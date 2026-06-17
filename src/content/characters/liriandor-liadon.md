@@ -12,7 +12,7 @@ Ha dedicat la seva vida a Oghma, déu de la saviesa, i ho apunta tot al seu llib
 
 ## Trasfons
 
-La seva meta personal és reconsagrar un altar d'Oghma profanat per una tribu de goblins al Castell Cragmaw; el propi Oghma li ho ha encomanat. A Phentanil, algú podria ajudar-lo a fer-ho.
+La seva meta personal és reconsagrar un altar d'Oghma profanat per una tribu de goblins al Castell de la Fumarola; el propi Oghma li ho ha encomanat. A Phentanil, algú podria ajudar-lo a fer-ho.
 
 ## Habilitats notables
 

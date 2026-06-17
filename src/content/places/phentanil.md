@@ -1,0 +1,23 @@
+---
+name: "Phentanil"
+type: "city"
+description: "El poble miner que serveix de base d'operacions al grup, lliure ara de l'amenaça dels Caps Rojos."
+tags: ["ciutat", "hub", "caps-rojos"]
+---
+
+Phentanil és un poble de mineria amb més ambició que llei. Sense una guàrdia organitzada ni un govern fort, durant mesos ha viscut sota l'amenaça dels Caps Rojos, una banda que cobrava "protecció" als comerciants i intimidava qui no pagava.
+
+## Llocs d'interès
+
+- **L'ajuntament**, on Arnau porta els registres del poble.
+- **La taverna**, punt de trobada habitual del grup, on Sorma sol tenir notícies fresques.
+- La **Mansió de la Cendra**, a les afores, antic cau dels Caps Rojos.
+
+## Gent coneguda
+
+- **Sildar Flocdeneu** — antic soldat, ara aliat de confiança del grup; els ha promès reconeixement dins l'Aliança dels Lords si neteja l'amenaça del poble.
+- **Hèlia Tornegrau** — una figura influent del poble que Cigarramic creu que pot saber qui el va trair quan formava part dels Caps Rojos.
+
+## Estat actual
+
+Amb la mort de Víctor Trapaire ("Vara de Vidre") i la caiguda dels Caps Rojos, el poble respira per primera vegada en mesos sense l'ombra de la banda. El grup és cada cop més conegut pels seus carrers.
