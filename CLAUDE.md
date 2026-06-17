@@ -97,7 +97,7 @@ Contingut lliure en Markdown...
 
 ## Desplegament a GitHub Pages
 
-El workflow `.github/workflows/deploy.yml` es dispara automàticament en cada push a `master`. El lloc es publica a `https://oscarmonkey.github.io/wiki`.
+El workflow `.github/workflows/deploy.yml` es dispara automàticament en cada push a `master`. El lloc es publica a `https://divas-tragonas.github.io/wiki`.
 
 Per activar-ho per primera vegada al repo de GitHub: **Settings → Pages → Source → GitHub Actions**.
 
