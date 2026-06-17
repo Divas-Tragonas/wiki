@@ -23,4 +23,4 @@ Al cau es va trobar una nota signada per "Vara de Vidre" que esmentava dos noms 
 
 ## Estat actual
 
-Amb Víctor Trapaire mort i la mansió completament saquejada, el cau dels Caps Rojos ha quedat desarticulat. El petit goblin Bato, capturat durant l'assalt, va acabar treballant a la taverna de Phentanil en lloc de patir un destí pitjor.
+Amb Víctor Trapaire mort i la mansió completament saquejada, el cau dels Caps Rojos ha quedat desarticulat. El petit goblin Gota, capturat durant l'assalt, va acabar treballant a la taverna de Phentanil en lloc de patir un destí pitjor.

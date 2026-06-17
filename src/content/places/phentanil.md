@@ -10,13 +10,13 @@ Phentanil és un poble de mineria amb més ambició que llei. Sense una guàrdia
 ## Llocs d'interès
 
 - **L'ajuntament**, on Arnau porta els registres del poble.
-- **La taverna**, punt de trobada habitual del grup, on Sorma sol tenir notícies fresques.
+- **La taverna**, punt de trobada habitual del grup, on la Sor Maria sol tenir notícies fresques.
 - La **Mansió de la Cendra**, a les afores, antic cau dels Caps Rojos.
 
 ## Gent coneguda
 
 - **Sildar Flocdeneu** — antic soldat, ara aliat de confiança del grup; els ha promès reconeixement dins l'Aliança dels Lords si neteja l'amenaça del poble.
-- **Hèlia Tornegrau** — una figura influent del poble que Cigarramic creu que pot saber qui el va trair quan formava part dels Caps Rojos.
+- **Hèlia Tornegrau** — una figura influent del poble.
 
 ## Estat actual
 

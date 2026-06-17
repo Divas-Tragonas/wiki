@@ -29,4 +29,4 @@ Entre les seves pertinences també hi havia el diari de l'enano Kumonmi, amb ref
 
 ## Estat al final
 
-Víctor Trapaire és mort i els Caps Rojos han quedat desarticulats. El goblin Bato és alliberat i acaba treballant a la taverna de Phentanil. El grup es dirigeix a l'ajuntament per parlar amb Arnau i després a la taverna, on esperen mostrar la bola de vidre de Víctor a Sorma. La propera sessió és el dimecres 1 de juliol.
+Víctor Trapaire és mort i els Caps Rojos han quedat desarticulats. El goblin Gota és alliberat i acaba treballant a la taverna de Phentanil. El grup es dirigeix a l'ajuntament per parlar amb Arnau i després a la taverna, on esperen mostrar la bola de vidre de Víctor a la Sor Maria. La propera sessió és el dimecres 1 de juliol.

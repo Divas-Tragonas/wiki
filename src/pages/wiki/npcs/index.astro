@@ -3,31 +3,31 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Card from '../../../components/Card.astro';
 import { getCollection } from 'astro:content';
 
-const characters = await getCollection('characters');
+const npcs = await getCollection('npcs');
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Personatges" description="Els personatges jugadors de La Mina Perduda de Phentanilo">
+<BaseLayout title="PNJs" description="Els personatges no jugadors de La Mina Perduda de Phentanilo">
   <div class="page-container">
     <nav class="breadcrumb">
       <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
       <span class="crumb-sep">›</span>
-      <span class="crumb-current">Personatges</span>
+      <span class="crumb-current">PNJs</span>
     </nav>
 
     <div class="page-header">
-      <h1 class="page-title">Personatges</h1>
-      <p class="page-desc">Els aventurers que formen el grup protagonista de la campanya.</p>
+      <h1 class="page-title">PNJs</h1>
+      <p class="page-desc">Els personatges no jugadors que el grup ha conegut pel camí.</p>
     </div>
 
     <div class="cards-grid">
-      {characters.map(char => (
+      {npcs.map(npc => (
         <Card
-          title={char.data.name}
-          description={char.data.description}
-          href={`${base}/wiki/characters/${char.id}`}
-          tags={char.data.tags}
-          badge={`Nivell ${char.data.level} · ${char.data.race}`}
+          title={npc.data.name}
+          description={npc.data.description}
+          href={`${base}/wiki/npcs/${npc.id}`}
+          tags={npc.data.tags}
+          badge={npc.data.role}
         />
       ))}
     </div>
@@ -51,7 +51,6 @@ const base = import.meta.env.BASE_URL;
     color: #c9a84c;
     text-decoration: none;
     opacity: 0.7;
-    transition: opacity 0.2s;
   }
   .crumb-link:hover { opacity: 1; }
   .crumb-sep { color: #c9a84c; opacity: 0.4; }

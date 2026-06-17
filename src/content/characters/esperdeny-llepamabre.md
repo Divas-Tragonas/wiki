@@ -4,7 +4,7 @@ race: "Humà"
 class: "Guerrer (Heroi del Poble)"
 level: 2
 player: "Martí"
-description: "Heroi de poble decidit a tornar a Pineda del Tro per fer fora el drac que l'assetja."
+description: "Heroi de poble amb un gran cor i una punteria mortal amb l'arc."
 tags: ["guerrer", "arquer", "supervivència"]
 ---
 
@@ -12,7 +12,7 @@ Quan fixa la ment en alguna cosa, la persegueix sense parar. Prefereix la sincer
 
 ## Trasfons
 
-Somia que un dia Pineda del Tro (Thundertree) tornarà a ser un poble pròsper i que se li erigirà una estàtua a la plaça pública. Per això vol tornar a les seves ruïnes i matar o expulsar el drac que habita la Torre Vella. Va conèixer Sildar a Neverwinter defensant treballadors del port d'abusos d'autoritat —Sildar va quedar impressionat per la seva valentia.
+Va conèixer Sildar a Neverwinter defensant treballadors del port d'abusos d'autoritat —Sildar va quedar impressionat per la seva valentia.
 
 ## Habilitats notables
 

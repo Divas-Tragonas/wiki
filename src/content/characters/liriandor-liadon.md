@@ -10,10 +10,6 @@ tags: ["mag", "erudit", "alt-elf"]
 
 Ha dedicat la seva vida a Oghma, déu de la saviesa, i ho apunta tot al seu llibre —tot li resulta fascinant. Un cop adult, va decidir sortir al món real per aprendre el coneixement del multivers.
 
-## Trasfons
-
-La seva meta personal és reconsagrar un altar d'Oghma profanat per una tribu de goblins al Castell de la Fumarola; el propi Oghma li ho ha encomanat. A Phentanil, algú podria ajudar-lo a fer-ho.
-
 ## Habilitats notables
 
 - **Mans Ardents**: un con de foc capaç de fregir diversos enemics alhora.

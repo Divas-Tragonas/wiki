@@ -2,14 +2,14 @@
 title: "Disfressats de Baines Roges"
 session: 9
 date: 2026-06-10
-summary: "Guiats pel goblin Bato, el grup explora la cripta i els calabossos de la mansió i comença a descobrir qui hi ha darrere Vara de Vidre."
+summary: "Guiats pel goblin Gota, el grup explora la cripta i els calabossos de la mansió i comença a descobrir qui hi ha darrere Vara de Vidre."
 players: ["Carlos", "Enric", "Martí", "Pau", "Eudald"]
 tags: ["infiltracio", "rescat", "mansio-de-la-cendra"]
 ---
 
 ## Resum
 
-Amb Bato com a guia forçós, el grup va continuar explorant la Mansió de la Cendra: una cripta antiga, els calabossos i les barraques de la banda.
+Amb Gota com a guia forçós, el grup va continuar explorant la Mansió de la Cendra: una cripta antiga, els calabossos i les barraques de la banda.
 
 ## Esdeveniments principals
 
@@ -32,4 +32,4 @@ Al final de la sessió, el grup va arribar a una porta secreta i va començar a 
 
 ## Estat al final
 
-La família Torrat ha quedat a càrrec de Sildar. Bato va ser tancat en un cofre per evitar una possible traïció. El grup, disfressat de Caps Rojos, està a punt de descobrir qui s'amaga darrere Vara de Vidre.
+La família Torrat ha quedat a càrrec de Sildar. Gota va ser tancat en un cofre per evitar una possible traïció. El grup, disfressat de Caps Rojos, està a punt de descobrir qui s'amaga darrere Vara de Vidre.

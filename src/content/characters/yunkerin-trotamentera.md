@@ -12,7 +12,7 @@ Sempre educat i respectuós, encara que no acostuma a confiar en els seus propis
 
 ## Trasfons
 
-Antic sergent mercenari a Mintarn. Té tres cosins —entre ells Gundren Rockseeker, ara presoner al Castell de la Fumarola— que són els seus companys de clan més estimats. La seva meta és donar una lliçó als Caps Rojos (Redbrands), igual que va fer amb els bravucons que va conèixer com a soldat a Neverwinter.
+Antic sergent mercenari a Mintarn. Té tres cosins —entre ells Roc Cercarocs, ara presoner al Castell de la Fumarola— que són els seus companys de clan més estimats.
 
 ## Habilitats notables
 
@@ -28,4 +28,4 @@ Antic sergent mercenari a Mintarn. Té tres cosins —entre ells Gundren Rocksee
 
 ## Relacions
 
-El seu cosí Gundren Rockseeker continua captiu al Castell de la Fumarola —un fil pendent de resoldre.
+El seu cosí Roc Cercarocs continua captiu al Castell de la Fumarola.

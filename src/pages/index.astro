@@ -7,6 +7,7 @@ const croniques = await getCollection('croniques');
 const characters = await getCollection('characters');
 const places = await getCollection('places');
 const enemies = await getCollection('enemies');
+const npcs = await getCollection('npcs');
 
 const lastSessions = croniques
   .sort((a, b) => b.data.session - a.data.session)
@@ -15,15 +16,15 @@ const lastSessions = croniques
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Inici" description="Wiki de la campanya D&D Crònica de les Cendres">
+<BaseLayout title="Inici" description="Wiki de la campanya D&D La Mina Perduda de Phentanilo">
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
       <p class="hero-eyebrow">Campanya de D&D 5e</p>
-      <h1 class="hero-title">Crònica de les Cendres</h1>
+      <h1 class="hero-title">La Mina Perduda de Phentanilo</h1>
       <p class="hero-tagline">
-        Una campanya de fantasia fosca sobre corrupció, lleialtat i ruïnes antigues.
-        Seguiu les aventures d'un grup d'herois impropis a través de Valdenmoor i més enllà.
+        Seguiu les aventures d'un grup d'aventurers que es fan un lloc a Phentanil,
+        enfrontant-se als Caps Rojos i als perills que amaga la regió.
       </p>
       <div class="hero-buttons">
         <a href={`${base}/wiki`} class="btn-primary">Explorar la Wiki</a>
@@ -48,6 +49,11 @@ const base = import.meta.env.BASE_URL;
       <div class="stat-item">
         <span class="stat-number">{enemies.length}</span>
         <span class="stat-label">Enemics</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{npcs.length}</span>
+        <span class="stat-label">PNJs</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">

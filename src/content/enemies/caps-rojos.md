@@ -16,7 +16,7 @@ Coneguts pel poble com els "Baines Roges" per les capes vermelles que duien els 
 
 ## Interaccions amb el grup
 
-Cigarramic va formar part de la banda abans de ser traït pels seus antics companys; descobrir qui ho va orquestrar és la seva meta personal. El grup va assaltar la Mansió de la Cendra durant les sessions 8 a 10, alliberant els presoners, cremant les barraques i acabant finalment amb Víctor Trapaire.
+Cigarramic va formar part de la banda abans de ser traït pels seus antics companys. El grup va assaltar la Mansió de la Cendra durant les sessions 8 a 10, alliberant els presoners, cremant les barraques i acabant finalment amb Víctor Trapaire.
 
 ## Estat actual
 

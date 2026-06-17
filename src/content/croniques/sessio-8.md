@@ -32,4 +32,4 @@ Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa 
 
 ## Estat al final
 
-La sala de rufians i l'esquerda dels osgos estan netejades. Al final de la sessió apareix un petit goblin espantat —Bato— que el grup decideix perdonar.
+La sala de rufians i l'esquerda dels osgos estan netejades. Al final de la sessió apareix un petit goblin espantat —Gota— que el grup decideix perdonar.

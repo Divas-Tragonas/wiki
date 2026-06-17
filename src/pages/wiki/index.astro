@@ -6,11 +6,12 @@ import { getCollection } from 'astro:content';
 const characters = await getCollection('characters');
 const places = await getCollection('places');
 const enemies = await getCollection('enemies');
+const npcs = await getCollection('npcs');
 
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Wiki" description="Personatges, llocs i enemics de Crònica de les Cendres">
+<BaseLayout title="Wiki" description="Personatges, llocs i enemics de La Mina Perduda de Phentanilo">
   <div class="wiki-container">
     <div class="wiki-header">
       <h1 class="wiki-title">Wiki</h1>
@@ -81,6 +82,29 @@ const base = import.meta.env.BASE_URL;
             href={`${base}/wiki/enemies/${enemy.id}`}
             tags={enemy.data.tags.slice(0, 2)}
             badge={enemy.data.status}
+          />
+        ))}
+      </div>
+    </section>
+
+    <!-- NPCs -->
+    <section class="wiki-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-icon">🧑</span>
+          <h2 class="section-title">PNJs</h2>
+          <span class="section-count">{npcs.length}</span>
+        </div>
+        <a href={`${base}/wiki/npcs`} class="section-link">Veure tots →</a>
+      </div>
+      <div class="cards-grid">
+        {npcs.slice(0, 3).map(npc => (
+          <Card
+            title={npc.data.name}
+            description={npc.data.description}
+            href={`${base}/wiki/npcs/${npc.id}`}
+            tags={npc.data.tags.slice(0, 2)}
+            badge={npc.data.role}
           />
         ))}
       </div>

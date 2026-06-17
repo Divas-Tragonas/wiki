@@ -1,16 +1,16 @@
 ---
 name: "Castell de la Fumarola"
 type: "dungeon"
-description: "Fortalesa goblin on una tribu reté presoners i ha profanat un altar d'Oghma."
+description: "Fortalesa goblin on una tribu reté presoners, entre ells el cosí d'en Yunkerin."
 tags: ["dungeon", "goblins", "objectiu"]
 ---
 
-Una fortalesa ocupada per una tribu de goblins. El grup en coneix l'existència per dues vies independents: la captura del Roc Cercarocs, cosí de Yunkerin, i la profanació d'un altar d'Oghma que Liriandor s'ha compromès a reconsagrar.
+Una fortalesa ocupada per una tribu de goblins. El grup en coneix l'existència per la captura d'en Roc Cercarocs, cosí de Yunkerin, i ha sentit parlar també d'un altar d'Oghma profanat al seu interior.
 
 ## Per què importa
 
-- **Roc Cercarocs**, cosí de Yunkerin i company de clan, hi continua captiu.
-- L'altar d'Oghma profanat hi és, i el propi déu n'ha encarregat la reconsagració a Liriandor.
+- **Roc Cercarocs**, cosí de Yunkerin, i els seus dos germans hi continuen captius.
+- Un altar d'Oghma profanat es troba també a l'interior de la fortalesa.
 
 ## Estat actual
 

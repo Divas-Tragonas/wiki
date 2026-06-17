@@ -38,6 +38,17 @@ const enemies = defineCollection({
   }),
 });
 
+const npcs = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/npcs' }),
+  schema: z.object({
+    name: z.string(),
+    description: z.string(),
+    role: z.string().optional(),
+    status: z.enum(['ally', 'neutral', 'unknown']).default('unknown'),
+    tags: z.array(z.string()).default([]),
+  }),
+});
+
 const croniques = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/croniques' }),
   schema: z.object({
@@ -50,4 +61,4 @@ const croniques = defineCollection({
   }),
 });
 
-export const collections = { characters, places, enemies, croniques };
+export const collections = { characters, places, enemies, npcs, croniques };
