@@ -2,7 +2,7 @@
 name: "Esperdeny Llepamabre"
 race: "Humà"
 class: "Guerrer (Heroi del Poble)"
-level: 3
+level: 2
 player: "Martí"
 description: "Heroi de poble decidit a tornar a Pineda del Tro per fer fora el drac que l'assetja."
 tags: ["guerrer", "arquer", "supervivència"]

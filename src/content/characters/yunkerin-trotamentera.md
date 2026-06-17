@@ -2,7 +2,7 @@
 name: "Yunkerin Trotamentera"
 race: "Enano de les Collines"
 class: "Clergue / Explorador (Swarmkeeper)"
-level: 3
+level: 2
 player: "Enric"
 description: "Enà soldat que vol ensenyar als Caps Rojos una lliçó que no oblidaran."
 tags: ["clergue", "explorador", "enano"]

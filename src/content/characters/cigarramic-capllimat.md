@@ -2,7 +2,7 @@
 name: "Cigarramic Capllimat"
 race: "Mediano"
 class: "Pícaro"
-level: 3
+level: 2
 player: "Pau"
 description: "Lladre de cor lleial decidit a descobrir qui el va trair quan formava part dels Caps Rojos."
 tags: ["pícaro", "arquer", "sigil"]

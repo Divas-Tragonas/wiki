@@ -2,7 +2,7 @@
 name: "Jaume III"
 race: "Humà"
 class: "Guerrer / Bruixot (Pacte del Geni)"
-level: 5
+level: 2
 player: "Eudald"
 description: "Noble guerrer decidit a portar ordre a Phentanil, brandant la destral de la seva família."
 tags: ["guerrer", "bruixot", "noble", "tanc"]

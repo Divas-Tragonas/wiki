@@ -2,7 +2,7 @@
 name: "Liriandor Líadon"
 race: "Alt Elf"
 class: "Mag / Clergue (Domini de l'Engany)"
-level: 7
+level: 2
 player: "Carlos"
 description: "Erudit d'Oghma que documenta cada secret del món al seu llibre de saviesa."
 tags: ["mag", "erudit", "alt-elf"]
