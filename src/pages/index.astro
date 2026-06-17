@@ -1,0 +1,231 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Card from '../components/Card.astro';
+import { getCollection } from 'astro:content';
+
+const croniques = await getCollection('croniques');
+const characters = await getCollection('characters');
+const places = await getCollection('places');
+const enemies = await getCollection('enemies');
+
+const lastSessions = croniques
+  .sort((a, b) => b.data.session - a.data.session)
+  .slice(0, 2);
+
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Inici" description="Wiki de la campanya D&D Crònica de les Cendres">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">Campanya de D&D 5e</p>
+      <h1 class="hero-title">Crònica de les Cendres</h1>
+      <p class="hero-tagline">
+        Una campanya de fantasia fosca sobre corrupció, lleialtat i ruïnes antigues.
+        Seguiu les aventures d'un grup d'herois impropis a través de Valdenmoor i més enllà.
+      </p>
+      <div class="hero-buttons">
+        <a href={`${base}/wiki`} class="btn-primary">Explorar la Wiki</a>
+        <a href={`${base}/croniques`} class="btn-secondary">Llegir Cròniques</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats-section">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <span class="stat-number">{characters.length}</span>
+        <span class="stat-label">Personatges</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{places.length}</span>
+        <span class="stat-label">Llocs</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{enemies.length}</span>
+        <span class="stat-label">Enemics</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{croniques.length}</span>
+        <span class="stat-label">Sessions</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent sessions -->
+  <section class="recent-section">
+    <div class="recent-inner">
+      <div class="section-header">
+        <h2 class="section-title">Últimes Sessions</h2>
+        <a href={`${base}/croniques`} class="section-link">Veure totes →</a>
+      </div>
+      <div class="cards-grid">
+        {lastSessions.map(session => (
+          <Card
+            title={`Sessió ${session.data.session}: ${session.data.title}`}
+            description={session.data.summary}
+            href={`${base}/croniques/${session.id}`}
+            tags={session.data.tags.slice(0, 3)}
+            badge={new Date(session.data.date).toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    background: linear-gradient(180deg, #0a0c10 0%, #0f1117 100%);
+    border-bottom: 1px solid #252932;
+    padding: 5rem 1.5rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 52rem;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #c9a84c;
+    margin: 0 0 1rem 0;
+  }
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 700;
+    color: #e8c56a;
+    margin: 0 0 1.25rem 0;
+    line-height: 1.1;
+    text-shadow: 0 0 60px rgba(232, 197, 106, 0.2);
+  }
+  .hero-tagline {
+    font-size: 1.05rem;
+    color: #d4c9a8;
+    opacity: 0.75;
+    max-width: 36rem;
+    margin: 0 auto 2rem;
+    line-height: 1.7;
+  }
+  .hero-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    padding: 0.75rem 1.75rem;
+    background-color: #c9a84c;
+    color: #0a0c10;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    transition: background-color 0.2s;
+  }
+  .btn-primary:hover { background-color: #e8c56a; }
+  .btn-secondary {
+    padding: 0.75rem 1.75rem;
+    background-color: transparent;
+    color: #c9a84c;
+    border: 1px solid #c9a84c;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover {
+    background-color: rgba(201, 168, 76, 0.1);
+    color: #e8c56a;
+  }
+  .stats-section {
+    background-color: #0a0c10;
+    border-bottom: 1px solid #252932;
+    padding: 1.5rem;
+  }
+  .stats-inner {
+    max-width: 52rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+  }
+  .stat-number {
+    font-family: 'Cinzel', serif;
+    font-size: 1.75rem;
+    color: #e8c56a;
+    font-weight: 700;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #d4c9a8;
+    opacity: 0.5;
+  }
+  .stat-divider {
+    width: 1px;
+    height: 2rem;
+    background-color: #252932;
+  }
+  .recent-section {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.375rem;
+    color: #e8c56a;
+    margin: 0;
+  }
+  .section-link {
+    font-size: 0.875rem;
+    color: #c9a84c;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .section-link:hover { opacity: 1; }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+</style>

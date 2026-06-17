@@ -1,0 +1,159 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Card from '../../components/Card.astro';
+import { getCollection } from 'astro:content';
+
+const characters = await getCollection('characters');
+const places = await getCollection('places');
+const enemies = await getCollection('enemies');
+
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Wiki" description="Personatges, llocs i enemics de Crònica de les Cendres">
+  <div class="wiki-container">
+    <div class="wiki-header">
+      <h1 class="wiki-title">Wiki</h1>
+      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges, llocs i enemics.</p>
+    </div>
+
+    <!-- Characters -->
+    <section class="wiki-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-icon">⚔</span>
+          <h2 class="section-title">Personatges</h2>
+          <span class="section-count">{characters.length}</span>
+        </div>
+        <a href={`${base}/wiki/characters`} class="section-link">Veure tots →</a>
+      </div>
+      <div class="cards-grid">
+        {characters.slice(0, 4).map(char => (
+          <Card
+            title={char.data.name}
+            description={char.data.description}
+            href={`${base}/wiki/characters/${char.id}`}
+            tags={char.data.tags.slice(0, 2)}
+            badge={`${char.data.race} · ${char.data.class}`}
+          />
+        ))}
+      </div>
+    </section>
+
+    <!-- Places -->
+    <section class="wiki-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-icon">🗺</span>
+          <h2 class="section-title">Llocs</h2>
+          <span class="section-count">{places.length}</span>
+        </div>
+        <a href={`${base}/wiki/places`} class="section-link">Veure tots →</a>
+      </div>
+      <div class="cards-grid">
+        {places.slice(0, 3).map(place => (
+          <Card
+            title={place.data.name}
+            description={place.data.description}
+            href={`${base}/wiki/places/${place.id}`}
+            tags={place.data.tags.slice(0, 2)}
+            badge={place.data.type}
+          />
+        ))}
+      </div>
+    </section>
+
+    <!-- Enemies -->
+    <section class="wiki-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-icon">💀</span>
+          <h2 class="section-title">Enemics</h2>
+          <span class="section-count">{enemies.length}</span>
+        </div>
+        <a href={`${base}/wiki/enemies`} class="section-link">Veure tots →</a>
+      </div>
+      <div class="cards-grid">
+        {enemies.slice(0, 3).map(enemy => (
+          <Card
+            title={enemy.data.name}
+            description={enemy.data.description}
+            href={`${base}/wiki/enemies/${enemy.id}`}
+            tags={enemy.data.tags.slice(0, 2)}
+            badge={enemy.data.status}
+          />
+        ))}
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .wiki-container {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+  .wiki-header {
+    margin-bottom: 3rem;
+    border-bottom: 1px solid #252932;
+    padding-bottom: 1.5rem;
+  }
+  .wiki-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.25rem;
+    color: #e8c56a;
+    margin: 0 0 0.5rem 0;
+  }
+  .wiki-desc {
+    color: #d4c9a8;
+    opacity: 0.6;
+    font-size: 1rem;
+    margin: 0;
+  }
+  .wiki-section {
+    margin-bottom: 3rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .section-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-icon {
+    font-size: 1.1rem;
+  }
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.25rem;
+    color: #e8c56a;
+    margin: 0;
+  }
+  .section-count {
+    background-color: rgba(201, 168, 76, 0.15);
+    color: #c9a84c;
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    font-weight: 600;
+  }
+  .section-link {
+    font-size: 0.875rem;
+    color: #c9a84c;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .section-link:hover { opacity: 1; }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+</style>

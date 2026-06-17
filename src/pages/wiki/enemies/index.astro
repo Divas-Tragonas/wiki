@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Card from '../../../components/Card.astro';
+import { getCollection } from 'astro:content';
+
+const enemies = await getCollection('enemies');
+const base = import.meta.env.BASE_URL;
+
+const statusColors: Record<string, string> = {
+  active: 'actiu',
+  defeated: 'derrotat',
+  unknown: 'desconegut',
+};
+---
+
+<BaseLayout title="Enemics" description="Els enemics i faccions de Crònica de les Cendres">
+  <div class="page-container">
+    <nav class="breadcrumb">
+      <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
+      <span class="crumb-sep">›</span>
+      <span class="crumb-current">Enemics</span>
+    </nav>
+
+    <div class="page-header">
+      <h1 class="page-title">Enemics</h1>
+      <p class="page-desc">Les criatures, humanoides i faccions que s'oposen al grup.</p>
+    </div>
+
+    <div class="cards-grid">
+      {enemies.map(enemy => (
+        <Card
+          title={enemy.data.name}
+          description={enemy.data.description}
+          href={`${base}/wiki/enemies/${enemy.id}`}
+          tags={enemy.data.tags}
+          badge={`${statusColors[enemy.data.status]} · ${enemy.data.type}`}
+        />
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .page-container {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+  }
+  .crumb-link {
+    color: #c9a84c;
+    text-decoration: none;
+    opacity: 0.7;
+  }
+  .crumb-link:hover { opacity: 1; }
+  .crumb-sep { color: #c9a84c; opacity: 0.4; }
+  .crumb-current { color: #d4c9a8; }
+  .page-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #252932;
+    padding-bottom: 1.25rem;
+  }
+  .page-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    color: #e8c56a;
+    margin: 0 0 0.5rem 0;
+  }
+  .page-desc {
+    color: #d4c9a8;
+    opacity: 0.6;
+    margin: 0;
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+</style>

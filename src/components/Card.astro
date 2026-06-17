@@ -1,0 +1,79 @@
+---
+import TagBadge from './TagBadge.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  href: string;
+  tags?: string[];
+  badge?: string;
+}
+
+const { title, description, href, tags = [], badge } = Astro.props;
+---
+
+<a href={href} class="card-link">
+  <div class="card">
+    {badge && (
+      <span class="card-badge">{badge}</span>
+    )}
+    <h3 class="card-title">{title}</h3>
+    <p class="card-desc">{description}</p>
+    {tags.length > 0 && (
+      <div class="card-tags">
+        {tags.map(tag => <TagBadge tag={tag} />)}
+      </div>
+    )}
+  </div>
+</a>
+
+<style>
+  .card-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  .card {
+    background-color: #1a1d24;
+    border: 1px solid #252932;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+    height: 100%;
+    position: relative;
+  }
+  .card:hover {
+    border-color: #c9a84c;
+    transform: translateY(-2px);
+  }
+  .card-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background-color: rgba(201, 168, 76, 0.2);
+    color: #e8c56a;
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  .card-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.125rem;
+    color: #e8c56a;
+    margin: 0 0 0.5rem 0;
+  }
+  .card-desc {
+    font-size: 0.875rem;
+    color: #d4c9a8;
+    opacity: 0.8;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+</style>

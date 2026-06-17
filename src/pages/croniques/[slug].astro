@@ -1,0 +1,39 @@
+---
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const croniques = await getCollection('croniques');
+  return croniques.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const base = import.meta.env.BASE_URL;
+
+const dateStr = new Date(entry.data.date).toLocaleDateString('ca-ES', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<EntryLayout
+  title={`Sessió ${entry.data.session}: ${entry.data.title}`}
+  description={entry.data.summary}
+  breadcrumbs={[
+    { label: 'Cròniques', href: '/croniques' },
+    { label: `Sessió ${entry.data.session}`, href: `/croniques/${entry.id}` },
+  ]}
+  metadata={[
+    { label: 'Sessió', value: String(entry.data.session) },
+    { label: 'Data', value: dateStr },
+    { label: 'Jugadors', value: entry.data.players.join(', ') },
+  ]}
+  tags={entry.data.tags}
+>
+  <Content />
+</EntryLayout>

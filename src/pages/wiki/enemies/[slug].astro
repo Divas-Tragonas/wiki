@@ -1,0 +1,41 @@
+---
+import EntryLayout from '../../../layouts/EntryLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const enemies = await getCollection('enemies');
+  return enemies.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const statusLabel: Record<string, string> = {
+  active: 'Actiu',
+  defeated: 'Derrotat',
+  unknown: 'Desconegut',
+};
+
+const base = import.meta.env.BASE_URL;
+---
+
+<EntryLayout
+  title={entry.data.name}
+  description={entry.data.description}
+  breadcrumbs={[
+    { label: 'Wiki', href: '/wiki' },
+    { label: 'Enemics', href: '/wiki/enemies' },
+    { label: entry.data.name, href: `/wiki/enemies/${entry.id}` },
+  ]}
+  metadata={[
+    { label: 'Tipus', value: entry.data.type },
+    ...(entry.data.cr ? [{ label: 'CR', value: entry.data.cr }] : []),
+    { label: 'Estat', value: statusLabel[entry.data.status] },
+  ]}
+  tags={entry.data.tags}
+>
+  <Content />
+</EntryLayout>

@@ -1,0 +1,83 @@
+---
+const pathname = Astro.url.pathname;
+const base = import.meta.env.BASE_URL;
+
+function isActive(path: string) {
+  if (path === '/') {
+    return pathname === base || pathname === base + '/';
+  }
+  return pathname.startsWith(base + path);
+}
+---
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href={base} class="nav-brand">
+      <span class="brand-icon">⚔</span>
+      <span class="brand-text">Crònica de les Cendres</span>
+    </a>
+    <div class="nav-links">
+      <a href={`${base}/wiki`} class:list={["nav-link", { active: isActive('/wiki') }]}>
+        Wiki
+      </a>
+      <a href={`${base}/croniques`} class:list={["nav-link", { active: isActive('/croniques') }]}>
+        Cròniques
+      </a>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .navbar {
+    background-color: #0a0c10;
+    border-bottom: 1px solid #252932;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: #e8c56a;
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .brand-icon {
+    font-size: 1.25rem;
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-link {
+    text-decoration: none;
+    color: #d4c9a8;
+    opacity: 0.7;
+    font-size: 0.95rem;
+    transition: color 0.2s, opacity 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .nav-link:hover {
+    color: #e8c56a;
+    opacity: 1;
+  }
+  .nav-link.active {
+    color: #e8c56a;
+    opacity: 1;
+    border-bottom: 2px solid #c9a84c;
+    padding-bottom: 2px;
+  }
+</style>

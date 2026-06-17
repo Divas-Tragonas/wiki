@@ -1,0 +1,32 @@
+---
+import EntryLayout from '../../../layouts/EntryLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const places = await getCollection('places');
+  return places.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const base = import.meta.env.BASE_URL;
+---
+
+<EntryLayout
+  title={entry.data.name}
+  description={entry.data.description}
+  breadcrumbs={[
+    { label: 'Wiki', href: '/wiki' },
+    { label: 'Llocs', href: '/wiki/places' },
+    { label: entry.data.name, href: `/wiki/places/${entry.id}` },
+  ]}
+  metadata={[
+    { label: 'Tipus', value: entry.data.type },
+  ]}
+  tags={entry.data.tags}
+>
+  <Content />
+</EntryLayout>

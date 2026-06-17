@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-stone-950: #0a0c10;
+  --color-stone-900: #0f1117;
+  --color-stone-800: #1a1d24;
+  --color-stone-700: #252932;
+  --color-gold-400: #e8c56a;
+  --color-gold-500: #c9a84c;
+  --color-gold-600: #a8863c;
+  --color-parchment: #d4c9a8;
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-stone-900);
+  color: var(--color-parchment);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+/* Prose styles for markdown content */
+.prose {
+  color: var(--color-parchment);
+  max-width: 65ch;
+}
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: var(--color-gold-400);
+  font-family: var(--font-display);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.prose h1 { font-size: 1.875rem; }
+.prose h2 { font-size: 1.5rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose p {
+  margin-bottom: 1em;
+  line-height: 1.75;
+}
+.prose strong {
+  color: var(--color-gold-400);
+}
+.prose em {
+  color: var(--color-gold-400);
+  font-style: italic;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+.prose li {
+  margin-bottom: 0.25em;
+}
+.prose a {
+  color: var(--color-gold-400);
+  text-decoration: underline;
+}

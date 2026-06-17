@@ -1,0 +1,35 @@
+---
+import EntryLayout from '../../../layouts/EntryLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const characters = await getCollection('characters');
+  return characters.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const base = import.meta.env.BASE_URL;
+---
+
+<EntryLayout
+  title={entry.data.name}
+  description={entry.data.description}
+  breadcrumbs={[
+    { label: 'Wiki', href: '/wiki' },
+    { label: 'Personatges', href: '/wiki/characters' },
+    { label: entry.data.name, href: `/wiki/characters/${entry.id}` },
+  ]}
+  metadata={[
+    { label: 'Raça', value: entry.data.race },
+    { label: 'Classe', value: entry.data.class },
+    { label: 'Nivell', value: String(entry.data.level) },
+    { label: 'Jugador', value: entry.data.player },
+  ]}
+  tags={entry.data.tags}
+>
+  <Content />
+</EntryLayout>
