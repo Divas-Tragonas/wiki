@@ -39,7 +39,6 @@ const charsHasMore = characters.length > CHAR_BATCH;
             description={char.data.description}
             href={`${base}/wiki/characters/${char.id}`}
             tags={char.data.tags.slice(0, 2)}
-            badge={char.data.role ?? char.data.type}
           />
         ))}
       </div>
@@ -52,7 +51,6 @@ const charsHasMore = characters.length > CHAR_BATCH;
                 description={char.data.description}
                 href={`${base}/wiki/characters/${char.id}`}
                 tags={char.data.tags.slice(0, 2)}
-                badge={char.data.role ?? char.data.type}
               />
             ))}
           </div>
@@ -65,7 +63,6 @@ const charsHasMore = characters.length > CHAR_BATCH;
             description={char.data.description}
             href={`${base}/wiki/characters/${char.id}`}
             tags={char.data.tags.slice(0, 2)}
-            badge={char.data.role ?? char.data.type}
           />
         ))}
       </div>
@@ -198,7 +195,7 @@ const charsHasMore = characters.length > CHAR_BATCH;
   .section-link:hover { opacity: 1; }
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1rem;
   }
   .preview-wrap {
