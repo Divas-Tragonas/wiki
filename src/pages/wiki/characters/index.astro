@@ -5,17 +5,9 @@ import { getCollection } from 'astro:content';
 
 const characters = await getCollection('characters');
 const base = import.meta.env.BASE_URL;
-
-const statusTone: Record<string, 'gold' | 'ally' | 'neutral' | 'enemy' | 'defeated'> = {
-  ally: 'ally',
-  neutral: 'neutral',
-  active: 'enemy',
-  defeated: 'defeated',
-  unknown: 'gold',
-};
 ---
 
-<BaseLayout title="Personatges" description="Els PNJs i enemics de La Mina Perduda de Phentanilo">
+<BaseLayout title="Personatges" description="Els PNJs i enemics de La Mina Perduda del Phentanilo">
   <div class="page-container">
     <nav class="breadcrumb">
       <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
@@ -36,7 +28,6 @@ const statusTone: Record<string, 'gold' | 'ally' | 'neutral' | 'enemy' | 'defeat
           href={`${base}/wiki/characters/${char.id}`}
           tags={char.data.tags}
           badge={char.data.role ?? char.data.type}
-          tone={statusTone[char.data.status]}
         />
       ))}
     </div>

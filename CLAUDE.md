@@ -1,4 +1,4 @@
-# Wiki — La Mina Perduda de Phentanilo
+# Wiki — La Mina Perduda del Phentanilo
 
 Wiki de campanya D&D 5e construïda amb **Astro 6 + Tailwind CSS 4**. Totes les pàgines es generen estàticament a partir de fitxers Markdown.
 

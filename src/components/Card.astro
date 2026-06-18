@@ -7,17 +7,14 @@ interface Props {
   href: string;
   tags?: string[];
   badge?: string;
-  tone?: 'gold' | 'ally' | 'neutral' | 'enemy' | 'defeated';
 }
 
-const { title, description, href, tags = [], badge, tone = 'gold' } = Astro.props;
+const { title, description, href, tags = [], badge } = Astro.props;
 ---
 
 <a href={href} class="card-link">
   <div class="card">
-    {badge && (
-      <span class:list={['card-badge', `tone-${tone}`]}>{badge}</span>
-    )}
+    {badge && <span class="card-badge">{badge}</span>}
     <h3 class="card-title">{title}</h3>
     <p class="card-desc">{description}</p>
     {tags.length > 0 && (
@@ -49,37 +46,15 @@ const { title, description, href, tags = [], badge, tone = 'gold' } = Astro.prop
   .card-badge {
     display: inline-block;
     padding: 0.125rem 0.5rem;
+    background-color: rgba(201, 168, 76, 0.2);
+    color: #e8c56a;
+    border: 1px solid rgba(201, 168, 76, 0.4);
     border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
-  }
-  .tone-gold {
-    background-color: rgba(201, 168, 76, 0.2);
-    color: #e8c56a;
-    border: 1px solid rgba(201, 168, 76, 0.4);
-  }
-  .tone-ally {
-    background-color: rgba(74, 158, 95, 0.2);
-    color: #6fcf87;
-    border: 1px solid rgba(74, 158, 95, 0.4);
-  }
-  .tone-neutral {
-    background-color: rgba(150, 150, 170, 0.2);
-    color: #b8b8cc;
-    border: 1px solid rgba(150, 150, 170, 0.4);
-  }
-  .tone-enemy {
-    background-color: rgba(201, 76, 76, 0.2);
-    color: #e8807a;
-    border: 1px solid rgba(201, 76, 76, 0.4);
-  }
-  .tone-defeated {
-    background-color: rgba(120, 120, 130, 0.15);
-    color: #8c8c98;
-    border: 1px solid rgba(120, 120, 130, 0.35);
   }
   .card-title {
     font-family: 'Cinzel', serif;
