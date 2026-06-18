@@ -2,14 +2,31 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Card from '../components/Card.astro';
 import { getCollection } from 'astro:content';
+import { execFileSync } from 'node:child_process';
 
 const croniques = await getCollection('croniques');
 const characters = await getCollection('characters');
 const places = await getCollection('places');
 
-const lastSessions = croniques
-  .sort((a, b) => b.data.session - a.data.session)
-  .slice(0, 2);
+function getLastModified(filePath?: string): Date {
+  if (!filePath) return new Date(0);
+  try {
+    const output = execFileSync('git', ['log', '-1', '--format=%cI', '--', filePath], {
+      encoding: 'utf-8',
+    }).trim();
+    return output ? new Date(output) : new Date(0);
+  } catch {
+    return new Date(0);
+  }
+}
+
+function latestBy<T>(entries: T[], dateOf: (entry: T) => Date): T {
+  return entries.reduce((latest, entry) => (dateOf(entry) > dateOf(latest) ? entry : latest));
+}
+
+const latestSession = croniques.reduce((latest, c) => (c.data.session > latest.data.session ? c : latest));
+const latestCharacter = latestBy(characters, (c) => getLastModified(c.filePath));
+const latestPlace = latestBy(places, (p) => getLastModified(p.filePath));
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -51,23 +68,33 @@ const base = import.meta.env.BASE_URL;
     </div>
   </section>
 
-  <!-- Recent sessions -->
+  <!-- Latest changes -->
   <section class="recent-section">
     <div class="recent-inner">
       <div class="section-header">
-        <h2 class="section-title">Últimes Sessions</h2>
-        <a href={`${base}/croniques`} class="section-link">Veure totes →</a>
+        <h2 class="section-title">Últims Canvis</h2>
       </div>
       <div class="cards-grid">
-        {lastSessions.map(session => (
-          <Card
-            title={`Sessió ${session.data.session}: ${session.data.title}`}
-            description={session.data.summary}
-            href={`${base}/croniques/${session.id}`}
-            tags={session.data.tags.slice(0, 3)}
-            badge={new Date(session.data.date).toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-          />
-        ))}
+        <Card
+          title={`Sessió ${latestSession.data.session}: ${latestSession.data.title}`}
+          description={latestSession.data.summary}
+          href={`${base}/croniques/${latestSession.id}`}
+          tags={latestSession.data.tags.slice(0, 3)}
+          badge={new Date(latestSession.data.date).toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+        />
+        <Card
+          title={latestCharacter.data.name}
+          description={latestCharacter.data.description}
+          href={`${base}/wiki/characters/${latestCharacter.id}`}
+          tags={latestCharacter.data.tags}
+        />
+        <Card
+          title={latestPlace.data.name}
+          description={latestPlace.data.description}
+          href={`${base}/wiki/places/${latestPlace.id}`}
+          tags={latestPlace.data.tags}
+          badge={latestPlace.data.type}
+        />
       </div>
     </div>
   </section>
