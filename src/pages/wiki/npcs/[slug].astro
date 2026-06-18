@@ -35,6 +35,8 @@ const base = import.meta.env.BASE_URL;
     { label: 'Estat', value: statusLabel[entry.data.status] },
   ]}
   tags={entry.data.tags}
+  showImage={true}
+  image={entry.data.image}
 >
   <Content />
 </EntryLayout>

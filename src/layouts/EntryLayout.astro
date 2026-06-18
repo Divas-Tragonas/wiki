@@ -8,9 +8,11 @@ interface Props {
   breadcrumbs: { label: string; href: string }[];
   metadata?: { label: string; value: string }[];
   tags?: string[];
+  showImage?: boolean;
+  image?: string;
 }
 
-const { title, description, breadcrumbs, metadata = [], tags = [] } = Astro.props;
+const { title, description, breadcrumbs, metadata = [], tags = [], showImage = false, image } = Astro.props;
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -42,6 +44,17 @@ const base = import.meta.env.BASE_URL;
 
       <!-- Sidebar -->
       <aside class="entry-sidebar">
+        {showImage && (
+          <div class="sidebar-card image-card">
+            {image ? (
+              <img src={`${base}${image}`} alt={title} class="entry-image" />
+            ) : (
+              <div class="entry-image-placeholder">
+                <span class="placeholder-initial">{title.charAt(0)}</span>
+              </div>
+            )}
+          </div>
+        )}
         {metadata.length > 0 && (
           <div class="sidebar-card">
             <h4 class="sidebar-title">Informació</h4>
@@ -162,5 +175,29 @@ const base = import.meta.env.BASE_URL;
     display: flex;
     flex-wrap: wrap;
     gap: 0.375rem;
+  }
+  .image-card {
+    padding: 0;
+    overflow: hidden;
+  }
+  .entry-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+  .entry-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    background-color: #14161c;
+  }
+  .placeholder-initial {
+    font-family: 'Cinzel', serif;
+    font-size: 3rem;
+    color: #c9a84c;
+    opacity: 0.35;
   }
 </style>

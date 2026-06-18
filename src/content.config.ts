@@ -46,6 +46,7 @@ const npcs = defineCollection({
     role: z.string().optional(),
     status: z.enum(['ally', 'neutral', 'unknown']).default('unknown'),
     tags: z.array(z.string()).default([]),
+    image: z.string().optional(),
   }),
 });
 
