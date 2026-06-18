@@ -7,7 +7,7 @@ const characters = await getCollection('characters');
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Personatges" description="Els personatges jugadors de La Mina Perduda de Phentanilo">
+<BaseLayout title="Personatges" description="Els PNJs i enemics de La Mina Perduda de Phentanilo">
   <div class="page-container">
     <nav class="breadcrumb">
       <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
@@ -17,7 +17,7 @@ const base = import.meta.env.BASE_URL;
 
     <div class="page-header">
       <h1 class="page-title">Personatges</h1>
-      <p class="page-desc">Els aventurers que formen el grup protagonista de la campanya.</p>
+      <p class="page-desc">Els PNJs, enemics i faccions que el grup ha conegut pel camí.</p>
     </div>
 
     <div class="cards-grid">
@@ -27,7 +27,7 @@ const base = import.meta.env.BASE_URL;
           description={char.data.description}
           href={`${base}/wiki/characters/${char.id}`}
           tags={char.data.tags}
-          badge={`Nivell ${char.data.level} · ${char.data.race}`}
+          badge={char.data.role ?? char.data.type}
         />
       ))}
     </div>

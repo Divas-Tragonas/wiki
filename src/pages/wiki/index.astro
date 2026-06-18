@@ -5,24 +5,22 @@ import { getCollection } from 'astro:content';
 
 const characters = await getCollection('characters');
 const places = await getCollection('places');
-const enemies = await getCollection('enemies');
-const npcs = await getCollection('npcs');
 
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Wiki" description="Personatges, llocs i enemics de La Mina Perduda de Phentanilo">
+<BaseLayout title="Wiki" description="Personatges i llocs de La Mina Perduda de Phentanilo">
   <div class="wiki-container">
     <div class="wiki-header">
       <h1 class="wiki-title">Wiki</h1>
-      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges, llocs i enemics.</p>
+      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges i llocs.</p>
     </div>
 
     <!-- Characters -->
     <section class="wiki-section">
       <div class="section-header">
         <div class="section-title-group">
-          <span class="section-icon">⚔</span>
+          <span class="section-icon">🧑</span>
           <h2 class="section-title">Personatges</h2>
           <span class="section-count">{characters.length}</span>
         </div>
@@ -35,7 +33,7 @@ const base = import.meta.env.BASE_URL;
             description={char.data.description}
             href={`${base}/wiki/characters/${char.id}`}
             tags={char.data.tags.slice(0, 2)}
-            badge={`${char.data.race} · ${char.data.class}`}
+            badge={char.data.role ?? char.data.type}
           />
         ))}
       </div>
@@ -59,52 +57,6 @@ const base = import.meta.env.BASE_URL;
             href={`${base}/wiki/places/${place.id}`}
             tags={place.data.tags.slice(0, 2)}
             badge={place.data.type}
-          />
-        ))}
-      </div>
-    </section>
-
-    <!-- Enemies -->
-    <section class="wiki-section">
-      <div class="section-header">
-        <div class="section-title-group">
-          <span class="section-icon">💀</span>
-          <h2 class="section-title">Enemics</h2>
-          <span class="section-count">{enemies.length}</span>
-        </div>
-        <a href={`${base}/wiki/enemies`} class="section-link">Veure tots →</a>
-      </div>
-      <div class="cards-grid">
-        {enemies.slice(0, 3).map(enemy => (
-          <Card
-            title={enemy.data.name}
-            description={enemy.data.description}
-            href={`${base}/wiki/enemies/${enemy.id}`}
-            tags={enemy.data.tags.slice(0, 2)}
-            badge={enemy.data.status}
-          />
-        ))}
-      </div>
-    </section>
-
-    <!-- NPCs -->
-    <section class="wiki-section">
-      <div class="section-header">
-        <div class="section-title-group">
-          <span class="section-icon">🧑</span>
-          <h2 class="section-title">PNJs</h2>
-          <span class="section-count">{npcs.length}</span>
-        </div>
-        <a href={`${base}/wiki/npcs`} class="section-link">Veure tots →</a>
-      </div>
-      <div class="cards-grid">
-        {npcs.slice(0, 3).map(npc => (
-          <Card
-            title={npc.data.name}
-            description={npc.data.description}
-            href={`${base}/wiki/npcs/${npc.id}`}
-            tags={npc.data.tags.slice(0, 2)}
-            badge={npc.data.role}
           />
         ))}
       </div>

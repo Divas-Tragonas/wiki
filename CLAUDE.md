@@ -16,9 +16,8 @@ npm run preview  # previsualitza el build final
 ```
 src/
 ├── content/             # tot el contingut editable
-│   ├── characters/      # fitxers .md dels personatges jugadors
+│   ├── characters/      # fitxers .md de PNJs, enemics i faccions
 │   ├── places/          # fitxers .md dels llocs del món
-│   ├── enemies/         # fitxers .md d'enemics i faccions
 │   └── croniques/       # fitxers .md de cada sessió
 ├── content.config.ts    # esquema dels camps de cada col·lecció
 ├── pages/               # rutes del lloc (no cal tocar-les normalment)
@@ -26,21 +25,24 @@ src/
 └── components/          # Navbar, Card, TagBadge, Footer
 ```
 
+Els personatges jugadors (els del grup) no es documenten a la wiki: cadascú té la seva pròpia fitxa fora d'aquí. La col·lecció `characters` només inclou PNJs, enemics i faccions amb qui el grup interactua.
+
 ## Afegir contingut nou
 
-### Personatge nou
+### Personatge nou (PNJ, enemic o facció)
 
 Crea `src/content/characters/nom-del-personatge.md`:
 
 ```markdown
 ---
 name: "Nom Complet"
-race: "Raça"
-class: "Classe (Subclasse)"
-level: 1
-player: "Nom del jugador"
 description: "Una frase de descripció curta."
+role: "Aliat"        # opcional, per a PNJs (p. ex. "Aliat", "Funcionari")
+type: "humanoid"     # opcional, per a enemics: creature | humanoid | faction | undead | fiend | other
+cr: "5"              # opcional, només per a enemics
+status: "unknown"    # ally | neutral | active | defeated | unknown
 tags: ["tag1", "tag2"]
+image: "/images/nom.jpg"  # opcional
 ---
 
 Contingut lliure en Markdown...
@@ -56,23 +58,6 @@ name: "Nom del Lloc"
 type: "city"        # city | dungeon | forest | ruin | region | other
 description: "Una frase de descripció curta."
 tags: ["tag1"]
----
-
-Contingut lliure en Markdown...
-```
-
-### Enemic o facció nous
-
-Crea `src/content/enemies/nom-enemic.md`:
-
-```markdown
----
-name: "Nom"
-type: "creature"    # creature | humanoid | faction | undead | fiend | other
-cr: "5"             # opcional
-description: "Una frase de descripció curta."
-tags: ["tag1"]
-status: "active"    # active | defeated | unknown
 ---
 
 Contingut lliure en Markdown...

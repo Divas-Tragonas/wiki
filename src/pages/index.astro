@@ -6,8 +6,6 @@ import { getCollection } from 'astro:content';
 const croniques = await getCollection('croniques');
 const characters = await getCollection('characters');
 const places = await getCollection('places');
-const enemies = await getCollection('enemies');
-const npcs = await getCollection('npcs');
 
 const lastSessions = croniques
   .sort((a, b) => b.data.session - a.data.session)
@@ -44,16 +42,6 @@ const base = import.meta.env.BASE_URL;
       <div class="stat-item">
         <span class="stat-number">{places.length}</span>
         <span class="stat-label">Llocs</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-number">{enemies.length}</span>
-        <span class="stat-label">Enemics</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-number">{npcs.length}</span>
-        <span class="stat-label">PNJs</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">

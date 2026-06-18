@@ -12,6 +12,15 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
+
+const statusLabel: Record<string, string> = {
+  ally: 'Aliat',
+  neutral: 'Neutral',
+  active: 'Actiu',
+  defeated: 'Derrotat',
+  unknown: 'Desconegut',
+};
+
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -24,10 +33,10 @@ const base = import.meta.env.BASE_URL;
     { label: entry.data.name, href: `/wiki/characters/${entry.id}` },
   ]}
   metadata={[
-    { label: 'Raça', value: entry.data.race },
-    { label: 'Classe', value: entry.data.class },
-    { label: 'Nivell', value: String(entry.data.level) },
-    { label: 'Jugador', value: entry.data.player },
+    ...(entry.data.role ? [{ label: 'Rol', value: entry.data.role }] : []),
+    ...(entry.data.type ? [{ label: 'Tipus', value: entry.data.type }] : []),
+    ...(entry.data.cr ? [{ label: 'CR', value: entry.data.cr }] : []),
+    { label: 'Estat', value: statusLabel[entry.data.status] },
   ]}
   tags={entry.data.tags}
   showImage={true}
