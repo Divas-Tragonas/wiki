@@ -1,12 +1,12 @@
 ---
 name: "Oriol"
-description: "Nothic ferit que Esperdeny va domesticar a la Mansió de la Cendra."
+description: "Nothic que Esperdeny va domesticar a la Mansió de la Cendra."
 role: "Criatura domesticada"
 status: "unknown"
 tags: ["nothic", "mansio-de-la-cendra"]
 ---
 
-Nothic trobat ferit a l'esquerda dels osgos, a qui Esperdeny va rebatejar "Oriol" i va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces".
+Nothic trobat a l'esquerda de les catacumbes de la Mansió de la Cendra. Jaume III el va batejar com "Oriol", i Esperdeny el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces".
 
 ## Moments destacats
 

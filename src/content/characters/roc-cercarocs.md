@@ -1,12 +1,12 @@
 ---
 name: "Roc Cercarocs"
-description: "Cosí de Yunkerin, captiu a mans d'una tribu de goblins al Castell de la Fumarola."
+description: "Captiu d'una tribu de goblins al Castell de la Fumarola, juntament amb els seus dos germans."
 role: "Captiu"
 status: "unknown"
 tags: ["castell-de-la-fumarola", "captiu"]
 ---
 
-Cosí de Yunkerin i company de clan seu. Continua captiu al Castell de la Fumarola, juntament amb els seus dos germans.
+Captiu al Castell de la Fumarola juntament amb els seus dos germans, a mans d'una tribu de goblins. És cosí llunyà de Yunkerin.
 
 ## Estat actual
 

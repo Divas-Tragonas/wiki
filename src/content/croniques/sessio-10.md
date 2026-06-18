@@ -2,14 +2,14 @@
 title: "La Caiguda de Vara de Vidre"
 session: 10
 date: 2026-06-17
-summary: "El grup s'enfronta a Víctor Trapaire, l'home darrere de Vara de Vidre, en la batalla final per la Mansió de la Cendra."
+summary: "El grup s'enfronta a Víctor Drepaire, l'home darrere de Vara de Vidre, en la batalla final per la Mansió de la Cendra."
 players: ["Carlos", "Enric", "Martí", "Pau", "Eudald"]
 tags: ["boss", "mansio-de-la-cendra", "revelacio"]
 ---
 
 ## Resum
 
-Al despatx secret de la mansió, el grup va trobar Víctor Trapaire —"Vara de Vidre"— cremant pergamins i el va enfrontar en la batalla final per la Mansió de la Cendra.
+Al despatx secret de la mansió, el grup va trobar Víctor Drepaire —"Vara de Vidre"— cremant pergamins i el va enfrontar en la batalla final per la Mansió de la Cendra.
 
 ## Esdeveniments principals
 
@@ -29,4 +29,4 @@ Entre les seves pertinences també hi havia el diari de l'enano Kumonmi, amb ref
 
 ## Estat al final
 
-Víctor Trapaire és mort i els Caps Rojos han quedat desarticulats. El goblin Gota és alliberat i acaba treballant a la taverna de Phentanil. El grup es dirigeix a l'ajuntament per parlar amb Arnau i després a la taverna, on esperen mostrar la bola de vidre de Víctor a la Sor Maria. La propera sessió és el dimecres 1 de juliol.
+Víctor Drepaire és mort i la Baina Roja ha quedat desarticulada. El goblin Gota és alliberat i ara acompanya el grup; han decidit que acabarà treballant a la taverna de Phentanil. El grup es dirigeix a l'ajuntament per parlar amb Arnau i després a la taverna, on esperen mostrar la bola de vidre de Víctor a la Sor Maria. La propera sessió és el dimecres 1 de juliol.

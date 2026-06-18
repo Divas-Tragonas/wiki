@@ -4,18 +4,18 @@ session: 8
 date: 2026-06-03
 summary: "El grup envaeix la Mansió de la Cendra, doma un nothic i s'enfronta a tres osgos enmig de barrils d'aigua electrificada."
 players: ["Carlos", "Enric", "Martí", "Pau", "Eudald"]
-tags: ["combat", "mansio-de-la-cendra", "caps-rojos"]
+tags: ["combat", "mansio-de-la-cendra", "baina-roja"]
 ---
 
 ## Resum
 
-El grup va decidir entrar a la Mansió de la Cendra, el cau dels Caps Rojos a les afores de Phentanil, per acabar amb l'amenaça que la banda representava per al poble.
+El grup va decidir entrar a la Mansió de la Cendra, el cau de la Baina Roja a les afores de Phentanil, per acabar amb l'amenaça que la banda representava per al poble.
 
 ## Esdeveniments principals
 
-A la primera sala, Esperdeny es va trobar amb un nothic ferit a l'esquerda —rebatejat "Oriol"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
+A la primera sala, dins les catacumbes, Esperdeny es va trobar amb un nothic a l'esquerda —que Jaume III va batejar com "Oriol"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
 
-Yunkerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians Caps Rojos —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
+Yunkerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Baina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
 
 Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; Sildar va acabar amb el que quedava i Jaume va partir el tercer amb la destral.
 

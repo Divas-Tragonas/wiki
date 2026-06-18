@@ -10,4 +10,4 @@ Present a la taverna de Phentanil, punt de trobada habitual del grup, on sol ten
 
 ## Moments destacats
 
-- Al final de la sessió 10, el grup es proposa mostrar-li la bola de vidre de Víctor Trapaire.
+- Al final de la sessió 10, el grup es proposa mostrar-li la bola de vidre de Víctor Drepaire.

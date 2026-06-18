@@ -1,12 +1,12 @@
 ---
-name: "Víctor Trapaire (\"Vara de Vidre\")"
+name: "Víctor Drepaire (\"Vara de Vidre\")"
 type: "humanoid"
-description: "El líder real dels Caps Rojos, amagat sota l'àlies de Vara de Vidre fins que el grup el va desemmascarar."
-tags: ["boss", "mag", "caps-rojos"]
+description: "El líder real de la Baina Roja, amagat sota l'àlies de Vara de Vidre fins que el grup el va desemmascarar."
+tags: ["boss", "mag", "baina-roja"]
 status: "defeated"
 ---
 
-Durant sessions els Caps Rojos van semblar actuar sols, però al fons de la Mansió de la Cendra el grup va trobar la veritat: la banda obeïa Víctor Trapaire, conegut entre ells com "Vara de Vidre", que els vigilava des d'una oficina secreta amb l'ajuda d'una bola de vidre.
+Durant sessions la Baina Roja va semblar actuar sola, però al fons de la Mansió de la Cendra el grup va trobar la veritat: la banda obeïa Víctor Drepaire, conegut entre ells com "Vara de Vidre", que els vigilava des d'una oficina secreta amb l'ajuda d'una bola de vidre.
 
 ## L'enfrontament
 
@@ -18,4 +18,4 @@ Del seu cos i despatx es van recuperar 130 monedes d'or i 180 d'argent, una boss
 
 ## Estat actual
 
-Mort a la Mansió de la Cendra a la sessió 10. Amb ell han caigut també els Caps Rojos com a amenaça organitzada a Phentanil.
+Mort a la Mansió de la Cendra a la sessió 10. Amb ell ha caigut també la Baina Roja com a amenaça organitzada a Phentanil.
