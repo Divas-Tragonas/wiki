@@ -6,7 +6,7 @@ status: "unknown"
 tags: ["castell-de-la-fumarola", "captiu"]
 ---
 
-Captiu al Castell de la Fumarola juntament amb els seus dos germans, a mans d'una tribu de goblins. És cosí llunyà de Yunkerin.
+Captiu al Castell de la Fumarola juntament amb els seus dos germans, a mans d'una tribu de goblins. És cosí llunyà de Yunquerin.
 
 ## Estat actual
 

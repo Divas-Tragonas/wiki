@@ -10,7 +10,7 @@ Una mansió mig enrunada a les afores de Phentanil que la Baina Roja havia conve
 ## Zones explorades
 
 - **La sala dels rufians**, on el grup va emboscar quatre membres de la banda —entre ells Carles Kirk.
-- **L'esquerda dels osgos**, a les catacumbes, on vivien tres osgos i el nothic Oriol, batejat per Jaume III i domesticat per Esperdeny.
+- **L'esquerda dels osgos**, a les catacumbes, on vivien tres osgos i el nothic Oriol, batejat per Jaume III i domesticat per Espardeny.
 - **La cripta**, amb sarcòfags d'esquelets coronats; Cigarramic en va decapitar un d'un tret de ballesta.
 - **Els calabossos**, on estava empresonada la família Torrat (Tomàquet, Nas i Suka), alliberada i posada sota la protecció de Sildar.
 - **Les barraques**, incendiades per Liriandor amb Mans Ardents.

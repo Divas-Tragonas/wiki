@@ -13,7 +13,7 @@ Al despatx secret de la mansió, el grup va trobar Víctor Drepaire —"Vara de 
 
 ## Esdeveniments principals
 
-Víctor es va defensar amb un impuls telecinètic i un llamp de gran potència que va deixar Jaume a 0 punts de vida. Cigarramic el va estabilitzar amb una poció just a temps perquè Jaume es tornés a aixecar i li partís el bastó i la cara amb un doble cop de destral de 36 punts de mal —batejat a taula com el "Wild Beyblade". La torxa que Esperdeny va llançar va encendre l'emboirament de Liriandor, provocant una mort en flames digna de cinema.
+Víctor es va defensar amb un impuls telecinètic i un llamp de gran potència que va deixar Jaume a 0 punts de vida. Cigarramic el va estabilitzar amb una poció just a temps perquè Jaume es tornés a aixecar i li partís el bastó i la cara amb un doble cop de destral de 36 punts de mal —batejat a taula com el "Wild Beyblade". La torxa que Espardeny va llançar va encendre l'emboirament de Liriandor, provocant una mort en flames digna de cinema.
 
 ## Descobriments
 
@@ -24,7 +24,7 @@ Entre les seves pertinences també hi havia el diari de l'enano Kumonmi, amb ref
 ## Moments memorables
 
 - El "Wild Beyblade" de Jaume: doble cop de destral de 36 punts de mal que acaba amb Víctor.
-- La mort en flames de Víctor, encesa per la torxa d'Esperdeny sobre l'emboirament de Liriandor.
+- La mort en flames de Víctor, encesa per la torxa d'Espardeny sobre l'emboirament de Liriandor.
 - Liriandor declarant-se "milionari" de coneixement amb el diari de Kumonmi.
 
 ## Estat al final

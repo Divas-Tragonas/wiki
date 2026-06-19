@@ -13,22 +13,22 @@ El grup va decidir entrar a la Mansió de la Cendra, el cau de la Baina Roja a l
 
 ## Esdeveniments principals
 
-A la primera sala, dins les catacumbes, Esperdeny es va trobar amb un nothic a l'esquerda —que Jaume III va batejar com "Oriol"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
+A la primera sala, dins les catacumbes, Espardeny es va trobar amb un nothic a l'esquerda —que Jaume III va batejar com "Oriol"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
 
-Yunkerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Baina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
+Yunquerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Baina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
 
 Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; Sildar va acabar amb el que quedava i Jaume va partir el tercer amb la destral.
 
 ## Descobriments
 
-Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa de vi, armadura de cuir, una ballesta de mà amb virots, racions, una javelina i una maça d'osgo que Yunkerin va aconseguir aixecar amb un 20 natural —descrita pel grup amb una aura digna d'Excalibur. També es va trobar una nota arrugada signada per "Vara de Vidre" que esmentava dos noms encara sense identificar: *la pantera negra* i *el llop blanc*.
+Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa de vi, armadura de cuir, una ballesta de mà amb virots, racions, una javelina i una maça d'osgo que Yunquerin va aconseguir aixecar amb un 20 natural —descrita pel grup amb una aura digna d'Excalibur. També es va trobar una nota arrugada signada per "Vara de Vidre" que esmentava dos noms encara sense identificar: *la pantera negra* i *el llop blanc*.
 
 ## Moments memorables
 
-- Esperdeny domesticant Oriol a còpia de "pis, pis, pis, nueces".
-- El "Leroy Jenkins" de Yunkerin contra la sala de rufians.
+- Espardeny domesticant Oriol a còpia de "pis, pis, pis, nueces".
+- El "Leroy Jenkins" de Yunquerin contra la sala de rufians.
 - El duel a càmera lenta de Cigarramic contra Carles Kirk, resolt amb un 20 natural.
-- Yunkerin aixecant la maça d'osgo entre l'assombrament de tothom.
+- Yunquerin aixecant la maça d'osgo entre l'assombrament de tothom.
 
 ## Estat al final
 

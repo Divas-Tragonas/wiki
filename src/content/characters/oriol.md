@@ -1,12 +1,12 @@
 ---
 name: "Oriol"
-description: "Nothic que Esperdeny va domesticar a la Mansió de la Cendra."
+description: "Nothic que Espardeny va domesticar a la Mansió de la Cendra."
 role: "Criatura domesticada"
 status: "unknown"
 tags: ["nothic", "mansio-de-la-cendra"]
 ---
 
-Nothic trobat a l'esquerda de les catacumbes de la Mansió de la Cendra. Jaume III el va batejar com "Oriol", i Esperdeny el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces".
+Nothic trobat a l'esquerda de les catacumbes de la Mansió de la Cendra. Jaume III el va batejar com "Oriol", i Espardeny el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces".
 
 ## Moments destacats
 
@@ -14,4 +14,4 @@ Nothic trobat a l'esquerda de les catacumbes de la Mansió de la Cendra. Jaume I
 
 ## Estat actual
 
-Es va escapar després de la batalla contra els osgos. Esperdeny encara el recorda amb enyorança.
+Es va escapar després de la batalla contra els osgos. Espardeny encara el recorda amb enyorança.
