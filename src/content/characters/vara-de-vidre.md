@@ -10,7 +10,7 @@ Durant sessions la Baina Roja va semblar actuar sola, però al fons de la Mansi�
 
 ## L'enfrontament
 
-A la sessió 10, el grup el va trobar cremant pergamins al seu despatx. Víctor es va defensar amb un impuls telecinètic i un llamp de gran potència que va deixar Jaume a 0 punts de vida —estabilitzat just a temps per una poció de Cigarramic. Jaume es va tornar a aixecar i el va matar amb un doble cop de destral de 36 punts de mal, mentre la torxa d'Espardeny encenia l'emboirament de Liriandor.
+A la sessió 10, el grup el va trobar cremant pergamins al seu despatx. Víctor es va defensar amb un impuls telecinètic i un llamp de gran potència que va deixar Jaume III a 0 punts de vida —estabilitzat just a temps per una poció de Cigarramic. Jaume III es va tornar a aixecar i el va matar amb un doble cop de destral de 36 punts de mal, mentre la torxa d'Espardeny encenia l'emboirament de Liriandor.
 
 ## Botí
 

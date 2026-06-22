@@ -17,11 +17,11 @@ A la primera sala, dins les catacumbes, Espardeny es va trobar amb un nothic a l
 
 Yunquerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Baina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
 
-Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; Sildar va acabar amb el que quedava i Jaume va partir el tercer amb la destral.
+Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; Sildar va acabar amb el que quedava i Jaume III va partir el tercer amb la destral.
 
 ## Descobriments
 
-Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa de vi, armadura de cuir, una ballesta de mà amb virots, racions, una javelina i una maça d'osgo que Yunquerin va aconseguir aixecar amb un 20 natural —descrita pel grup amb una aura digna d'Excalibur. També es va trobar una nota arrugada signada per "Vara de Vidre" que esmentava dos noms encara sense identificar: *la pantera negra* i *el llop blanc*.
+Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa de vi, armadura de cuir, una ballesta de mà amb virots, racions, una javelina i una maça d'osgo que Yunquerin va aconseguir aixecar amb un 20 natural —descrita pel grup amb una aura digna d'Excalibur. També es va trobar una nota arrugada signada per "[**Vara de Vidre**](/wiki/wiki/characters/vara-de-vidre)" que esmentava dos noms encara sense identificar: *la pantera negra* i *el llop blanc*.
 
 ## Moments memorables
 
