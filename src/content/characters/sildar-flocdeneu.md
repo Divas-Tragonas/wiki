@@ -15,4 +15,4 @@ Antic soldat, ara instal·lat a Phentanil, on s'ha convertit en un aliat de conf
 
 ## Relacions
 
-Coneix tant Jaume com Espardeny d'abans que el grup arribés a Phentanil.
+Coneix tant Jaume III com Espardeny d'abans que el grup arribés a Phentanil.

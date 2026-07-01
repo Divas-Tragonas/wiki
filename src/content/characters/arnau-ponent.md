@@ -1,12 +1,12 @@
 ---
 name: "Arnau Ponent"
-description: "Encarregat de l'ajuntament de Phentanil, on porta els registres del poble."
-role: "Funcionari"
+description: "Alcalde de Phentanil, on porta els registres del poble des de l'ajuntament."
+role: "Alcalde"
 status: "unknown"
 tags: ["phentanil", "ajuntament"]
 ---
 
-Porta els registres de l'ajuntament de Phentanil.
+Alcalde de Phentanil. Porta els registres de l'ajuntament del poble.
 
 ## Moments destacats
 
