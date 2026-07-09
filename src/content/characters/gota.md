@@ -6,7 +6,7 @@ status: "ally"
 tags: ["goblin", "mansio-de-la-cendra"]
 ---
 
-Petit goblin espantat trobat al final de la sessió 8, a qui el grup va decidir perdonar en lloc de matar.
+Petit goblin espantat trobat al final de la sessió 8, a qui el grup va decidir perdonar en lloc de matar. També és conegut com **El Vato con Gota**.
 
 ## Moments destacats
 
@@ -16,7 +16,3 @@ Petit goblin espantat trobat al final de la sessió 8, a qui el grup va decidir 
 ## Estat actual
 
 Acompanya el grup des de la seva alliberació. Han decidit que acabarà treballant a la taverna de Phentanil, encara que de moment no hi ha començat.
-
-## Relacions
-
-Cigarramic el rep amb una abraçada efusiva en retrobar-se'l, cridant "Goblin, Goblin, Goblin" davant la vergonya de tot el grup.

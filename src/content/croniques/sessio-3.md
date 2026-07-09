@@ -19,13 +19,13 @@ El camí passa per un pantà d'aigua sotmesa amb sangoneres i granotes que parle
 
 Quan cauen les últimes granotes, en surten cinquanta més cridant "Venganza!", liderades per un **Rei Granota** vell i cerimoniós dalt d'una cadira de rodes flotant. Els germans es presenten com a "salvadors" i improvisen una cirurgia gens ortodoxa sobre el rei, obligant-lo a escopir un tap de goma que li tenia bloquejada la gola. El rei, agraït, ordena que les granotes curin el grup i el deixin passar. Espardeny és aclamat com a "Llepamembres" i les granotes se n'acomiaden nedant en formació —una d'elles, Mike Kroc, campiona de la Federació Granota, s'allunya fent crol amb dignitat.
 
-Més enllà del pantà s'obre un llac d'aigües groguenques i boira freda que resulten ser alcohol —ratafia madurada, whisky, ron— coronat per una cascada del mateix color. D'entre la boira apareix una gòndola guiada per una figura encaputxada amb túnica negra i un rem llarg: **Canrón**, un barquer mut que només accepta passar viatgers a canvi que li xiuxiuegin la seva por més gran a cau d'orella. Un a un, tots pugen a la barca després de confessar la seva por —Jaume III diu la seva en veu alta: els dracs ferotges. Canrón assenteix amb solemnitat i els fa travessar el llac fins al peu d'un portó de sis metres d'alçada. La porta és mig oberta: algú s'hi ha avançat.
+Més enllà del pantà s'obre un llac d'aigües groguenques i boira freda que resulten ser alcohol —ratafia madurada, whisky, ron— coronat per una cascada del mateix color. D'entre la boira apareix una gòndola guiada per una figura encaputxada amb túnica negra i un rem llarg: **Kanrón**, un barquer mut que només accepta passar viatgers a canvi que li xiuxiuegin la seva por més gran a cau d'orella. Un a un, tots pugen a la barca després de confessar la seva por —Jaume III diu la seva en veu alta. Kanrón assenteix amb solemnitat i els fa travessar el llac fins al peu d'un portó de sis metres d'alçada. La porta és mig oberta: algú s'hi ha avançat.
 
 Dins de l'Alijo, però, no hi ha en Yunquerin. Hi ha un enano pèl-roig assegut a una taula llarga, envoltat de pallassos, focus improvisats i granotes, que es presenta com **Pablo Motos** i obre un debat polític sobre l'estat dels Regnes Oblidats. La sessió es tanca amb el grup mirant, decebut i molt bevut, aquest podcast improvisat que no havien anat a buscar.
 
 ## Descobriments
 
-L'Alijo dels Germans existeix i és a l'altra banda d'un pantà i d'un llac d'alcohol —a l'entorn del Blueprint de Tempestat, en algun lloc del bosc on el grup havia acampat. L'enano que s'hi ha avançat no era en Yunquerin sinó un imitador que es fa dir Pablo Motos. També s'aprèn que la Sor Maria de la taverna de Phentanil és, segons Jaume III, tia seva —afirmació que ell mateix defensa amb visible incomoditat quan els germans hi encaixen que van tenir un rotllo d'una nit amb ella.
+L'Alijo dels Germans existeix i és a l'altra banda d'un pantà i d'un llac d'alcohol —a l'entorn del Blueprint de Tempestat, en algun lloc del bosc on el grup havia acampat. L'enano que s'hi ha avançat no era en Yunquerin sinó un imitador que es fa dir Pablo Motos. També s'aprèn que la Sor Maria de la taverna de Phentanil és, segons Cigarramic, tia seva —afirmació que ell mateix defensa amb visible incomoditat quan els germans hi encaixen que van tenir un rotllo d'una nit amb ella.
 
 ## Moments memorables
 
@@ -34,7 +34,7 @@ L'Alijo dels Germans existeix i és a l'altra banda d'un pantà i d'un llac d'al
 - Liriandor electrificant l'aigua del pantà per segona vegada amb els companys encara dins i deixant Espardeny, Jaume III i ell mateix a zero punts de vida.
 - Espardeny reviscolat exigint que la resta del combat es faci a punys, i tot el grup obeint sense qüestionar-ho.
 - Els germans destapant la màscara del Rei Granota i "curant-lo" amb un mètode de cirurgia inclassificable per fer-li escopir un tap de goma.
-- Jaume III confessant en veu alta a Canrón que la seva por més gran són els dracs ferotges, i Canrón assentint amb la solemnitat d'un ritual antic.
+- Jaume III confessant la seva por més gran en veu alta a Kanrón, i Kanrón assentint amb la solemnitat d'un ritual antic.
 - L'arribada a l'Alijo esperant trobar Yunquerin i trobant, en canvi, un enano pèl-roig que es presenta com Pablo Motos i obre un debat polític improvisat.
 
 ## Estat al final

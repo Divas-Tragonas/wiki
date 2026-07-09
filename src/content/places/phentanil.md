@@ -10,7 +10,7 @@ Phentanil és un poble de mineria amb més ambició que llei. Sense una guàrdia
 ## Llocs d'interès
 
 - **L'ajuntament**, on Arnau porta els registres del poble.
-- **La taverna**, punt de trobada habitual del grup, on la Sor Maria sol tenir notícies fresques.
+- **La taverna El Gegant Dorment**, punt de trobada habitual del grup.
 - La **Mansió de la Cendra**, a les afores, antic cau de la Vaina Roja.
 - El **Santuari de Timora**, a la plaça central, amb una casoleta màgica que emet purpurina quan hi tires monedes.
 - **Casa de Sor Maria**, apartada del carrer principal.
@@ -19,7 +19,7 @@ Phentanil és un poble de mineria amb més ambició que llei. Sense una guàrdia
 ## Gent coneguda
 
 - [**Sildar Flocdeneu**](/wiki/wiki/characters/sildar-flocdeneu) — antic soldat, ara aliat de confiança del grup; els ha promès reconeixement dins l'Aliança dels Lords si neteja l'amenaça del poble.
-- [**Hèlia Tornegrau**](/wiki/wiki/characters/helia-tornegrau) — cambrera de la taverna, propietària de l'Escut del Lleó i ex-Vaina Roja, aliada silenciosa del grup.
+- [**Hèlia Tornegrau**](/wiki/wiki/characters/helia-tornegrau) — propietària de l'armeria l'Escut del Lleó i ex-Vaina Roja, aliada silenciosa del grup.
 
 ## Estat actual
 

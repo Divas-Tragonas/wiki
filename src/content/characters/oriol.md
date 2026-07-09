@@ -14,4 +14,4 @@ Nothic trobat a l'esquerda de les catacumbes de la Mansió de la Cendra. Jaume I
 
 ## Estat actual
 
-Es va escapar després de la batalla contra els osgos. Espardeny encara el recorda amb enyorança.
+Es va escapar després de la batalla contra els osgos. Espardeny i Jaume III el troben a faltar tots dos —especialment Jaume III, que semblava ser qui més el podia controlar.

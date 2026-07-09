@@ -7,7 +7,7 @@ status: "neutral"
 tags: ["phentanil", "vaina-roja"]
 ---
 
-Veí humà de Phentanil, d'uns quaranta anys. Els Vaina Roja el van fer desaparèixer uns dies i el van tornar a portar cremat i ferit al mig del carrer davant de la taverna El Gegant Dorment com a càstig exemplar per no haver pagat la seva "quota de canal".
+Veí humà de Phentanil, d'uns quaranta anys. Els Vaina Roja el van fer desaparèixer uns dies i el van tornar a portar cremat i ferit al mig del carrer davant de la taverna El Gegant Dorment com a càstig exemplar per no haver pogut pagar la quota abusiva dels Vaina Roja.
 
 ## Moments destacats
 

@@ -1,5 +1,5 @@
 ---
-name: "Runes de Cony Berri"
+name: "Runes de Cony Berry"
 type: "ruin"
 description: "Runes al bosc a l'est de Phentanil, on viu Àgata, una elfa maga que respon una sola pregunta."
 tags: ["runes", "agata"]

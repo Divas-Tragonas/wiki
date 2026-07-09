@@ -7,7 +7,7 @@ status: "defeated"
 tags: ["vaina-roja", "phentanil"]
 ---
 
-Humà amb capa vermell granat i armadura de cuir, líder d'una patrulla dels Vaina Roja que fa complir a puny i foc la "quota de canal" imposada als veïns de Phentanil. Té autoritat sobre almenys tres homes armats i coneix Cigarramic de la seva vida anterior amb la banda.
+Humà amb capa vermell granat i armadura de cuir, líder d'una patrulla dels Vaina Roja que fa complir a puny i foc la quota abusiva imposada als veïns de Phentanil. Té autoritat sobre almenys tres homes armats i coneix Cigarramic de la seva vida anterior amb la banda.
 
 ## Moments destacats
 

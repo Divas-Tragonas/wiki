@@ -11,4 +11,4 @@ Vell druida descrit com una mica boig però coneixedor com pocs de la zona al vo
 
 ## Moments destacats
 
-- A la sessió 6, Damià Roqueblanc l'esmenta al grup com a possible font d'informació sobre com arribar al Castell de la Fumarola.
+- A la sessió 6, Damià RoureBlanc l'esmenta al grup com a possible font d'informació sobre com arribar al Castell de la Fumarola.

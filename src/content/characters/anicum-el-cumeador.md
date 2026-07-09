@@ -12,5 +12,6 @@ Mag humà d'aparença llardosa amb entrades pronunciades, també conegut com **A
 ## Moments destacats
 
 - A la sessió 11, al jardí del palau reial, una entitat tenebrosa de quatre potes li ofereix un pacte fosc. Accepta i n'obté màgia negra: raigs abraçadors, bola de foc, invisibilitat i canvi de forma. Els seus ulls i els dels seus companys s'encenen d'un blau desconegut.
+- La màgia negra acaba posseint-lo: AniCum perd el control de si mateix i esdevé un instrument de l'entitat de l'ombra.
 - L'endemà, camuflat entre el poble, llança una bola de foc contra el balcó reial que colpeja [Guifré](/wiki/wiki/characters/guifre-el-pollos) i [Judit](/wiki/wiki/characters/judit-la-pinchos) i inicia oficialment la Gran Guerra del Fentanilo.
 - Al sisè dia de batalla, tot i haver fulminat Guifré amb un llamp de vint-i-vuit punts, cau finalment a mans d'aquest en una segona escomesa.

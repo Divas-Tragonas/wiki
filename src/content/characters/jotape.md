@@ -6,7 +6,7 @@ status: "defeated"
 tags: ["off-topic", "doppelganger", "alijo"]
 ---
 
-Aparició tardana al combat de l'Hormiguero. Es presenta cridant "voy a por ellos" i mostrant un dispositiu màgic que li retorna missatges d'odi constant. Sota l'aparença d'influenciador pèl-roig, era un doppelganger.
+Aparició tardana al combat de l'Hormiguero. Es presenta cridant "Voy a por ello yo, voy a por ello" i mostrant un dispositiu màgic que li retorna missatges d'odi constant. Sota l'aparença d'influenciador pèl-roig, era un doppelganger.
 
 ## Moments destacats
 
