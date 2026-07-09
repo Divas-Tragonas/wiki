@@ -91,4 +91,4 @@ Per activar-ho per primera vegada al repo de GitHub: **Settings → Pages → So
 - El `base` del lloc és `/wiki` (configurat a `astro.config.mjs`). Els links interns han d'usar `import.meta.env.BASE_URL` com a prefix.
 - Els noms de fitxer dels `.md` es converteixen en la URL (p. ex. `lyra-solaris.md` → `/wiki/characters/lyra-solaris`).
 - Si s'afegeix un camp nou als frontmatters, cal actualitzar l'esquema a `src/content.config.ts`.
-- El cercador (`/cerca`) és a `src/pages/cerca.astro`; l'índex JSON es genera al build a `src/pages/cerca.json.ts` a partir de les col·leccions, així que el contingut nou s'hi indexa sol.
+- El cercador és un modal global (`src/components/SearchModal.astro`, obert des del botó de la Navbar o amb Ctrl+K); l'índex JSON es genera al build a `src/pages/cerca.json.ts` a partir de les col·leccions, així que el contingut nou s'hi indexa sol.

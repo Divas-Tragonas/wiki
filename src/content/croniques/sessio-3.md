@@ -25,7 +25,7 @@ Dins de l'Alijo, però, no hi ha en Yunquerin. Hi ha un enano pèl-roig assegut 
 
 ## Descobriments
 
-L'Alijo dels Germans existeix i és a l'altra banda d'un pantà i d'un llac d'alcohol —a l'entorn del Blueprint de Tempestat, en algun lloc del bosc on el grup havia acampat. L'enano que s'hi ha avançat no era en Yunquerin sinó un imitador que es fa dir Pablo Motos. També s'aprèn que la Sor Maria de la taverna de Phentanil és, segons Cigarramic, tia seva —afirmació que ell mateix defensa amb visible incomoditat quan els germans hi encaixen que van tenir un rotllo d'una nit amb ella.
+L'Alijo dels Germans existeix i és a l'altra banda d'un pantà i d'un llac d'alcohol. L'enano que s'hi ha avançat no era en Yunquerin sinó un imitador que es fa dir Pablo Motos. També s'aprèn que la Sor Maria de la taverna de Phentanil és, segons Cigarramic, tia seva —afirmació que ell mateix defensa amb visible incomoditat quan els germans hi encaixen que van tenir un rotllo d'una nit amb ella.
 
 ## Moments memorables
 

@@ -1,14 +1,8 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Cerca" description="Cerca de paraules clau a la wiki de La Mina Perduda del Phentanilo">
-  <div class="search-container">
-    <div class="search-header">
-      <h1 class="search-title">Cerca</h1>
-      <p class="search-desc">Busca paraules clau entre personatges, llocs i cròniques.</p>
-    </div>
-
+<div class="search-overlay" id="search-overlay" hidden>
+  <div class="search-panel" role="dialog" aria-modal="true" aria-label="Cerca">
     <div class="search-box">
       <span class="search-icon" aria-hidden="true">🔍</span>
       <input
@@ -16,14 +10,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         id="search-input"
         placeholder="Escriu una paraula clau… (p. ex. Kanrón, hidromel, Vaina Roja)"
         autocomplete="off"
-        autofocus
       />
+      <button type="button" class="search-close" id="search-close" aria-label="Tanca la cerca">✕</button>
     </div>
-
     <p class="search-status" id="search-status" aria-live="polite"></p>
     <div class="search-results" id="search-results"></div>
   </div>
-</BaseLayout>
+</div>
 
 <script>
   interface Item {
@@ -43,6 +36,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     nBody: string;
   }
 
+  const overlay = document.getElementById('search-overlay')!;
   const input = document.getElementById('search-input') as HTMLInputElement;
   const statusEl = document.getElementById('search-status')!;
   const resultsEl = document.getElementById('search-results')!;
@@ -188,62 +182,79 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       .join('');
   }
 
+  function openSearch() {
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    loadIndex();
+    input.focus();
+    input.select();
+  }
+
+  function closeSearch() {
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('[data-search-open]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSearch();
+    });
+  });
+
+  document.getElementById('search-close')!.addEventListener('click', closeSearch);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSearch();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) closeSearch();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (overlay.hidden) openSearch();
+      else closeSearch();
+    }
+  });
+
   let timer: ReturnType<typeof setTimeout>;
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      const q = input.value;
-      const url = new URL(window.location.href);
-      if (q.trim()) url.searchParams.set('q', q.trim());
-      else url.searchParams.delete('q');
-      history.replaceState(null, '', url);
-      search(q);
-    }, 150);
+    timer = setTimeout(() => search(input.value), 150);
   });
-
-  const initial = new URLSearchParams(window.location.search).get('q');
-  if (initial) {
-    input.value = initial;
-    search(initial);
-  }
 </script>
 
 <style>
-  .search-container {
-    max-width: 48rem;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-    min-height: 60vh;
+  .search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background-color: rgba(5, 6, 9, 0.75);
+    backdrop-filter: blur(3px);
+    padding: 10vh 1rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
   }
-  .search-header {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #252932;
-    padding-bottom: 1.5rem;
-  }
-  .search-title {
-    font-family: 'Cinzel', serif;
-    font-size: 2.25rem;
-    color: #e8c56a;
-    margin: 0 0 0.5rem 0;
-  }
-  .search-desc {
-    color: #d4c9a8;
-    opacity: 0.6;
-    font-size: 1rem;
-    margin: 0;
+  .search-panel {
+    width: 100%;
+    max-width: 42rem;
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #0f1218;
+    border: 1px solid #2f3542;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
   }
   .search-box {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    background-color: #12151c;
-    border: 1px solid #252932;
-    border-radius: 0.5rem;
-    padding: 0.75rem 1rem;
-    transition: border-color 0.2s;
-  }
-  .search-box:focus-within {
-    border-color: #c9a84c;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #252932;
+    flex-shrink: 0;
   }
   .search-icon {
     opacity: 0.6;
@@ -261,24 +272,48 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: #d4c9a8;
     opacity: 0.35;
   }
+  .search-close {
+    background: transparent;
+    border: none;
+    color: #d4c9a8;
+    opacity: 0.5;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    border-radius: 0.25rem;
+    transition: opacity 0.2s, background-color 0.2s;
+  }
+  .search-close:hover {
+    opacity: 1;
+    background-color: rgba(212, 201, 168, 0.1);
+  }
   .search-status {
     color: #d4c9a8;
     opacity: 0.6;
-    font-size: 0.875rem;
-    margin: 1.25rem 0 1rem;
-    min-height: 1.25rem;
+    font-size: 0.8rem;
+    margin: 0;
+    padding: 0.6rem 1rem 0;
+    flex-shrink: 0;
+  }
+  .search-status:empty {
+    display: none;
   }
   .search-results {
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem 1rem;
+  }
+  .search-results:empty {
+    padding: 0;
   }
   .search-results :global(.result-card) {
     display: block;
     background-color: #12151c;
     border: 1px solid #252932;
     border-radius: 0.5rem;
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1rem;
     text-decoration: none;
     transition: border-color 0.2s, background-color 0.2s;
   }
@@ -291,11 +326,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.3rem;
   }
   .search-results :global(.result-title) {
     font-family: 'Cinzel', serif;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #e8c56a;
   }
@@ -313,7 +348,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .search-results :global(.result-snippet) {
     color: #d4c9a8;
     opacity: 0.75;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     line-height: 1.5;
     margin: 0;
   }
@@ -321,7 +356,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
-    margin-top: 0.6rem;
+    margin-top: 0.5rem;
   }
   .search-results :global(.result-tag) {
     background-color: rgba(212, 201, 168, 0.08);

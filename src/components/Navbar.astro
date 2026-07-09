@@ -23,9 +23,9 @@ function isActive(path: string) {
       <a href={`${base}/croniques`} class:list={["nav-link", { active: isActive('/croniques') }]}>
         Cròniques
       </a>
-      <a href={`${base}/cerca`} class:list={["nav-link", { active: isActive('/cerca') }]} title="Cerca">
+      <button type="button" class="nav-link nav-search-btn" data-search-open title="Cerca (Ctrl+K)">
         🔍 Cerca
-      </a>
+      </button>
     </div>
   </div>
 </nav>
@@ -82,5 +82,12 @@ function isActive(path: string) {
     opacity: 1;
     border-bottom: 2px solid #c9a84c;
     padding-bottom: 2px;
+  }
+  .nav-search-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
   }
 </style>
