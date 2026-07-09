@@ -1,12 +1,12 @@
 ---
-name: "Baina Roja"
+name: "Vaina Roja"
 type: "faction"
 description: "Banda de bandits que extorsionava Phentanil des de la Mansió de la Cendra, ara desarticulada."
 tags: ["facció", "bandits", "phentanil"]
 status: "defeated"
 ---
 
-Coneguts pel poble com les "Baines Roges" per les capes vermelles que duien els seus membres, la Baina Roja va controlar Phentanil durant mesos a base d'intimidació i extorsió, operant des de la Mansió de la Cendra.
+Coneguts pel poble com les "Vaines Roges" per les capes vermelles que duien els seus membres, la Vaina Roja va controlar Phentanil durant mesos a base d'intimidació i extorsió, operant des de la Mansió de la Cendra.
 
 ## Estructura
 
@@ -20,4 +20,4 @@ Cigarramic va formar part de la banda abans que Carles Kirk el deixés mal vist 
 
 ## Estat actual
 
-Amb el seu líder mort i el seu cau completament saquejat, la Baina Roja ha quedat desarticulada a Phentanil.
+Amb el seu líder mort i el seu cau completament saquejat, la Vaina Roja ha quedat desarticulada a Phentanil.

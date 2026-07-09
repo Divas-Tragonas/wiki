@@ -1,23 +1,23 @@
 ---
-title: "L'Assalt a la Mansió de la Cendra"
+title: "VARA DE VIDRE"
 session: 8
-date: 2026-06-03
+date: 2026-05-19
 summary: "El grup envaeix la Mansió de la Cendra, doma un nothic i s'enfronta a tres osgos enmig de barrils d'aigua electrificada."
 players: ["Carlos", "Enric", "Martí", "Pau", "Eudald"]
-tags: ["combat", "mansio-de-la-cendra", "baina-roja"]
+tags: ["combat", "mansio-de-la-cendra", "vaina-roja"]
 ---
 
 ## Resum
 
-El grup va decidir entrar a la Mansió de la Cendra, el cau de la Baina Roja a les afores de Phentanil, per acabar amb l'amenaça que la banda representava per al poble.
+El grup va decidir entrar a la [Mansió de la Cendra](/wiki/wiki/places/mansio-de-la-cendra), el cau de la [Vaina Roja](/wiki/wiki/characters/vaina-roja) a les afores de [Phentanil](/wiki/wiki/places/phentanil), per acabar amb l'amenaça que la banda representava per al poble.
 
 ## Esdeveniments principals
 
-A la primera sala, dins les catacumbes, Espardeny es va trobar amb un nothic a l'esquerda —que Jaume III va batejar com "Oriol"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
+A la primera sala, dins les catacumbes, Espardeny es va trobar amb un nothic a l'esquerda —que Jaume III va batejar com "[Oriol](/wiki/wiki/characters/oriol)"— i el va domesticar oferint-li racions de menjar mentre repetia "pis, pis, pis, nueces" fins que la criatura va acceptar el tracte.
 
-Yunquerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Baina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar Carles Kirk, un dels traïdors, en un duel cinematogràfic amb un 20 natural.
+Yunquerin va forçar el grup a llançar-se sense pla contra la sala on descansaven quatre rufians de la Vaina Roja —un "Leroy Jenkins" en tota regla. Cigarramic va obrir el combat amb una fletxa en flames i va rematar [Carles Kirk](/wiki/wiki/characters/carles-kirk), un dels traïdors, en un duel cinematogràfic amb un 20 natural.
 
-Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; Sildar va acabar amb el que quedava i Jaume III va partir el tercer amb la destral.
+Més endavant, tres osgos van sortir al pas del grup. Liriandor va electrocutar l'aigua d'un barril bolcat per fer mal a un d'ells; Oriol, ja domesticat, es va menjar els altres dos sencers; [Sildar](/wiki/wiki/characters/sildar-flocdeneu) va acabar amb el que quedava i Jaume III va partir el tercer amb la destral.
 
 ## Descobriments
 
@@ -32,4 +32,4 @@ Entre el botí del cau hi havia 14 monedes d'or, una daga, un clauer, una bossa 
 
 ## Estat al final
 
-La sala de rufians i l'esquerda dels osgos estan netejades. Al final de la sessió apareix un petit goblin espantat —Gota— que el grup decideix perdonar.
+La sala de rufians i l'esquerda dels osgos estan netejades. Al final de la sessió apareix un petit goblin espantat —[Gota](/wiki/wiki/characters/gota)— que el grup decideix perdonar.

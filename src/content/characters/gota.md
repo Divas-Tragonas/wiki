@@ -11,7 +11,7 @@ Petit goblin espantat trobat al final de la sessió 8, a qui el grup va decidir 
 ## Moments destacats
 
 - A la sessió 9, fa de guia forçós del grup per la Mansió de la Cendra i, per precaució, és tancat en un cofre durant un tram del trajecte.
-- A la sessió 10, un cop morts Víctor Drepaire i desarticulada la Baina Roja, és alliberat definitivament.
+- A la sessió 10, un cop morts Víctor Drepaire i desarticulada la Vaina Roja, és alliberat definitivament.
 
 ## Estat actual
 

@@ -3,11 +3,13 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Card from '../../../components/Card.astro';
 import { getCollection } from 'astro:content';
 
-const characters = await getCollection('characters');
+const allCharacters = await getCollection('characters');
+const players = allCharacters.filter(c => c.data.pc);
+const characters = allCharacters.filter(c => !c.data.pc);
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="Personatges" description="Els PNJs i enemics de La Mina Perduda del Phentanilo">
+<BaseLayout title="Personatges" description="Els personatges jugadors, PNJs, enemics i faccions de La Mina Perduda del Phentanilo">
   <div class="page-container">
     <nav class="breadcrumb">
       <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
@@ -17,19 +19,50 @@ const base = import.meta.env.BASE_URL;
 
     <div class="page-header">
       <h1 class="page-title">Personatges</h1>
-      <p class="page-desc">Els PNJs, enemics i faccions que el grup ha conegut pel camí.</p>
+      <p class="page-desc">Els personatges jugadors, PNJs, enemics i faccions de la campanya.</p>
     </div>
 
-    <div class="cards-grid">
-      {characters.map(char => (
-        <Card
-          title={char.data.name}
-          description={char.data.description}
-          href={`${base}/wiki/characters/${char.id}`}
-          tags={char.data.tags}
-        />
-      ))}
-    </div>
+    {players.length > 0 && (
+      <section class="chars-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="section-icon">⚔️</span>
+            <h2 class="section-title">Personatges jugadors</h2>
+            <span class="section-count">{players.length}</span>
+          </div>
+        </div>
+        <div class="cards-grid">
+          {players.map(pc => (
+            <Card
+              title={pc.data.name}
+              description={pc.data.description}
+              href={`${base}/wiki/characters/${pc.id}`}
+              tags={pc.data.tags}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section class="chars-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-icon">🧑</span>
+          <h2 class="section-title">PNJs, enemics i faccions</h2>
+          <span class="section-count">{characters.length}</span>
+        </div>
+      </div>
+      <div class="cards-grid">
+        {characters.map(char => (
+          <Card
+            title={char.data.name}
+            description={char.data.description}
+            href={`${base}/wiki/characters/${char.id}`}
+            tags={char.data.tags}
+          />
+        ))}
+      </div>
+    </section>
   </div>
 </BaseLayout>
 
@@ -70,6 +103,38 @@ const base = import.meta.env.BASE_URL;
     color: #d4c9a8;
     opacity: 0.6;
     margin: 0;
+  }
+  .chars-section {
+    margin-bottom: 2.5rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .section-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-icon {
+    font-size: 1.1rem;
+  }
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.25rem;
+    color: #e8c56a;
+    margin: 0;
+  }
+  .section-count {
+    background-color: rgba(201, 168, 76, 0.15);
+    color: #c9a84c;
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    font-weight: 600;
   }
   .cards-grid {
     display: grid;

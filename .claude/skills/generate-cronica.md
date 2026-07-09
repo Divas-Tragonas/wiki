@@ -40,9 +40,13 @@ Usar el prompt de generació de més avall amb:
 1. La transcripció completa
 2. El resum del context de la wiki (personatges actius, llocs, fils pendents de l'última sessió)
 
-### Pas 5 — Identificar entitats noves per a la wiki
+### Pas 5 — Identificar entitats noves i modificacions per a la wiki
 
-Abans d'escriure res, revisar la transcripció i comparar-la amb els fitxers de `characters/` i `places/` ja existents. Detectar:
+Abans d'escriure res, revisar la transcripció i comparar-la amb els fitxers de `characters/` i `places/` ja existents.
+
+#### 5a. Entitats noves
+
+Detectar:
 
 - **PNJs nous**: personatges amb nom propi que interactuen amb el grup i no existeixen a `characters/`.
 - **Llocs nous**: llocs visitats o esmentats que no existeixen a `places/`.
@@ -76,11 +80,40 @@ Contingut breu basat en el que apareix a la transcripció.
 
 Presentar les fitxes proposades a l'usuari i esperar confirmació o correccions **abans** d'escriure cap fitxer. L'usuari pot aprovar-les tal qual, modificar-les o descartar-les.
 
+#### 5b. Modificacions a entitats existents (només afegits)
+
+La crònica és un registre narratiu, però certs **canvis permanents al món** s'han de reflectir també a la fitxa de l'entitat afectada perquè condicionaran com apareixerà a futures sessions. Detectar durant la sessió:
+
+- Un PNJ **mor, queda derrotat, es rendeix o desapareix definitivament** (canvi de `status` a `defeated`).
+- Un PNJ passa a ser **aliat permanent** del grup o **enemic declarat** (canvi de `status` a `ally` / `active`).
+- Un lloc queda **destruït, cremat, abandonat, alliberat o ocupat per una nova facció**.
+- Una facció es **desarticula, canvia de lideratge o es fusiona** amb una altra.
+- **Transformació física** del PNJ o lloc, canvi de nom públic, o revelació de la seva veritable identitat.
+
+**Regles fonamentals:**
+
+1. **Només afegir, mai reescriure ni esborrar.** Tot el text i el frontmatter existent queda intacte. Els canvis vàlids són:
+   - Afegir un bullet nou al final d'una llista existent (p. ex. `## Moments destacats`).
+   - Afegir una secció nova al final del fitxer, sempre precedida per un títol amb la referència de sessió: `## Després de la sessió N` o `## Sessió N — [event breu]`. Exemple: *"A la sessió 11, [PNJ] es transforma permanentment en un lich després del ritual al Pacte del Fentanilo. Manté el record de les seves aliances però ja no pot sortir al sol."*
+   - Actualitzar el camp `status` del frontmatter si l'estat de l'entitat canvia (ally / neutral / active / defeated / unknown).
+   - **Afegir hipervincles a mencions existents** d'entitats que ara tenen fitxa pròpia. Consisteix a embolcallar el nom canònic en un enllaç Markdown (`[**Nom**](/wiki/wiki/characters/slug)` o `.../places/slug`) sense modificar el text del voltant. Aquesta operació NO es considera reescriptura. Sempre que es crea una fitxa nova, cal revisar les mencions al seu nom en altres fitxes ja existents i vincular-les. També és vàlid actualitzar la descripció d'un bullet de menció (p. ex. a `## Gent coneguda` d'un lloc) si la descripció antiga ha quedat obsoleta pel que ara sabem del personatge —però només aquest bullet, no la prosa lliure.
+2. **No tocar `name`, `description`, `role`, `type`, `tags`, `image`.** Aquestes són la identitat editorial de l'entitat. Si el canvi és tan gros que la descripció actual ja no és certa, proposar-ho explícitament a l'usuari; no fer-ho unilateralment.
+3. **Res inventat.** Només reflectir canvis que consten **explícitament** a la transcripció. Un PNJ que apareix i actua però no canvia d'estat no requereix cap modificació.
+4. **Mai modificar fitxers de PCs** (frontmatter amb `pc: true`). Els jugadors mantenen les seves fitxes fora de la wiki (vegeu CLAUDE.md).
+
+**Format de proposta:** per cada modificació proposada, mostrar a l'usuari:
+- El fitxer afectat (p. ex. `src/content/characters/vara-de-vidre.md`).
+- El canvi de `status` proposat, si escau (p. ex. `active → defeated`).
+- El text a afegir (paràgraf o bullet), amb el lloc on s'inserirà (final del fitxer / final de la secció X).
+
+Esperar aprovació **abans** d'editar res.
+
 ### Pas 6 — Escriure els fitxers
 
 Amb l'aprovació de l'usuari, escriure en aquest ordre:
-1. Els fitxers nous de `characters/` i/o `places/` aprovats.
-2. La crònica a `src/content/croniques/sessio-N.md`.
+1. Els fitxers nous de `characters/` i/o `places/` aprovats (Pas 5a).
+2. Les modificacions a fitxers existents aprovades (Pas 5b). Usar `Edit` per afegir contingut; **mai** `Write` sobre un fitxer existent (sobreescriuria tot). Actualitzar el camp `status` del frontmatter si escau.
+3. La crònica a `src/content/croniques/sessio-N.md`.
 
 ---
 
@@ -160,6 +193,7 @@ La teva tasca és generar una **crònica estructurada en català** per a la wiki
 
 ## Notes finals
 
-- No modificar fitxers **existents** de `characters/` ni de `places/`. La crònica és un registre narratiu, no una actualització de l'estat del món. Les fitxes noves sí que es poden crear (Pas 5).
-- Si la transcripció conté spoilers del DM (coses que els jugadors no saben), ometre-los de la crònica.
-- Mostrar la crònica i les fitxes proposades a l'usuari i esperar aprovació **abans** d'escriure cap fitxer.
+- Les modificacions a fitxers existents de `characters/` i `places/` estan permeses **només** com a **afegits** (Pas 5b): nous bullets, seccions noves al final del fitxer o actualització del camp `status`. **Mai** reescriure, resumir ni esborrar prosa existent —tot el que ja hi ha queda intacte.
+- **No modificar mai** fitxers amb `pc: true` (personatges jugadors). Cada jugador manté la seva fitxa fora de la wiki.
+- Si la transcripció conté spoilers del DM (coses que els jugadors no saben), ometre-los tant de la crònica com de qualsevol modificació a fitxes.
+- Mostrar la crònica, les fitxes proposades (Pas 5a) i les modificacions proposades (Pas 5b) a l'usuari i esperar aprovació **abans** d'escriure cap fitxer.

@@ -3,25 +3,49 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import Card from '../../components/Card.astro';
 import { getCollection } from 'astro:content';
 
-const characters = await getCollection('characters');
+const allCharacters = await getCollection('characters');
 const places = await getCollection('places');
+
+const players = allCharacters.filter(c => c.data.pc);
+const characters = allCharacters.filter(c => !c.data.pc);
 
 const base = import.meta.env.BASE_URL;
 
 const CHAR_BATCH = 6;
-const CHAR_PREVIEW = 3;
 const charsVisible = characters.slice(0, CHAR_BATCH);
-const charsPreview = characters.slice(CHAR_BATCH, CHAR_BATCH + CHAR_PREVIEW);
-const charsPool = characters.slice(CHAR_BATCH + CHAR_PREVIEW);
-const charsHasMore = characters.length > CHAR_BATCH;
+const charsHidden = characters.slice(CHAR_BATCH);
+const charsHasMore = charsHidden.length > 0;
 ---
 
 <BaseLayout title="Wiki" description="Personatges i llocs de La Mina Perduda del Phentanilo">
   <div class="wiki-container">
     <div class="wiki-header">
       <h1 class="wiki-title">Wiki</h1>
-      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges i llocs.</p>
+      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges jugadors, PNJs i llocs.</p>
     </div>
+
+    <!-- Players -->
+    {players.length > 0 && (
+      <section class="wiki-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="section-icon">⚔️</span>
+            <h2 class="section-title">Personatges jugadors</h2>
+            <span class="section-count">{players.length}</span>
+          </div>
+        </div>
+        <div class="cards-grid">
+          {players.map(pc => (
+            <Card
+              title={pc.data.name}
+              description={pc.data.description}
+              href={`${base}/wiki/characters/${pc.id}`}
+              tags={pc.data.tags.slice(0, 2)}
+            />
+          ))}
+        </div>
+      </section>
+    )}
 
     <!-- Characters -->
     <section class="wiki-section">
@@ -42,10 +66,10 @@ const charsHasMore = characters.length > CHAR_BATCH;
           />
         ))}
       </div>
-      {charsPreview.length > 0 && (
-        <div class="preview-wrap" id="chars-preview-wrap">
-          <div class="cards-grid" id="chars-preview">
-            {charsPreview.map(char => (
+      {charsHasMore && (
+        <>
+          <div class="cards-grid chars-hidden" id="chars-hidden">
+            {charsHidden.map(char => (
               <Card
                 title={char.data.name}
                 description={char.data.description}
@@ -54,53 +78,20 @@ const charsHasMore = characters.length > CHAR_BATCH;
               />
             ))}
           </div>
-        </div>
-      )}
-      <div class="cards-grid" id="chars-pool">
-        {charsPool.map(char => (
-          <Card
-            title={char.data.name}
-            description={char.data.description}
-            href={`${base}/wiki/characters/${char.id}`}
-            tags={char.data.tags.slice(0, 2)}
-          />
-        ))}
-      </div>
-      {charsHasMore && (
-        <button type="button" class="load-more-btn" id="chars-load-more">
-          <span aria-hidden="true">+</span> Carrega'n més
-        </button>
+          <button type="button" class="load-more-btn" id="chars-load-more">
+            <span aria-hidden="true">+</span> Mostra'ls tots ({characters.length})
+          </button>
+        </>
       )}
     </section>
 
     <script>
       const btn = document.getElementById('chars-load-more');
-      if (btn) {
-        const BATCH = 6;
-        const visibleGrid = document.getElementById('chars-visible')!;
-        const previewWrap = document.getElementById('chars-preview-wrap')!;
-        const previewGrid = document.getElementById('chars-preview')!;
-        const pool = document.getElementById('chars-pool')!;
-
+      const hidden = document.getElementById('chars-hidden');
+      if (btn && hidden) {
         btn.addEventListener('click', () => {
-          let revealed = 0;
-          while (previewGrid.firstChild && revealed < BATCH) {
-            visibleGrid.appendChild(previewGrid.firstChild);
-            revealed++;
-          }
-          while (revealed < BATCH && pool.firstChild) {
-            visibleGrid.appendChild(pool.firstChild);
-            revealed++;
-          }
-          while (previewGrid.children.length < 3 && pool.firstChild) {
-            previewGrid.appendChild(pool.firstChild);
-          }
-          if (!previewGrid.firstChild) {
-            previewWrap.style.display = 'none';
-          }
-          if (!pool.firstChild && !previewGrid.firstChild) {
-            btn.style.display = 'none';
-          }
+          hidden.classList.add('is-revealed');
+          btn.style.display = 'none';
         });
       }
     </script>
@@ -204,25 +195,12 @@ const charsHasMore = characters.length > CHAR_BATCH;
   @media (max-width: 480px) {
     .cards-grid { grid-template-columns: 1fr; }
   }
-  .preview-wrap {
-    position: relative;
-    max-height: 6.5rem;
-    overflow: hidden;
+  .chars-hidden {
+    display: none;
     margin-top: 1rem;
   }
-  .preview-wrap .cards-grid {
-    filter: blur(2px);
-    pointer-events: none;
-    user-select: none;
-  }
-  .preview-wrap::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, transparent 0%, #0f1117 95%);
-  }
-  #chars-pool {
-    display: none;
+  .chars-hidden.is-revealed {
+    display: grid;
   }
   .load-more-btn {
     display: flex;

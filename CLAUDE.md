@@ -25,7 +25,7 @@ src/
 └── components/          # Navbar, Card, TagBadge, Footer
 ```
 
-Els personatges jugadors (els del grup) no es documenten a la wiki: cadascú té la seva pròpia fitxa fora d'aquí. La col·lecció `characters` només inclou PNJs, enemics i faccions amb qui el grup interactua.
+La col·lecció `characters` inclou PNJs, enemics, faccions **i els personatges jugadors del grup**. Els PCs es guarden amb informació mínima (només frontmatter identificatiu: `pc: true`, `player`, `race`, `pcClass`, `level`) perquè cada jugador conserva la seva fitxa detallada fora d'aquesta wiki i el grup manté una imatge pròpia de cada company. No hi afegeixis biografies, trasfons ni "moments destacats" —la wiki és un registre narratiu, no una fitxa de personatge.
 
 ## Afegir contingut nou
 

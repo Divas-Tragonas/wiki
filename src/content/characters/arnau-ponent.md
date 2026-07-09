@@ -10,4 +10,4 @@ Alcalde de Phentanil. Porta els registres de l'ajuntament del poble.
 
 ## Moments destacats
 
-- A la sessió 10, el grup hi va a parlar amb ell després de la caiguda de Víctor Drepaire i la Baina Roja.
+- A la sessió 10, el grup hi va a parlar amb ell després de la caiguda de Víctor Drepaire i la Vaina Roja.

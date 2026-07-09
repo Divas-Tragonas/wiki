@@ -12,6 +12,11 @@ const characters = defineCollection({
     status: z.enum(['ally', 'neutral', 'active', 'defeated', 'unknown']).default('unknown'),
     tags: z.array(z.string()).default([]),
     image: z.string().optional(),
+    pc: z.boolean().default(false),
+    player: z.string().optional(),
+    race: z.string().optional(),
+    pcClass: z.string().optional(),
+    level: z.number().optional(),
   }),
 });
 
