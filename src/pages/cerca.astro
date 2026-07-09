@@ -1,0 +1,340 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Cerca" description="Cerca de paraules clau a la wiki de La Mina Perduda del Phentanilo">
+  <div class="search-container">
+    <div class="search-header">
+      <h1 class="search-title">Cerca</h1>
+      <p class="search-desc">Busca paraules clau entre personatges, llocs i cròniques.</p>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input
+        type="search"
+        id="search-input"
+        placeholder="Escriu una paraula clau… (p. ex. Kanrón, hidromel, Vaina Roja)"
+        autocomplete="off"
+        autofocus
+      />
+    </div>
+
+    <p class="search-status" id="search-status" aria-live="polite"></p>
+    <div class="search-results" id="search-results"></div>
+  </div>
+</BaseLayout>
+
+<script>
+  interface Item {
+    title: string;
+    description: string;
+    section: string;
+    url: string;
+    tags: string[];
+    extra: string;
+    body: string;
+  }
+  interface Indexed extends Item {
+    nTitle: string;
+    nDesc: string;
+    nTags: string;
+    nExtra: string;
+    nBody: string;
+  }
+
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const statusEl = document.getElementById('search-status')!;
+  const resultsEl = document.getElementById('search-results')!;
+
+  // Normalització sense accents perquè "canro" trobi "Kanrón".
+  const norm = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const esc = (s: string) =>
+    s.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+    );
+
+  // Marca les coincidències dins d'un text, ignorant accents i majúscules.
+  function highlight(text: string, tokens: string[]): string {
+    const chars = [...text];
+    const nText = chars.map((ch) => norm(ch) || ch).join('');
+    const ranges: [number, number][] = [];
+    for (const t of tokens) {
+      let i = 0;
+      while ((i = nText.indexOf(t, i)) !== -1) {
+        ranges.push([i, i + t.length]);
+        i += t.length;
+      }
+    }
+    if (!ranges.length) return esc(text);
+    ranges.sort((a, b) => a[0] - b[0]);
+    const merged: [number, number][] = [];
+    for (const r of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+      else merged.push([r[0], r[1]]);
+    }
+    let out = '';
+    let pos = 0;
+    for (const [s, e] of merged) {
+      out +=
+        esc(chars.slice(pos, s).join('')) +
+        '<mark>' +
+        esc(chars.slice(s, e).join('')) +
+        '</mark>';
+      pos = e;
+    }
+    return out + esc(chars.slice(pos).join(''));
+  }
+
+  // Fragment del cos al voltant de la primera coincidència.
+  function snippet(item: Indexed, tokens: string[]): string {
+    let idx = -1;
+    for (const t of tokens) {
+      const i = item.nBody.indexOf(t);
+      if (i !== -1 && (idx === -1 || i < idx)) idx = i;
+    }
+    if (idx === -1) return highlight(item.description, tokens);
+    const chars = [...item.body];
+    const start = Math.max(0, idx - 60);
+    const end = Math.min(chars.length, idx + 140);
+    const text =
+      (start > 0 ? '…' : '') +
+      chars.slice(start, end).join('').trim() +
+      (end < chars.length ? '…' : '');
+    return highlight(text, tokens);
+  }
+
+  function score(item: Indexed, tokens: string[]): number {
+    let total = 0;
+    for (const t of tokens) {
+      let s = 0;
+      if (item.nTitle === t) s += 30;
+      else if (item.nTitle.startsWith(t)) s += 16;
+      else if (item.nTitle.includes(t)) s += 12;
+      if (item.nTags.includes(t)) s += 8;
+      if (item.nExtra.includes(t)) s += 6;
+      if (item.nDesc.includes(t)) s += 4;
+      if (item.nBody.includes(t)) {
+        let count = 0;
+        let i = 0;
+        while ((i = item.nBody.indexOf(t, i)) !== -1 && count < 5) {
+          count++;
+          i += t.length;
+        }
+        s += 1 + count;
+      }
+      if (s === 0) return 0; // cada paraula ha d'aparèixer en algun camp
+      total += s;
+    }
+    return total;
+  }
+
+  let indexed: Indexed[] | null = null;
+  async function loadIndex(): Promise<Indexed[]> {
+    if (indexed) return indexed;
+    const res = await fetch(`${import.meta.env.BASE_URL}/cerca.json`);
+    const data: Item[] = await res.json();
+    indexed = data.map((it) => ({
+      ...it,
+      nTitle: norm(it.title),
+      nDesc: norm(it.description),
+      nTags: norm(it.tags.join(' ')),
+      nExtra: norm(it.extra),
+      nBody: norm(it.body),
+    }));
+    return indexed;
+  }
+
+  async function search(query: string) {
+    const tokens = norm(query).split(/\s+/).filter((t) => t.length >= 2);
+    if (!tokens.length) {
+      statusEl.textContent = '';
+      resultsEl.innerHTML = '';
+      return;
+    }
+    const items = await loadIndex();
+    const results = items
+      .map((item) => ({ item, s: score(item, tokens) }))
+      .filter((r) => r.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 50);
+
+    statusEl.textContent = results.length
+      ? `${results.length} resultat${results.length === 1 ? '' : 's'} per a «${query.trim()}»`
+      : `Cap resultat per a «${query.trim()}»`;
+
+    resultsEl.innerHTML = results
+      .map(
+        ({ item }) => `
+        <a href="${esc(item.url)}" class="result-card">
+          <div class="result-top">
+            <span class="result-title">${highlight(item.title, tokens)}</span>
+            <span class="result-section">${esc(item.section)}</span>
+          </div>
+          <p class="result-snippet">${snippet(item, tokens)}</p>
+          ${
+            item.tags.length
+              ? `<div class="result-tags">${item.tags
+                  .slice(0, 4)
+                  .map((tag) => `<span class="result-tag">${highlight(tag, tokens)}</span>`)
+                  .join('')}</div>`
+              : ''
+          }
+        </a>`,
+      )
+      .join('');
+  }
+
+  let timer: ReturnType<typeof setTimeout>;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const q = input.value;
+      const url = new URL(window.location.href);
+      if (q.trim()) url.searchParams.set('q', q.trim());
+      else url.searchParams.delete('q');
+      history.replaceState(null, '', url);
+      search(q);
+    }, 150);
+  });
+
+  const initial = new URLSearchParams(window.location.search).get('q');
+  if (initial) {
+    input.value = initial;
+    search(initial);
+  }
+</script>
+
+<style>
+  .search-container {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    min-height: 60vh;
+  }
+  .search-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #252932;
+    padding-bottom: 1.5rem;
+  }
+  .search-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.25rem;
+    color: #e8c56a;
+    margin: 0 0 0.5rem 0;
+  }
+  .search-desc {
+    color: #d4c9a8;
+    opacity: 0.6;
+    font-size: 1rem;
+    margin: 0;
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background-color: #12151c;
+    border: 1px solid #252932;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus-within {
+    border-color: #c9a84c;
+  }
+  .search-icon {
+    opacity: 0.6;
+  }
+  #search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e8e2ce;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+  }
+  #search-input::placeholder {
+    color: #d4c9a8;
+    opacity: 0.35;
+  }
+  .search-status {
+    color: #d4c9a8;
+    opacity: 0.6;
+    font-size: 0.875rem;
+    margin: 1.25rem 0 1rem;
+    min-height: 1.25rem;
+  }
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .search-results :global(.result-card) {
+    display: block;
+    background-color: #12151c;
+    border: 1px solid #252932;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    text-decoration: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .search-results :global(.result-card:hover) {
+    border-color: #c9a84c;
+    background-color: #151923;
+  }
+  .search-results :global(.result-top) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.35rem;
+  }
+  .search-results :global(.result-title) {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #e8c56a;
+  }
+  .search-results :global(.result-section) {
+    flex-shrink: 0;
+    background-color: rgba(201, 168, 76, 0.15);
+    color: #c9a84c;
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .search-results :global(.result-snippet) {
+    color: #d4c9a8;
+    opacity: 0.75;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .search-results :global(.result-tags) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+  }
+  .search-results :global(.result-tag) {
+    background-color: rgba(212, 201, 168, 0.08);
+    color: #d4c9a8;
+    opacity: 0.7;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.5rem;
+  }
+  .search-results :global(mark) {
+    background-color: rgba(201, 168, 76, 0.35);
+    color: #f5e6b8;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+</style>
