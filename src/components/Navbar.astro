@@ -90,4 +90,34 @@ function isActive(path: string) {
     font-family: inherit;
     cursor: pointer;
   }
+
+  @media (max-width: 768px) {
+    .nav-inner {
+      padding: 0 1rem;
+      gap: 1rem;
+    }
+    .nav-brand {
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+    .nav-links {
+      gap: 1.25rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .nav-inner {
+      height: auto;
+      padding: 0.65rem 1rem;
+      flex-wrap: wrap;
+    }
+    .nav-brand {
+      font-size: 0.95rem;
+    }
+    .nav-links {
+      width: 100%;
+      gap: 1.5rem;
+      justify-content: flex-start;
+    }
+  }
 </style>
