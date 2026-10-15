@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Missions — La Mina Perduda del Phentanilo</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<link rel="preload" href="assets/antiq.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/antiq-scribe.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="stage">
+  <div id="shell">
+    <div class="board"></div>
+    <div class="bmap" id="bmap" hidden>
+      <img id="mapImg" src="assets/map.webp" alt="Mapa de Phentanil" draggable="false">
+      <svg id="labels" viewBox="0 0 4950 3510" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="ptag" id="ptag"></div>
+    </div>
+    <div id="docs"></div>
+    <div class="pile" id="pile" hidden><div class="pl p3"></div><div class="pl p2"></div><div class="pl p1"><div class="pile-k">Arxiu</div><div class="pile-n" id="pileN">0</div><div class="pile-t">Missions completades</div><div class="pile-st">Fetes</div></div></div>
+    <div class="dim" id="dim"></div>
+    <div class="pcard" id="pcard"></div>
+    <div class="vig"></div><div class="gobo"></div><div class="gobo g2"></div>
+    <canvas class="gobo-gl" id="goboGL" width="800" height="450"></canvas>
+    <aside class="dmcard" id="dmcard"></aside>
+    <div class="zp" id="zp"></div>
+    <div class="hint" id="hint" hidden></div>
+    <div class="dmbar" id="dmbar" hidden></div>
+    <nav class="chrome" id="chrome"><a class="pill" href="../">← Wiki</a><button class="pill" id="fsBtn" type="button">Pantalla completa</button><button class="pill" id="dmBtn" type="button">Mode DM</button></nav>
+    <div class="toast" id="toast"></div>
+    <div class="gate" id="gate" hidden></div>
+  </div>
+</div>
+<input type="file" id="impFile" accept="application/json,.json" hidden>
+<script src="assets/gsap.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
