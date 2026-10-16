@@ -43,7 +43,7 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh' };
+  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh', fx: 'phx.fx' };
   const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/data.json', branch: 'master' };
 
   /* =================================================================== xifratge */
@@ -173,17 +173,48 @@
   }
 
   /* =================================================================== llum (gobo) */
-  /* Ombra d'arbres en WebGL amb vent (soroll simplex). Quan s'obre un paper o el mapa, aquest "s'aixeca"
-     cap a la càmera: surt de l'ombra (forat amb la seva forma, seguit cada fotograma) i el tauler del
-     fons queda desenfocat. Si no hi ha GPU, queden les capes CSS amb un balanceig simple. */
+  /* Tres nivells de llum, perquè el tauler sol anar en un ordinador que ja treballa molt durant la sessió:
+     - «quieta»: l'ombra d'arbres no es mou; en repòs la GPU no redibuixa res.
+     - «suau» (per defecte): les dues capes d'ombra es mouen per JS ~8 cops per segon. El vent és tan lent
+       que cada pas és de menys d'un píxel i no es nota, però són ~8 composicions per segon en lloc de 60.
+     - «viva»: ombra en WebGL amb vent (soroll simplex). Quan s'obre un paper o el mapa, aquest "s'aixeca"
+       cap a la càmera i surt de l'ombra (forat amb la seva forma, seguit cada fotograma). És la més cara.
+     Es tria amb la tecla L o el botó «Llum» i es recorda en aquest navegador (?gl=1 força la viva). */
   const LIFT = { v: 0, el: null, kind: '' };
+  const FX_MODES = ['suau', 'quieta', 'viva'];
+  let fx = '', goboGL = null, swayT = 0;
+  function setFx(m, say) {
+    if (m === 'viva' && !goboGL) goboGL = initGobo() || false;
+    if (m === 'viva' && !goboGL) { if (say) toast('Aquest ordinador no té GPU per a la llum viva; queda la suau.'); m = 'suau'; say = false; }
+    fx = m;
+    FX_MODES.forEach((k) => stage.classList.toggle('fx-' + k, k === m));
+    if (goboGL) goboGL.run(m === 'viva');
+    clearInterval(swayT); swayT = 0;
+    if (m === 'suau' && !reduce) { swayT = setInterval(sway, 125); sway(); } else $$('.gobo').forEach((g) => { g.style.transform = ''; });
+    const b = $('#fxBtn'); if (b) b.textContent = 'Llum: ' + m;
+    if (say) toast('Llum ' + m + (m === 'quieta' ? ': sense moviment, la més lleugera.' : m === 'viva' ? ': la més bonica, però fa treballar la GPU.' : ': moviment lent amb poc cost.'));
+  }
+  /* mateix balanceig que tenien les animacions CSS (13 s i 6,5 s, anada i tornada), però a pocs fotogrames */
+  const GS = [
+    { el: null, p: 13, a: [0, 0, 0, 1], b: [-16, 8, 0.4, 1] },
+    { el: null, p: 6.5, a: [7, -4, -0.3, 1.01], b: [-11, 7, 0.5, 1.014] }
+  ];
+  function sway() {
+    if (document.hidden) return;
+    const t = performance.now() / 1000;
+    GS.forEach((g, i) => {
+      g.el = g.el || $$('.gobo')[i]; if (!g.el) return;
+      const k = 0.5 - 0.5 * Math.cos(Math.PI * t / g.p), v = g.a.map((a, j) => a + (g.b[j] - a) * k);
+      g.el.style.transform = `translate(${v[0].toFixed(2)}px,${v[1].toFixed(2)}px) rotate(${v[2].toFixed(3)}deg) scale(${v[3].toFixed(4)})`;
+    });
+  }
   function initGobo() {
-    const cv = $('#goboGL'); if (!cv) return;
+    const cv = $('#goboGL'); if (!cv) return null;
     let gl = null;
     try { gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false }); } catch (e) {}
-    if (!gl) return;
+    if (!gl) return null;
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    if (!FORCE_GL && dbg && /swiftshader|llvmpipe|software|basic render/i.test(String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)))) return;
+    if (!FORCE_GL && dbg && /swiftshader|llvmpipe|software|basic render/i.test(String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)))) return null;
     const VS = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
     const FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -236,9 +267,9 @@ void main(){
   gl_FragColor=vec4(uCol*A,A);
 }`;
     const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return gl.getShaderParameter(o, gl.COMPILE_STATUS) ? o : (console.warn(gl.getShaderInfoLog(o)), null); };
-    const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS); if (!vs || !fs) return;
+    const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS); if (!vs || !fs) return null;
     const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
     gl.useProgram(pr);
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
@@ -248,6 +279,7 @@ void main(){
     gl.uniform3f(U.uCol, 16 / 255, 18 / 255, 26 / 255);
     gl.uniform2f(U.uStr, 0.36, 0.12);
     gl.uniform1i(U.uTex, 0);
+    let on = false, ready = false, raf = 0;
     const img = new Image();
     img.onload = () => {
       const tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -256,9 +288,14 @@ void main(){
       gl.generateMipmap(gl.TEXTURE_2D);
       [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach((k) => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      stage.classList.add('gl'); requestAnimationFrame(frame);
+      ready = true; run(on);
     };
-    img.src = 'assets/gobo.webp';
+    img.src = 'assets/gobo-sh.webp';
+    function run(v) {
+      on = v; cancelAnimationFrame(raf); raf = 0;
+      stage.classList.toggle('gl', on && ready);
+      if (on && ready) { last = 0; n = 0; slow = 0; drawn = 0; raf = requestAnimationFrame(frame); }
+    }
     function hole() {
       const el = LIFT.el;
       if (!el || LIFT.v < 0.001) return [0, 0, 0, 0, 0];
@@ -273,15 +310,16 @@ void main(){
     const t0 = performance.now();
     let last = 0, drawn = 0, n = 0, slow = 0;
     function frame(now) {
+      raf = 0; if (!on) return;
       if (last && !FORCE_GL && ++n > 20) {
         slow = now - last > 50 ? slow + 1 : Math.max(0, slow - 1);
-        if (slow > 25) { stage.classList.remove('gl'); return; }
+        if (slow > 25) { setFx('suau'); toast("L'ordinador va just: passo a la llum suau."); return; }
       }
       last = now;
       /* el vent és lent: n'hi ha prou amb ~30 fps i deixa la GPU lliure per als papers;
          mentre un paper vola es dibuixa cada fotograma perquè el forat de l'ombra el segueixi */
       const moving = LIFT.el && ((LIFT.v > 0.001 && LIFT.v < 0.999) || (window.gsap && window.gsap.isTweening(LIFT.el)));
-      if (!moving && now - drawn < 30) { requestAnimationFrame(frame); return; }
+      if (!moving && now - drawn < 30) { raf = requestAnimationFrame(frame); return; }
       drawn = now;
       const t = reduce ? 30 : (now - t0) / 1000 + 30;
       const gust = 0.62 + 0.2 * Math.sin(t * 0.29) + 0.12 * Math.sin(t * 0.71 + 1.3) + 0.07 * Math.sin(t * 1.63 + 0.4);
@@ -292,8 +330,9 @@ void main(){
       gl.uniform1f(U.uLift, LIFT.el ? LIFT.v : 0); gl.uniform1f(U.uRem, LIFT.kind === 'map' ? 0 : 0.08);
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      requestAnimationFrame(frame);
+      raf = requestAnimationFrame(frame);
     }
+    return { run };
   }
   /* el paper surt de l'ombra de seguida en aixecar-se i hi torna just quan aterra */
   function liftTo(el, kind, on, landAt) {
@@ -327,7 +366,8 @@ void main(){
   }
   async function start() {
     fit(); addEventListener('resize', fit);
-    initGobo();
+    const fx0 = ls.get(LSK.fx);
+    setFx(FORCE_GL ? 'viva' : FX_MODES.includes(fx0) ? fx0 : 'suau');
     if (!window.crypto || !crypto.subtle) { fatal('Aquest navegador no pot obrir el tauler (cal una connexió segura).'); return; }
     try { REMOTE = await fetchData(); } catch (e) { fatal("No s'ha pogut carregar el tauler de missions."); return; }
     const kp = ls.get(LSK.kp);
@@ -475,6 +515,7 @@ void main(){
       el._sig = sig;
       el.style.width = g.W + 'px'; el.style.height = g.H + 'px';
       el.style.setProperty('--tex', `url(assets/paper-${tex}.webp)`);
+      el.style.setProperty('--sh', `url(assets/sh-${tex}.webp)`);
       ['it', 'ir', 'ib', 'il'].forEach((k, i) => el.style.setProperty('--' + k, P.i[i]));
       el.firstElementChild.innerHTML = docHTML(q, edit);
       if (edit) setEditable(el, true);
@@ -1302,6 +1343,7 @@ void main(){
   let hintGone = false;
   function firstInput() { if (!hintGone) { hintGone = true; const h = $('#hint'); G.to(h, { opacity: 0, duration: 0.4 * D, onComplete: () => { h.hidden = true; } }); } }
   function setInput(kind) { stage.classList.toggle('kb', kind !== 'mouse'); if (input !== kind) { input = kind; renderPrompts(); } }
+  const cycleFx = () => { const m = FX_MODES[(FX_MODES.indexOf(fx) + 1) % FX_MODES.length]; setFx(m, true); ls.set(LSK.fx, fx); };
   const fullscreen = () => { const d = document.documentElement; if (!document.fullscreenElement) { if (d.requestFullscreen) d.requestFullscreen().catch(() => {}); } else if (document.exitFullscreen) document.exitFullscreen(); };
   function act(a) {
     if (arr.on) return;
@@ -1336,6 +1378,7 @@ void main(){
       if (map[k]) { e.preventDefault(); act(map[k]); }
       else if (k === 'f' || k === 'F') fullscreen();
       else if (k === 'd' || k === 'D') setDm(!dmOn);
+      else if (k === 'l' || k === 'L') cycleFx();
     });
     document.addEventListener('click', (e) => {
       if (!$('#gate').hidden) return;
@@ -1387,6 +1430,7 @@ void main(){
     document.addEventListener('auxclick', (e) => { if (e.button === 1 && viewOf()) e.preventDefault(); });
     $('#fsBtn').addEventListener('click', fullscreen);
     $('#dmBtn').addEventListener('click', () => setDm(!dmOn));
+    $('#fxBtn').addEventListener('click', cycleFx);
     const docsBox = $('#docs');
     docsBox.addEventListener('input', onDocInput);
     docsBox.addEventListener('keydown', onDocKey);
@@ -1409,10 +1453,15 @@ void main(){
       }).catch(() => toast('Aquest fitxer no és un tauler de missions vàlid.'));
       e.target.value = '';
     });
-    const pad = { prev: {}, next: {} };
+    /* el comandament es llegeix cada fotograma només mentre n'hi ha un de connectat: abans el bucle
+       corria sempre i mantenia el navegador despert 60 cops per segon sense fer res */
+    const pad = { prev: {}, next: {}, on: false };
+    const padList = () => (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []);
+    const padStart = () => { if (!pad.on) { pad.on = true; requestAnimationFrame(pollPad); } };
     function pollPad(now) {
-      const gpd = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).find((g) => g && g.connected);
-      if (gpd && $('#gate').hidden) {
+      const gpd = padList().find((g) => g && g.connected);
+      if (!gpd) { pad.on = false; pad.prev = {}; return; }
+      if ($('#gate').hidden) {
         const b = (i) => !!(gpd.buttons[i] && gpd.buttons[i].pressed), ax = gpd.axes || [];
         const st = { up: b(12) || ax[1] < -0.6, down: b(13) || ax[1] > 0.6, left: b(14) || b(4) || ax[0] < -0.6, right: b(15) || b(5) || ax[0] > 0.6, ok: b(0), back: b(1), map: b(3) };
         Object.keys(st).forEach((k) => {
@@ -1423,7 +1472,8 @@ void main(){
       }
       requestAnimationFrame(pollPad);
     }
-    requestAnimationFrame(pollPad);
+    addEventListener('gamepadconnected', padStart);
+    if (padList().some((g) => g && g.connected)) padStart();
   }
 
   /* =================================================================== tauler: inici */

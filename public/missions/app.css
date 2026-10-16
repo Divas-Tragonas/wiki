@@ -65,9 +65,14 @@ body.panning, body.panning * { cursor: grabbing !important; }
 #docs { position: absolute; inset: 0; }
 .doc {
   position: absolute; left: 0; top: 0; transform-origin: 50% 50%; cursor: pointer; color: var(--ink);
-  background: var(--tex) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 calc(6px * var(--is, 1)) calc(5px * var(--is, 1)) rgba(30, 18, 8, .5));
+  isolation: isolate;
   --c: var(--ink);
+}
+/* el paper i la seva ombra són dues imatges de fons d'una mateixa capa: l'ombra ja ve desenfocada
+   (assets/sh-*.webp), així la GPU no ha de calcular cap filter: drop-shadow a cada fotograma */
+.doc::before, .pl::before {
+  content: ""; position: absolute; inset: -5%; z-index: -1; pointer-events: none;
+  background: var(--tex) center / 90.91% 90.91% no-repeat, var(--sh) center / 100% 100% no-repeat;
 }
 .doc.c-principal { --c: var(--red); }
 .doc.c-secundaria { --c: var(--green); }
@@ -137,10 +142,10 @@ body.panning, body.panning * { cursor: grabbing !important; }
 
 /* ---------- pila de missions completades ---------- */
 .pile { position: absolute; z-index: 29; cursor: pointer; transform-origin: 50% 50%; }
-.pl { position: absolute; inset: 0; background: url(assets/paper-4.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 6px 6px rgba(30, 18, 8, .38)); }
-.pl.p3 { transform: rotate(-7deg) translate(-14px, 10px); background-image: url(assets/paper-1.webp); }
-.pl.p2 { transform: rotate(5deg) translate(12px, 6px); background-image: url(assets/paper-6.webp); }
-.pl.p1 { display: flex; flex-direction: column; align-items: center; padding: 46px 26px 34px; text-align: center; background-image: url(assets/paper-3.webp); }
+.pl { position: absolute; inset: 0; isolation: isolate; }
+.pl.p3 { transform: rotate(-7deg) translate(-14px, 10px); --tex: url(assets/paper-1.webp); --sh: url(assets/sh-1.webp); }
+.pl.p2 { transform: rotate(5deg) translate(12px, 6px); --tex: url(assets/paper-6.webp); --sh: url(assets/sh-6.webp); }
+.pl.p1 { display: flex; flex-direction: column; align-items: center; padding: 46px 26px 34px; text-align: center; --tex: url(assets/paper-3.webp); --sh: url(assets/sh-3.webp); }
 .pile-k { font-family: var(--fw); font-size: 28px; color: var(--ink-2); }
 .pile-n { margin-top: 6px; font-family: var(--fd); font-size: 104px; line-height: 1; color: var(--ink); }
 .pile-t { font-family: var(--fd); font-size: 24px; line-height: 1.1; text-transform: uppercase; color: var(--ink-2); }
@@ -170,15 +175,17 @@ body.panning, body.panning * { cursor: grabbing !important; }
 
 /* ---------- llum ---------- */
 .vig { position: absolute; inset: 0; z-index: 114; pointer-events: none; background: radial-gradient(ellipse 80% 78% at 40% 42%, rgba(26, 16, 8, 0) 55%, rgba(26, 16, 8, .24) 100%); }
-.gobo { position: absolute; left: -80px; top: -50px; width: 2080px; height: 1180px; z-index: 115; pointer-events: none; background: #10121a; opacity: .36; -webkit-mask: url(assets/gobo.webp) center / 2080px 1387px no-repeat; mask: url(assets/gobo.webp) center / 2080px 1387px no-repeat; will-change: transform; animation: gobo-a 13s ease-in-out infinite alternate; transition: opacity .5s ease; }
-.gobo.g2 { opacity: .12; transform-origin: 70% 30%; animation: gobo-b 6.5s ease-in-out infinite alternate; }
+/* ombra d'arbres: imatge ja acolorida (sense mask, que obligava a una passada extra de la GPU).
+   En llum «suau» la mou app.js unes poques vegades per segon; en «quieta» no es mou gens */
+.gobo { position: absolute; left: -80px; top: -50px; width: 2080px; height: 1180px; z-index: 115; pointer-events: none; background: url(assets/gobo-sh.webp) center / 2080px 1387px no-repeat; opacity: .36; transition: opacity .5s ease; }
+.gobo.g2 { opacity: .12; transform-origin: 70% 30%; }
+#stage.fx-suau .gobo { will-change: transform; }
 #stage.lift .gobo { opacity: .07; }
-@keyframes gobo-a { from { transform: translate(0, 0) rotate(0); } to { transform: translate(-16px, 8px) rotate(.4deg); } }
-@keyframes gobo-b { from { transform: translate(7px, -4px) rotate(-.3deg) scale(1.01); } to { transform: translate(-11px, 7px) rotate(.5deg) scale(1.014); } }
 .gobo-gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 115; pointer-events: none; display: none; }
 #stage.gl .gobo-gl { display: block; }
 #stage.gl .gobo { display: none; }
-@media (prefers-reduced-motion: reduce) { .gobo { animation: none; } }
+/* sense llum viva el tauler del fons no s'escala en obrir un paper: només es fon la versió desenfocada */
+#stage:not(.fx-viva).lift .board { transform: none; }
 
 /* ---------- moure papers (mode DM) ---------- */
 #stage.arrange .doc, #stage.arrange .bmap, #stage.arrange .pile { cursor: grab; touch-action: none; }
