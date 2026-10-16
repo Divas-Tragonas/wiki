@@ -101,3 +101,4 @@ Pàgina estàtica independent d'Astro (no usa el layout ni Tailwind): `index.htm
 - Les missions s'editen des del mateix tauler en **mode DM** (botó «Mode DM» o tecla D). «Publicar al wiki» desa `data.json` a `master` amb l'API de GitHub (cal una clau d'accés amb permís d'escriptura al repositori, que es guarda només al navegador del DM) i el workflow de Pages republica el lloc.
 - Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (`GEOM` a `app.js`), sobre `assets/map.webp` (mapa sense etiquetes).
 - Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `app.js`).
+- En mode DM, «Moure papers» deixa arrossegar i girar (nansa ↻ o roda) cada paper, el mapa i la pila. Les posicions es desen a `layout` dins de les dades (es publiquen amb la resta) i el doble clic torna una peça al seu lloc automàtic.

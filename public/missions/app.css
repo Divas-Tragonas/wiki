@@ -180,6 +180,15 @@ body.panning, body.panning * { cursor: grabbing !important; }
 #stage.gl .gobo { display: none; }
 @media (prefers-reduced-motion: reduce) { .gobo { animation: none; } }
 
+/* ---------- moure papers (mode DM) ---------- */
+#stage.arrange .doc, #stage.arrange .bmap, #stage.arrange .pile { cursor: grab; touch-action: none; }
+body.arr-drag, body.arr-drag * { cursor: grabbing !important; }
+.doc.arr-up { filter: drop-shadow(0 calc(22px * var(--is, 1)) calc(16px * var(--is, 1)) rgba(30, 18, 8, .42)); }
+.pile.arr-up .pl { filter: drop-shadow(0 18px 16px rgba(30, 18, 8, .42)); }
+.rhandle { position: absolute; left: 0; top: 0; z-index: 97; width: 46px; height: 46px; display: grid; place-items: center; border: 3px solid var(--red); border-radius: 50%; background: var(--cream); color: var(--red); font-size: 26px; line-height: 1; box-shadow: 0 4px 10px rgba(20, 12, 6, .4); cursor: grab; opacity: 0; pointer-events: none; transition: opacity .18s; touch-action: none; -webkit-user-select: none; user-select: none; }
+.rhandle.on { opacity: 1; pointer-events: auto; }
+.rhandle:hover { background: #fff6e2; }
+
 /* ---------- fitxa del DM (al costat del paper ampliat) ---------- */
 .dmcard { position: absolute; left: 1250px; top: 54px; z-index: 116; width: 630px; max-height: 972px; padding: 40px 46px 34px; background: url(assets/paper-5.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 16px 20px rgba(20, 12, 6, .45)); color: var(--ink); opacity: 0; pointer-events: none; overflow: auto; }
 .dmcard.on { pointer-events: auto; }

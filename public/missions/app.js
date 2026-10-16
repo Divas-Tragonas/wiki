@@ -104,6 +104,7 @@
   /* tauler: mapa a dalt a l'esquerra i els llocs dels cartells copiats del tauler de referència */
   const MAP = { x: 28, y: 22, w: 1100, h: 780, r: -0.8, s: 1 };
   const PILE = { x: 60, y: 655, w: 285, h: 398, r: -2, s: 1 };
+  const MAP0 = Object.assign({}, MAP), PILE0 = Object.assign({}, PILE);
   const REF = [
     { id: 'B1', cx: 486, cy: 766, w: 450, h: 600, r: 3.5, z: 40 }, { id: 'R1', cx: 1310, cy: 320, w: 346, h: 513, r: -2.2, z: 38 },
     { id: 'B5', cx: 1081, cy: 832, w: 342, h: 427, r: -3, z: 42 }, { id: 'R3', cx: 1505, cy: 755, w: 360, h: 513, r: 1.2, z: 33 },
@@ -140,6 +141,7 @@
     s.quests = Array.isArray(s.quests) ? s.quests : [];
     s.ecos = Array.isArray(s.ecos) ? s.ecos : [];
     s.places = s.places && typeof s.places === 'object' ? s.places : {};
+    s.layout = s.layout && typeof s.layout === 'object' ? s.layout : {};
     s.party = s.party || { level: 1, title: '' };
     s.quests.forEach((q) => { q.steps = Array.isArray(q.steps) ? q.steps : []; q.status = q.status || 'active'; });
     return s;
@@ -151,6 +153,7 @@
     o.quests = o.quests.filter((q) => !q.hidden).map((q) => { delete q.note; return q; });
     o.ecos = o.ecos.map((e) => (e.unlocked ? e : { id: e.id, num: e.num, unlocked: false }));
     if (o.tracked && !o.quests.some((q) => q.id === o.tracked)) o.tracked = null;
+    o.layout = Object.fromEntries(Object.entries(o.layout || {}).filter(([k]) => k === 'map' || k === 'pile' || o.quests.some((q) => q.id === k)));
     return o;
   }
 
@@ -382,8 +385,8 @@ void main(){
   }
   /* mida completa del document segons la proporció del lloc: al tauler es veu a escala s */
   function geomOf(id, sl) {
-    const r = sl.r + ((hashOf(id, 131) % 9) - 4) * 0.15;
-    const [cx, cy] = clampC(sl.cx, sl.cy, sl.w, sl.h, r);
+    const r = sl.fixed ? sl.r : sl.r + ((hashOf(id, 131) % 9) - 4) * 0.15;
+    const [cx, cy] = sl.fixed ? [sl.cx, sl.cy] : clampC(sl.cx, sl.cy, sl.w, sl.h, r);
     const ar = sl.w / sl.h;
     let H = 960, W = H * ar; if (W > 1240) { W = 1240; H = W / ar; }
     W = Math.round(W); H = Math.round(H);
@@ -399,6 +402,9 @@ void main(){
     const free = REF.slice(); if (!done.length) free.push(SLOT_B2);
     const over = OVER.slice(), slots = {};
     quests.forEach((q, n) => {
+      /* els papers que el DM ha col·locat a mà no ocupen cap lloc automàtic */
+      const P = S.layout[q.id];
+      if (P) { slots[q.id] = geomOf(q.id, { cx: P.cx, cy: P.cy, w: P.w || 285, h: P.h || 398, r: P.r || 0, z: P.z || 40, fixed: true }); return; }
       let sl = null;
       for (const sid of SLOT_PREF[catOf(q)]) { const k = free.findIndex((f) => f.id === sid); if (k >= 0) { sl = free.splice(k, 1)[0]; break; } }
       if (!sl && free.length) sl = free.shift();
@@ -478,6 +484,7 @@ void main(){
   }
   const homeOf = (g) => ({ x: g.cx - g.W / 2, y: g.cy - g.H / 2 });
   function renderBoard(anim) {
+    applyFixed(anim);
     L = layout();
     const seen = new Set();
     L.ids.forEach((id, n) => {
@@ -798,6 +805,7 @@ void main(){
     else { G.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
   }
   function onWheel(e) {
+    if (arr.on) { arrWheel(e); return; }
     const v = viewOf(); if (!v) return;
     if (e.target.closest && e.target.closest('#dmcard, #dmbar, #pcard, #chrome')) return;
     e.preventDefault();
@@ -827,11 +835,165 @@ void main(){
   }
   function onPanEnd() { if (!pan) return; pan = null; document.body.classList.remove('panning'); }
 
+  /* =================================================================== col·locar papers (mode DM) */
+  /* «Moure papers»: el DM arrossega qualsevol paper, el mapa o la pila i els gira amb la nansa ↻ o la roda.
+     La posició es desa a S.layout (va amb la resta de dades en publicar) i el paper ja no ocupa cap lloc
+     automàtic; amb doble clic hi torna. */
+  const arr = { on: false, hover: null, drag: null, wheel: null, wt: null };
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  let fixedSig = '';
+  /* mapa i pila: posició del DM o la de sempre; si canvia, hi llisquen des d'on eren */
+  function applyFixed(anim) {
+    const lm = S.layout.map || {}, lp = S.layout.pile || {}, sig = JSON.stringify([lm, lp]);
+    if (sig === fixedSig) return;
+    const first = !fixedSig; fixedSig = sig;
+    const m = $('#bmap'), pile = $('#pile'), om = { x: MAP.x, y: MAP.y }, op = { x: PILE.x, y: PILE.y };
+    MAP.x = num(lm.x, MAP0.x); MAP.y = num(lm.y, MAP0.y); MAP.r = num(lm.r, MAP0.r);
+    PILE.x = num(lp.x, PILE0.x); PILE.y = num(lp.y, PILE0.y); PILE.r = num(lp.r, PILE0.r);
+    Object.assign(m.style, { left: MAP.x + 'px', top: MAP.y + 'px' });
+    Object.assign(pile.style, { left: PILE.x + 'px', top: PILE.y + 'px', width: PILE.w + 'px', height: PILE.h + 'px' });
+    if (first) return;
+    const d = anim ? 0.45 * D : 0;
+    if (T.zoom !== 'map') {
+      G.set(m, { x: gp(m, 'x') + om.x - MAP.x, y: gp(m, 'y') + om.y - MAP.y, overwrite: true });
+      G.to(m, { x: 0, y: 0, rotation: MAP.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
+    }
+    G.set(pile, { x: gp(pile, 'x') + op.x - PILE.x, y: gp(pile, 'y') + op.y - PILE.y, overwrite: true });
+    G.to(pile, { x: 0, y: 0, rotation: PILE.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
+  }
+  const rad = (r) => r * Math.PI / 180;
+  /* centre, gir i mida (al tauler) de cada peça */
+  function arrGet(key) {
+    if (key === 'map') {
+      const a = rad(MAP.r), hw = MAP.w / 2, hh = MAP.h / 2;
+      return { key, el: $('#bmap'), cx: MAP.x + Math.cos(a) * hw - Math.sin(a) * hh, cy: MAP.y + Math.sin(a) * hw + Math.cos(a) * hh, r: MAP.r, w: MAP.w, h: MAP.h };
+    }
+    if (key === 'pile') return { key, el: $('#pile'), cx: PILE.x + PILE.w / 2, cy: PILE.y + PILE.h / 2, r: PILE.r, w: PILE.w, h: PILE.h };
+    const el = docs.get(key), g = L && L.slots[key];
+    return el && g ? { key, el, cx: g.cx, cy: g.cy, r: g.r, w: g.w, h: g.h, g } : null;
+  }
+  function arrKeyAt(t) {
+    if (!t || !t.closest) return null;
+    const d = t.closest('.doc'); if (d) return L.slots[d.dataset.id] ? d.dataset.id : null;
+    if (t.closest('#pile')) return L.done.length ? 'pile' : null;
+    return t.closest('#bmap') ? 'map' : null;
+  }
+  /* pose en directe: el mapa gira des del cantó, així que se'n recalcula l'origen per girar pel centre */
+  function arrPose(it, cx, cy, r, up, dur) {
+    let o;
+    if (it.key === 'map') { const a = rad(r), hw = it.w / 2, hh = it.h / 2; o = { x: cx - Math.cos(a) * hw + Math.sin(a) * hh - MAP.x, y: cy - Math.sin(a) * hw - Math.cos(a) * hh - MAP.y, scale: 1, rotation: r }; }
+    else if (it.key === 'pile') o = { x: cx - it.cx, y: cy - it.cy, scale: up ? 1.03 : 1, rotation: r };
+    else o = { x: cx - it.g.W / 2, y: cy - it.g.H / 2, scale: it.g.s * (up ? 1.03 : 1), rotation: r };
+    G.to(it.el, Object.assign({ duration: dur * D, ease: 'power3.out', overwrite: 'auto' }, o));
+    it.el.classList.toggle('arr-up', !!up);
+  }
+  function arrCommit(it, cx, cy, r, z) {
+    cx = Math.round(cx); cy = Math.round(cy); r = Math.round(((r + 540) % 360 - 180) * 10) / 10;
+    if (it.key === 'map') { const a = rad(r), hw = it.w / 2, hh = it.h / 2; S.layout.map = { x: Math.round(cx - Math.cos(a) * hw + Math.sin(a) * hh), y: Math.round(cy - Math.sin(a) * hw - Math.cos(a) * hh), r }; }
+    else if (it.key === 'pile') S.layout.pile = { x: cx - PILE.w / 2, y: cy - PILE.h / 2, r };
+    else S.layout[it.key] = { cx, cy, r, w: it.g.w, h: it.g.h, z: z || it.g.z };
+    it.el.classList.remove('arr-up');
+    markDirty(); renderBoard(true);
+  }
+  function arrReset(key) {
+    if (!S.layout[key]) return;
+    delete S.layout[key]; markDirty(); renderBoard(true);
+    setTimeout(() => arrHover(key), 500 * D);
+  }
+  /* el paper que s'agafa passa a sobre de tots */
+  function topZ() {
+    const zs = L.ids.map((id) => L.slots[id].z);
+    let z = Math.max(40, ...zs) + 1;
+    if (z > 88) { Object.values(S.layout).forEach((P) => { if (P && P.z) P.z = Math.max(20, P.z - 40); }); z = 50; }
+    return z;
+  }
+  function placeHandle(it, cx, cy, r) {
+    /* cantonada de dalt a la dreta, o la de baix si quedaria sota la barra del DM */
+    const h = $('#rhandle'), a = rad(r), vx = it.w / 2 + 4, at = (vy) => [cx + Math.cos(a) * vx - Math.sin(a) * vy, cy + Math.sin(a) * vx + Math.cos(a) * vy];
+    let [x, y] = at(-it.h / 2 - 4); if (y < 100) [x, y] = at(it.h / 2 + 4);
+    G.set(h, { x: Math.max(4, Math.min(1870, x - 23)), y: Math.max(4, Math.min(1030, y - 23)) });
+    h.classList.add('on');
+  }
+  function arrHover(key) {
+    if (arr.drag) return;
+    const it = key && arrGet(key);
+    arr.hover = it ? key : null;
+    if (it) placeHandle(it, it.cx, it.cy, it.r); else $('#rhandle').classList.remove('on');
+  }
+  function setArrange(on) {
+    if (on && !dmOn) return;
+    if (on && T.zoom) { closeAny().then(() => setArrange(true)); return; }
+    if (arr.on === on) return;
+    arr.on = on; arr.drag = null;
+    if (on && T.focus) { lift(T.focus, false); T.focus = null; }
+    stage.classList.toggle('arrange', on);
+    if (!on) { $('#rhandle').classList.remove('on'); arr.hover = null; document.body.classList.remove('arr-drag'); }
+    G.to('#zp', { opacity: on ? 1 : 0, duration: 0.3 * D });
+    renderDmBar(); renderPrompts();
+  }
+  function arrDown(e) {
+    if (!arr.on || e.button !== 0 || !$('#gate').hidden) return;
+    const onH = e.target.closest && e.target.closest('#rhandle');
+    const key = onH ? arr.hover : arrKeyAt(e.target), it = key && arrGet(key);
+    if (!it) return;
+    e.preventDefault();
+    const p = toStage(e);
+    const z = it.g ? topZ() : 0;
+    arr.drag = { it, rot: !!onH, p0: p, cx: it.cx, cy: it.cy, r: it.r, a0: Math.atan2(p.y - it.cy, p.x - it.cx), z, moved: false };
+    it.el.style.zIndex = it.key === 'map' ? 60 : 95;
+    document.body.classList.add('arr-drag');
+    arrPose(it, it.cx, it.cy, it.r, true, 0.2);
+  }
+  function arrMove(e) {
+    const d = arr.drag; if (!d) return;
+    const p = toStage(e), it = d.it;
+    if (d.rot) {
+      let r = it.r + (Math.atan2(p.y - it.cy, p.x - it.cx) - d.a0) * 180 / Math.PI;
+      if (e.shiftKey) r = Math.round(r / 15) * 15;
+      d.r = r;
+    } else {
+      d.cx = Math.max(20, Math.min(1900, it.cx + p.x - d.p0.x));
+      d.cy = Math.max(20, Math.min(1060, it.cy + p.y - d.p0.y));
+    }
+    d.moved = d.moved || Math.abs(p.x - d.p0.x) + Math.abs(p.y - d.p0.y) > 3;
+    arrPose(it, d.cx, d.cy, d.r, true, 0.14);
+    placeHandle(it, d.cx, d.cy, d.r);
+  }
+  function arrUp() {
+    const d = arr.drag; if (!d) return;
+    arr.drag = null; document.body.classList.remove('arr-drag');
+    const it = d.it;
+    if (it.key === 'map' || it.key === 'pile') it.el.style.zIndex = '';
+    if (!d.moved) { arrPose(it, it.cx, it.cy, it.r, false, 0.25); if (it.g) it.el.style.zIndex = it.g.z; arrHover(it.key); return; }
+    arrCommit(it, d.cx, d.cy, d.r, d.z);
+    arrHover(it.key);
+  }
+  /* la roda gira la peça que hi ha sota el ratolí; es desa quan s'atura */
+  function arrWheel(e) {
+    const key = arrKeyAt(e.target) || (e.target.closest && e.target.closest('#rhandle') ? arr.hover : null);
+    if (!key || arr.drag) return;
+    e.preventDefault();
+    const it = arrGet(key); if (!it) return;
+    const dy = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 600 : 1);
+    const base = arr.wheel && arr.wheel.key === key ? arr.wheel.r : it.r;
+    const r = base + Math.max(-6, Math.min(6, dy * 0.03));
+    arr.wheel = { key, r };
+    arrPose(it, it.cx, it.cy, r, false, 0.16);
+    placeHandle(it, it.cx, it.cy, r);
+    clearTimeout(arr.wt);
+    arr.wt = setTimeout(() => { const w = arr.wheel; arr.wheel = null; const i2 = w && arrGet(w.key); if (i2) arrCommit(i2, i2.cx, i2.cy, w.r); }, 350);
+  }
+
   /* =================================================================== indicacions */
   function renderPrompts() {
     const pad = input === 'pad', k = (t, r) => `<i class="key${r ? ' round' : ''}">${t}</i>`;
     let z = [];
     const mz = input === 'mouse' ? [`<span>${k('Roda')}Zoom · ${k('Botó del mig')}Moure</span>`] : [];
+    if (arr.on) {
+      z = ['<span>Arrossega per moure</span>', `<span><i class="key round">↻</i>o roda per girar · ${k('Maj')}de 15° en 15°</span>`, '<span>Doble clic: al seu lloc automàtic</span>', `<span>${k('Esc')}Fet</span>`];
+      $('#zp').innerHTML = z.join(''); $('#zp').style.left = '0';
+      return;
+    }
     if (T.zoom === 'map') {
       z = [`<span>${pad ? k('◀') + k('▶') : k('←') + k('→')}Llocs</span>`];
       if (!(T.card && !questsAt(T.card).length)) z.push(`<span>${pad ? k('A', 1) : k('↵')}${T.card ? 'Obrir la missió' : 'Veure el lloc'}</span>`);
@@ -874,6 +1036,7 @@ void main(){
   async function setDm(on) {
     if (on && !(await unlockDm())) return;
     if (dmOn === on) return;
+    if (!on) setArrange(false);
     if (!on && T.zoom && T.zoom !== 'map') { const q = qById(T.zoom); if (q && q.hidden) await closeDoc(); }
     dmOn = on;
     stage.classList.toggle('dm', on);
@@ -896,6 +1059,7 @@ void main(){
     const st = statText();
     $('#dmbar').innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
       <button class="btn" type="button" data-dm="new">+ Nova missió</button>
+      <button class="btn${arr.on ? ' on' : ''}" type="button" data-dm="arrange">${arr.on ? 'Fet' : 'Moure papers'}</button>
       <span class="sep"></span><span class="stat${WORK && WORK.dirty ? ' dirty' : ''}" title="${esc(st)}">${esc(st)}</span>
       <button class="btn pri" type="button" data-dm="publish"${WORK && WORK.dirty ? '' : ' disabled'}>Publicar al wiki</button>
       <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button><button class="btn" type="button" data-dm="token">Clau</button>
@@ -1060,7 +1224,9 @@ void main(){
   async function onBarClick(e) {
     const b = e.target.closest('[data-dm]'); if (!b) return;
     const a = b.dataset.dm;
-    if (a === 'new') newQuest();
+    if (arr.on && (a === 'new' || a === 'import' || a === 'exit')) setArrange(false);
+    if (a === 'arrange') setArrange(!arr.on);
+    else if (a === 'new') newQuest();
     else if (a === 'publish') publish(armedForce);
     else if (a === 'exit') setDm(false);
     else if (a === 'token') askToken(true);
@@ -1138,6 +1304,7 @@ void main(){
   function setInput(kind) { stage.classList.toggle('kb', kind !== 'mouse'); if (input !== kind) { input = kind; renderPrompts(); } }
   const fullscreen = () => { const d = document.documentElement; if (!document.fullscreenElement) { if (d.requestFullscreen) d.requestFullscreen().catch(() => {}); } else if (document.exitFullscreen) document.exitFullscreen(); };
   function act(a) {
+    if (arr.on) return;
     if (T.zoom === 'map') {
       const dv = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[a];
       if (dv) placeNav(dv[0], dv[1]);
@@ -1164,6 +1331,7 @@ void main(){
       if (!$('#gate').hidden || e.metaKey || e.ctrlKey || e.altKey) return;
       if (typing(e.target)) return;
       firstInput(); setInput('kb');
+      if (arr.on && e.key === 'Escape') { e.preventDefault(); setArrange(false); return; }
       const k = e.key, map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', ' ': 'ok', Escape: 'back', Backspace: 'back', m: 'map', M: 'map' };
       if (map[k]) { e.preventDefault(); act(map[k]); }
       else if (k === 'f' || k === 'F') fullscreen();
@@ -1174,6 +1342,7 @@ void main(){
       firstInput();
       const t = e.target, path = e.composedPath ? e.composedPath() : [];
       if (path.some((n) => n && (n.id === 'dmbar' || n.id === 'dmcard' || n.id === 'chrome' || n.id === 'gate'))) return;
+      if (arr.on) return;
       if (T.zoom === 'map') {
         const qb = t.closest('#pcard [data-q]'); if (qb) { openDoc(qb.dataset.q); return; }
         if (t.closest('#pcard')) return;
@@ -1193,6 +1362,7 @@ void main(){
     });
     document.addEventListener('mouseover', (e) => {
       if (!$('#gate').hidden) return;
+      if (arr.on) { if (!e.target.closest('#rhandle')) arrHover(arrKeyAt(e.target)); return; }
       if (T.zoom === 'map') { if (e.target.closest('#pcard')) return; const pl = e.target.closest('.plc'); setPlace(pl ? pl.dataset.p : T.card); return; }
       if (T.zoom) return;
       const el = e.target.closest('.doc') || e.target.closest('#pile') || e.target.closest('#bmap');
@@ -1205,6 +1375,11 @@ void main(){
     document.addEventListener('mousemove', wake); wake();
     addEventListener('wheel', onWheel, { passive: false });
     document.addEventListener('mousedown', onPanStart);
+    document.addEventListener('pointerdown', arrDown);
+    document.addEventListener('pointermove', arrMove);
+    document.addEventListener('pointerup', arrUp);
+    document.addEventListener('pointercancel', arrUp);
+    document.addEventListener('dblclick', (e) => { if (arr.on) { const k = arrKeyAt(e.target); if (k) arrReset(k); } });
     document.addEventListener('mousemove', onPanMove);
     document.addEventListener('mouseup', onPanEnd);
     addEventListener('blur', onPanEnd);
@@ -1255,8 +1430,8 @@ void main(){
   function initTV() {
     renderLabels();
     const m = $('#bmap'); m.hidden = false;
+    applyFixed(false);
     G.set(m, { rotation: MAP.r });
-    Object.assign($('#pile').style, { left: PILE.x + 'px', top: PILE.y + 'px', width: PILE.w + 'px', height: PILE.h + 'px' });
     G.set('#pile', { rotation: PILE.r });
     renderBoard(false); renderPrompts(); bindInput();
     $('#chrome').classList.add('show');
