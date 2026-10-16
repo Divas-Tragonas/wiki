@@ -100,3 +100,4 @@ Pàgina estàtica independent d'Astro (no usa el layout ni Tailwind): `index.htm
 - Les dades són a `public/missions/data.json`, **xifrades** (AES-GCM amb clau PBKDF2): `pub` és el que veu el grup (contrasenya del grup) i `dm` és l'estat complet amb missions ocultes i notes (contrasenya del DM). Les contrasenyes no són enlloc del repositori. No editis aquest fitxer a mà.
 - Les missions s'editen des del mateix tauler en **mode DM** (botó «Mode DM» o tecla D). «Publicar al wiki» desa `data.json` a `master` amb l'API de GitHub (cal una clau d'accés amb permís d'escriptura al repositori, que es guarda només al navegador del DM) i el workflow de Pages republica el lloc.
 - Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (`GEOM` a `app.js`), sobre `assets/map.webp` (mapa sense etiquetes).
+- Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `app.js`).

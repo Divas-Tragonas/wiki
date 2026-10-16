@@ -155,11 +155,12 @@
   }
 
   /* =================================================================== escenari */
-  let sc = 1;
+  let sc = 1, sox = 0, soy = 0;
   function fit() {
-    sc = Math.min(innerWidth / 1920, innerHeight / 1080);
-    stage.style.transform = `translate(${(innerWidth - 1920 * sc) / 2}px,${(innerHeight - 1080 * sc) / 2}px) scale(${sc})`;
+    sc = Math.min(innerWidth / 1920, innerHeight / 1080); sox = (innerWidth - 1920 * sc) / 2; soy = (innerHeight - 1080 * sc) / 2;
+    stage.style.transform = `translate(${sox}px,${soy}px) scale(${sc})`;
   }
+  const toStage = (e) => ({ x: (e.clientX - sox) / sc, y: (e.clientY - soy) / sc });
   function fatal(msg) { const d = document.createElement('div'); d.className = 'fatal'; d.textContent = msg; document.body.appendChild(d); }
   let toastT;
   function toast(msg, ms) {
@@ -501,7 +502,7 @@ void main(){
       const q = qById(id);
       if (q && isDone(q) && canSee(q)) toPile(el); else G.to(el, { opacity: 0, y: gp(el, 'y') + 30, duration: 0.35 * D, onComplete: () => el.remove() });
     });
-    renderPile(); renderParty();
+    renderPile();
     if (T.focus && !itemOf(T.focus)) T.focus = null;
   }
   function toPile(el) {
@@ -513,10 +514,6 @@ void main(){
     const pile = $('#pile');
     pile.hidden = !L.done.length;
     $('#pileN').textContent = L.done.length;
-  }
-  function renderParty() {
-    const p = S.party || {};
-    $('#ptag').innerHTML = `<span class="l">Nivell</span><b>${esc(p.level == null ? '' : p.level)}</b><span class="t">${esc(p.title || '')}</span>`;
   }
   function itemList() {
     const list = [Object.assign({ key: 'map', el: $('#bmap') }, MAP)];
@@ -679,7 +676,7 @@ void main(){
       const tx0 = Math.min(...p.ln.map((l) => l[1])), tx1 = Math.max(...p.ln.map((l) => l[1] + l[3])), ty0 = Math.min(...p.ln.map((l) => l[2])) - 50, ty1 = Math.max(...p.ln.map((l) => l[2])) + 16;
       h += `<g class="plc" data-p="${p.id}"><line class="hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><rect class="hit" x="${tx0 - 18}" y="${ty0 - 14}" width="${tx1 - tx0 + 36}" height="${ty1 - ty0 + 28}"/>` +
         `<line class="h" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="hh" points="${head}"/><line class="s" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="sh" points="${head}"/>` +
-        p.ln.map((l) => `<text x="${l[1]}" y="${l[2]}" textLength="${l[3]}" lengthAdjust="spacing">${esc(l[0])}</text>`).join('') + '</g>';
+        p.ln.map((l) => `<text x="${l[1] + l[3] / 2}" y="${l[2]}">${esc(l[0])}</text>`).join('') + '</g>';
     });
     $('#labels').innerHTML = h;
   }
@@ -711,7 +708,7 @@ void main(){
   }
   function placeText(id) { const o = S.places[id]; return o && typeof o.text === 'string' ? o.text : (PLACE_INFO[id] || {}).text || ''; }
   function placeBox(id) {
-    const p = PL[id], s = MAPZ, ox = (1920 - MAP.w * s) / 2, oy = (1080 - MAP.h * s) / 2, k = MAP.w * s / 4950;
+    const p = PL[id], v = mapPose(), s = v.s, ox = MAP.x + v.x, oy = MAP.y + v.y, k = MAP.w * s / 4950;
     if (p.icon) return { l: ox + (p.icon[0] - p.icon[2]) * k, r: ox + (p.icon[0] + p.icon[2]) * k, cy: oy + p.icon[1] * k };
     const xs = p.ln.map((l) => l[1]).concat(p.ln.map((l) => l[1] + l[3]), [p.ar[0], p.ar[2]]), ys = p.ln.map((l) => l[2] - 25);
     return { l: ox + Math.min(...xs) * k, r: ox + Math.max(...xs) * k, cy: oy + (ys.reduce((a, b) => a + b, 0) / ys.length) * k };
@@ -762,15 +759,85 @@ void main(){
     return wait(600);
   }
 
+  /* =================================================================== zoom i desplaçament */
+  /* Sobre el paper o el mapa ampliats, la roda del ratolí acosta cap al punt on és el ratolí i el botó
+     del mig arrossega. Tornar a la mida inicial amb la roda el recol·loca on era. */
+  const VZMAX = { doc: 3, map: 3 };
+  const mapBase = () => ({ x: (1920 - MAP.w * MAPZ) / 2 - MAP.x, y: (1080 - MAP.h * MAPZ) / 2 - MAP.y, s: MAPZ });
+  /* or: origen de la transformació respecte de x/y (el mapa escala des del cantó, els papers des del centre) */
+  function viewOf() {
+    if (!$('#gate').hidden) return null;
+    if (T.zoom === 'map') return { el: $('#bmap'), base: mapBase(), or: [MAP.x, MAP.y], f: 0, w: MAP.w, h: MAP.h, max: MAPZ * VZMAX.map, anchor: [960, 540] };
+    if (!T.zoom || !T.zEl || !T.zEl._g) return null;
+    const g = T.zEl._g, z = zoomTarget(g);
+    return { el: T.zEl, base: { x: z.x, y: z.y, s: z.scale }, or: [g.W / 2, g.H / 2], f: 0.5, w: g.W, h: g.H, max: z.scale * VZMAX.doc, anchor: [z.x + g.W / 2, z.y + g.H / 2] };
+  }
+  /* posició actual (o la de destí si ja hi anem); null mentre el paper o el mapa encara vola */
+  function poseOf(el) {
+    if (el._vt) return el._v;
+    if (window.gsap && window.gsap.isTweening(el)) return null;
+    return { x: gp(el, 'x'), y: gp(el, 'y'), s: gp(el, 'scaleX') || 1 };
+  }
+  function mapPose() { const m = $('#bmap'); return (T.zoom === 'map' && poseOf(m)) || mapBase(); }
+  /* el centre on s'havia obert ha de quedar sempre a sobre del paper o del mapa */
+  function clampPose(v, o) {
+    const l = o.x + v.or[0] - v.f * v.w * o.s, t = o.y + v.or[1] - v.f * v.h * o.s, r = l + v.w * o.s, b = t + v.h * o.s;
+    if (l > v.anchor[0]) o.x -= l - v.anchor[0]; else if (r < v.anchor[0]) o.x += v.anchor[0] - r;
+    if (t > v.anchor[1]) o.y -= t - v.anchor[1]; else if (b < v.anchor[1]) o.y += v.anchor[1] - b;
+    return o;
+  }
+  function setPose(v, o, dur) {
+    const el = v.el;
+    if (o.s <= v.base.s * 1.02) { o = Object.assign({}, v.base); dur = Math.max(dur, 0.3); }
+    else o = clampPose(v, o);
+    el._v = o; el._vt = true;
+    if (T.card) closeCard();
+    const end = () => { el._vt = false; };
+    if (window.gsap) window.gsap.killTweensOf(el, 'x,y,scale');
+    if (dur) G.to(el, { x: o.x, y: o.y, scale: o.s, duration: dur * D, ease: 'power2.out', onComplete: end, onInterrupt: end });
+    else { G.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
+  }
+  function onWheel(e) {
+    const v = viewOf(); if (!v) return;
+    if (e.target.closest && e.target.closest('#dmcard, #dmbar, #pcard, #chrome')) return;
+    e.preventDefault();
+    const o = poseOf(v.el); if (!o) return;
+    const dy = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 600 : 1);
+    const ns = Math.min(v.max, Math.max(v.base.s, o.s * Math.exp(-dy * 0.0016))), f = ns / o.s;
+    if (Math.abs(f - 1) < 1e-4) return;
+    /* el punt sota el ratolí es queda quiet: l'origen de la transformació s'hi apropa o se n'allunya en proporció */
+    const p = toStage(e), ox = o.x + v.or[0], oy = o.y + v.or[1];
+    setPose(v, { x: p.x + (ox - p.x) * f - v.or[0], y: p.y + (oy - p.y) * f - v.or[1], s: ns }, 0.16);
+  }
+  let pan = null;
+  function onPanStart(e) {
+    if (e.button !== 1) return;
+    const v = viewOf(); if (!v) return;
+    if (e.target.closest && e.target.closest('#dmcard, #dmbar, #chrome')) return;
+    e.preventDefault();
+    const o = poseOf(v.el); if (!o) return;
+    pan = { v, o: Object.assign({}, o), p: toStage(e) };
+    document.body.classList.add('panning');
+    if (T.card) closeCard();
+  }
+  function onPanMove(e) {
+    if (!pan) return;
+    const p = toStage(e);
+    setPose(pan.v, { x: pan.o.x + p.x - pan.p.x, y: pan.o.y + p.y - pan.p.y, s: pan.o.s }, 0);
+  }
+  function onPanEnd() { if (!pan) return; pan = null; document.body.classList.remove('panning'); }
+
   /* =================================================================== indicacions */
   function renderPrompts() {
     const pad = input === 'pad', k = (t, r) => `<i class="key${r ? ' round' : ''}">${t}</i>`;
     let z = [];
+    const mz = input === 'mouse' ? [`<span>${k('Roda')}Zoom · ${k('Botó del mig')}Moure</span>`] : [];
     if (T.zoom === 'map') {
       z = [`<span>${pad ? k('◀') + k('▶') : k('←') + k('→')}Llocs</span>`];
       if (!(T.card && !questsAt(T.card).length)) z.push(`<span>${pad ? k('A', 1) : k('↵')}${T.card ? 'Obrir la missió' : 'Veure el lloc'}</span>`);
       z.push(`<span>${pad ? k('B', 1) : k('Esc')}${T.card ? 'Tancar' : 'Tornar al tauler'}</span>`);
     } else if (T.zoom) z = [`<span>${pad ? k('◀') + k('▶') : k('←') + k('→')}Un altre paper</span>`, `<span>${pad ? k('B', 1) : k('Esc')}Tornar al tauler</span>`, `<span>${pad ? k('Y', 1) : k('M')}Mapa</span>`];
+    if (T.zoom) z = z.concat(mz);
     $('#zp').innerHTML = z.join('');
     const zp = $('#zp'); zp.style.left = T.zoom && T.zoom !== 'map' && dmOn ? '-540px' : '0';
   }
@@ -826,10 +893,9 @@ void main(){
   }
   function renderDmBar() {
     if (!dmOn) return;
-    const p = S.party || {}, st = statText();
+    const st = statText();
     $('#dmbar').innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
       <button class="btn" type="button" data-dm="new">+ Nova missió</button>
-      <span class="party">Nivell <input type="number" min="1" max="20" data-party="level" value="${esc(p.level || 1)}"><input class="t" data-party="title" value="${esc(p.title || '')}" placeholder="Títol del grup"></span>
       <span class="sep"></span><span class="stat${WORK && WORK.dirty ? ' dirty' : ''}" title="${esc(st)}">${esc(st)}</span>
       <button class="btn pri" type="button" data-dm="publish"${WORK && WORK.dirty ? '' : ' disabled'}>Publicar al wiki</button>
       <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button><button class="btn" type="button" data-dm="token">Clau</button>
@@ -1004,12 +1070,6 @@ void main(){
       document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 2000);
     } else if (a === 'import') $('#impFile').click();
   }
-  function onBarInput(e) {
-    const t = e.target; if (!t.dataset.party) return;
-    S.party = S.party || {};
-    if (t.dataset.party === 'level') S.party.level = parseInt(t.value, 10) || 1; else S.party.title = t.value;
-    renderParty(); markDirty();
-  }
 
   /* publicar al wiki: data.json xifrat, amb l'API de GitHub */
   let armedForce = false;
@@ -1143,6 +1203,13 @@ void main(){
     let idleT;
     const wake = () => { if (input !== 'mouse') setInput('mouse'); document.body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => document.body.classList.add('idle'), 2600); };
     document.addEventListener('mousemove', wake); wake();
+    addEventListener('wheel', onWheel, { passive: false });
+    document.addEventListener('mousedown', onPanStart);
+    document.addEventListener('mousemove', onPanMove);
+    document.addEventListener('mouseup', onPanEnd);
+    addEventListener('blur', onPanEnd);
+    /* el clic del mig no ha d'obrir enllaços ni activar el desplaçament automàtic del navegador */
+    document.addEventListener('auxclick', (e) => { if (e.button === 1 && viewOf()) e.preventDefault(); });
     $('#fsBtn').addEventListener('click', fullscreen);
     $('#dmBtn').addEventListener('click', () => setDm(!dmOn));
     const docsBox = $('#docs');
@@ -1154,7 +1221,6 @@ void main(){
     $('#dmcard').addEventListener('change', onCardInput);
     $('#dmcard').addEventListener('click', onCardClick);
     $('#dmbar').addEventListener('click', onBarClick);
-    $('#dmbar').addEventListener('input', onBarInput);
     $('#pcard').addEventListener('input', (e) => {
       const f = e.target.closest('[data-place]'); if (!f || !dmOn) return;
       S.places[f.dataset.place] = { text: f.innerText.replace(/ /g, ' ').trim() }; markDirty();

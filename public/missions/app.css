@@ -13,6 +13,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { background: none; border: 0; padding: 0; cursor: pointer; }
 [hidden] { display: none !important; }
 body.idle, body.idle * { cursor: none !important; }
+body.panning, body.panning * { cursor: grabbing !important; }
 
 #stage {
   --ink: #2a2018; --ink-2: #55453a; --ink-3: #8a755c; --red: #a8352b; --red-d: #7d2219;
@@ -50,7 +51,8 @@ body.idle, body.idle * { cursor: none !important; }
 .plc .hh { fill: #f2efe8; stroke: #f2efe8; stroke-width: 14; stroke-linejoin: round; }
 .plc .s { stroke: var(--li); stroke-width: 8; stroke-linecap: round; fill: none; transition: stroke .18s; }
 .plc .sh { fill: var(--li); transition: fill .18s; }
-.plc text { font-family: var(--fd); font-size: 54.5px; fill: var(--li); stroke: #f2efe8; stroke-width: 13px; stroke-linejoin: round; paint-order: stroke; transition: fill .18s; }
+/* sense textLength: forçar l'amplada original aixafava les lletres; cada línia es centra on era */
+.plc text { font-family: var(--fd); font-size: 52px; letter-spacing: 2.5px; text-anchor: middle; fill: var(--li); stroke: #f2efe8; stroke-width: 12px; stroke-linejoin: round; paint-order: stroke; transition: fill .18s; }
 .plc .ic { fill: #f2efe8; }
 .plc .icr { fill: #f2efe8; stroke: var(--li); stroke-width: 7; transition: stroke .18s; }
 .plc .icd { fill: var(--li); transition: fill .18s; }
@@ -58,10 +60,6 @@ body.idle, body.idle * { cursor: none !important; }
 .bmap.zoomed .plc { pointer-events: auto; cursor: pointer; }
 .plc.on { --li: #7d2219; }
 .plc.sel { --li: #a8352b; }
-.ptag { position: absolute; left: 330px; top: -12px; z-index: 4; display: flex; align-items: baseline; gap: 12px; padding: 14px 28px 12px; background: url(assets/paper-5r.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 4px 4px rgba(30, 18, 8, .45)); transform: rotate(2.2deg); }
-.ptag .l { font-family: var(--fw); font-size: 20px; color: var(--ink-3); }
-.ptag b { font-family: var(--fd); font-weight: 400; font-size: 34px; line-height: 1; color: var(--red); }
-.ptag .t { font-family: var(--fd); font-size: 21px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .02em; }
 
 /* ---------- papers (el mateix document a mida petita al tauler i gran en ampliar-lo) ---------- */
 #docs { position: absolute; inset: 0; }
@@ -213,9 +211,6 @@ body.idle, body.idle * { cursor: none !important; }
 .dmbar .k { font-family: var(--fd); font-size: 24px; letter-spacing: .06em; color: var(--red); text-transform: uppercase; }
 .dmbar .sep { width: 2px; align-self: stretch; background: var(--ink-3); opacity: .5; }
 .dmbar .btn { font-size: 16px; padding: 7px 13px 4px; }
-.dmbar .party { display: flex; align-items: center; gap: 8px; font-family: var(--fw); font-size: 20px; color: var(--ink-2); }
-.dmbar .party input { width: 52px; padding: 2px 4px 0; border: 0; border-bottom: 2px solid var(--ink-3); background: transparent; font-family: var(--fd); font-size: 20px; text-align: center; outline: none; }
-.dmbar .party input.t { width: 230px; text-align: left; }
 .dmbar .stat { max-width: 330px; overflow: hidden; text-overflow: ellipsis; font-family: var(--fw); font-size: 19px; color: var(--ink-3); }
 .dmbar .stat.dirty { color: var(--red-d); }
 
