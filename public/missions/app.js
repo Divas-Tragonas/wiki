@@ -267,13 +267,18 @@ void main(){
       return [x + W / 2, y + H / 2, W / 2 * s, H / 2 * s, r];
     }
     const t0 = performance.now();
-    let last = 0, n = 0, slow = 0;
+    let last = 0, drawn = 0, n = 0, slow = 0;
     function frame(now) {
       if (last && !FORCE_GL && ++n > 20) {
         slow = now - last > 50 ? slow + 1 : Math.max(0, slow - 1);
         if (slow > 25) { stage.classList.remove('gl'); return; }
       }
       last = now;
+      /* el vent és lent: n'hi ha prou amb ~30 fps i deixa la GPU lliure per als papers;
+         mentre un paper vola es dibuixa cada fotograma perquè el forat de l'ombra el segueixi */
+      const moving = LIFT.el && ((LIFT.v > 0.001 && LIFT.v < 0.999) || (window.gsap && window.gsap.isTweening(LIFT.el)));
+      if (!moving && now - drawn < 30) { requestAnimationFrame(frame); return; }
+      drawn = now;
       const t = reduce ? 30 : (now - t0) / 1000 + 30;
       const gust = 0.62 + 0.2 * Math.sin(t * 0.29) + 0.12 * Math.sin(t * 0.71 + 1.3) + 0.07 * Math.sin(t * 1.63 + 0.4);
       gl.uniform1f(U.uT, t); gl.uniform1f(U.uGust, gust);
@@ -582,7 +587,7 @@ void main(){
   function flyIn(el) {
     el.classList.add('zoomed'); el.style.zIndex = 110;
     el.style.setProperty('--is', 2.4);
-    G.to(el, Object.assign({ duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false }, zoomTarget(el._g)));
+    G.to(el, Object.assign({ duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto' }, zoomTarget(el._g)));
     liftTo(el, 'doc', true);
   }
   function openDoc(id) {
@@ -604,12 +609,12 @@ void main(){
     if (g && !el._temp) {
       el.style.setProperty('--is', (1 / g.s).toFixed(3));
       const h = homeOf(g);
-      G.to(el, { x: h.x + scatterX(g), y: h.y, scale: g.s, rotation: g.r + (g.cx < 960 ? -7 : 7), duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false, onComplete: () => { el.style.zIndex = g.z; } });
+      G.to(el, { x: h.x + scatterX(g), y: h.y, scale: g.s, rotation: g.r + (g.cx < 960 ? -7 : 7), duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = g.z; } });
     } else {
       if (docs.get(id) === el) docs.delete(id);
       if (qById(id) && isDone(qById(id))) {
         const pg = pileGeom(id), h = homeOf(pg);
-        G.to(el, { x: h.x, y: h.y, scale: pg.s, rotation: pg.r + 3, duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false, onComplete: () => el.remove() });
+        G.to(el, { x: h.x, y: h.y, scale: pg.s, rotation: pg.r + 3, duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => el.remove() });
       } else G.to(el, { x: gp(el, 'x') - dir * 1400, opacity: 0, duration: 0.45 * D, onComplete: () => el.remove() });
     }
   }
@@ -632,12 +637,12 @@ void main(){
     if (g && !el._temp) {
       el.style.setProperty('--is', (1 / g.s).toFixed(3));
       const h = homeOf(g);
-      G.to(el, { x: h.x, y: h.y, scale: g.s * FOC, rotation: g.r * FOCR, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false, onComplete: () => { el.style.zIndex = T.focus === id ? 90 : g.z; } });
+      G.to(el, { x: h.x, y: h.y, scale: g.s * FOC, rotation: g.r * FOCR, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = T.focus === id ? 90 : g.z; } });
     } else {
       if (docs.get(id) === el) docs.delete(id);
       if (q && isDone(q) && canSee(q)) {
         const pg = pileGeom(id), h = homeOf(pg);
-        G.to(el, { x: h.x, y: h.y, scale: pg.s, rotation: pg.r + 3, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false, onComplete: () => G.to(el, { opacity: 0, duration: 0.2 * D, onComplete: () => el.remove() }) });
+        G.to(el, { x: h.x, y: h.y, scale: pg.s, rotation: pg.r + 3, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => G.to(el, { opacity: 0, duration: 0.2 * D, onComplete: () => el.remove() }) });
         if (L.done.length) T.focus = 'pile';
       } else G.to(el, { opacity: 0, scale: gp(el, 'scaleX') * 0.9, duration: 0.4 * D, onComplete: () => el.remove() });
     }
@@ -741,7 +746,7 @@ void main(){
     const m = $('#bmap');
     m.classList.add('zoomed'); m.style.zIndex = 107;
     scatter(true, 'map');
-    G.to(m, { x: (1920 - MAP.w * MAPZ) / 2 - MAP.x, y: (1080 - MAP.h * MAPZ) / 2 - MAP.y, scale: MAPZ, rotation: 0, duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false });
+    G.to(m, { x: (1920 - MAP.w * MAPZ) / 2 - MAP.x, y: (1080 - MAP.h * MAPZ) / 2 - MAP.y, scale: MAPZ, rotation: 0, duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto' });
     liftTo(m, 'map', true);
     renderPrompts();
     return wait(700);
@@ -751,7 +756,7 @@ void main(){
     closeCard(); setPlace(null);
     T.zoom = null;
     const m = $('#bmap'); m.classList.remove('zoomed');
-    G.to(m, { x: 0, y: 0, scale: FOCM, rotation: MAP.r, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', force3D: false, onComplete: () => { m.style.zIndex = ''; lift('map', true); } });
+    G.to(m, { x: 0, y: 0, scale: FOCM, rotation: MAP.r, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { m.style.zIndex = ''; lift('map', true); } });
     liftTo(m, 'map', false, 0.38);
     scatter(false, 'map'); renderPrompts();
     return wait(600);
@@ -812,7 +817,7 @@ void main(){
     renderBoard(true);
     if (T.zoom && T.zoom !== 'map' && T.zEl) {
       if (on) enterEdit(T.zEl); else { setEditing(T.zEl, false); hideDmCard(); }
-      G.to(T.zEl, Object.assign({ duration: 0.5 * D, ease: 'power3.inOut', force3D: false }, zoomTarget(T.zEl._g)));
+      G.to(T.zEl, Object.assign({ duration: 0.5 * D, ease: 'power3.inOut' }, zoomTarget(T.zEl._g)));
     }
     if (T.card) openCard(T.card);
     renderPrompts();
@@ -903,7 +908,7 @@ void main(){
       return;
     }
     if (el._g && L.slots[q.id] && !el._temp) applyDoc(el, q, L.slots[q.id]);
-    if (T.zEl === el) G.to(el, Object.assign({ duration: 0.4 * D, ease: 'power2.inOut', force3D: false, overwrite: 'auto' }, zoomTarget(el._g)));
+    if (T.zEl === el) G.to(el, Object.assign({ duration: 0.4 * D, ease: 'power2.inOut', overwrite: 'auto' }, zoomTarget(el._g)));
     renderDmCard();
   }
   function newQuest() {
@@ -983,7 +988,7 @@ void main(){
   function onCardClick(e) {
     const b = e.target.closest('button'); if (!b) return;
     const q = T.zEl && qById(T.zEl.dataset.id); if (!q) return;
-    if (b.dataset.cat) { q.cat = b.dataset.cat; markDirty(); renderBoard(true); const g = L.slots[q.id]; if (g && !T.zEl._temp) T.zEl._g = g; applyDoc(T.zEl, q, T.zEl._g, true); G.to(T.zEl, Object.assign({ duration: 0.4 * D, force3D: false }, zoomTarget(T.zEl._g))); renderDmCard(); return; }
+    if (b.dataset.cat) { q.cat = b.dataset.cat; markDirty(); renderBoard(true); const g = L.slots[q.id]; if (g && !T.zEl._temp) T.zEl._g = g; applyDoc(T.zEl, q, T.zEl._g, true); G.to(T.zEl, Object.assign({ duration: 0.4 * D }, zoomTarget(T.zEl._g))); renderDmCard(); return; }
     if (b.dataset.q) questAction(b.dataset.q);
   }
   async function onBarClick(e) {
