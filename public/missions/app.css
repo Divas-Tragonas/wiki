@@ -181,9 +181,9 @@ body.panning, body.panning * { cursor: grabbing !important; }
 .gobo.g2 { opacity: .12; transform-origin: 70% 30%; }
 #stage.fx-suau .gobo { will-change: transform; }
 #stage.lift .gobo { opacity: .07; }
-/* amb un paper o el mapa ampliats l'ombra passa per sota (entre .dim i la peça): si quedava per sobre,
-   en fer zoom o arrossegar semblava un vidre quiet damunt d'un paper que es mou */
-#stage.lift .gobo, #stage.lift .gobo-gl { z-index: 105; }
+/* llum suau i quieta: amb un paper o el mapa ampliats l'ombra passa per sota (entre .dim i la peça); si quedava
+   per sobre, en fer zoom o arrossegar semblava un vidre quiet damunt d'un paper que es mou. La viva ja hi fa un forat */
+#stage.lift .gobo { z-index: 105; }
 .gobo-gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 115; pointer-events: none; display: none; }
 #stage.gl .gobo-gl { display: block; }
 #stage.gl .gobo { display: none; }
