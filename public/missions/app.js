@@ -43,11 +43,11 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-  /* cada poble té el seu tauler (?lloc=…), amb el seu mapa i el seu fitxer de dades; les contrasenyes són les mateixes */
+  /* cada poble té el seu tauler (?lloc=…) amb el seu mapa; les missions són les mateixes per a tots (data.json)
+     i cada una diu a quins taulers surt, així que una missió de dos pobles és la mateixa als dos */
   const TOWN_ID = new URLSearchParams(location.search).get('lloc') === 'cony-cirera' ? 'cony-cirera' : 'phentanil';
-  const DATA_FILE = TOWN_ID === 'phentanil' ? 'data.json' : `data-${TOWN_ID}.json`;
-  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: TOWN_ID === 'phentanil' ? 'phx.work' : 'phx.work.' + TOWN_ID, tok: 'phx.gh', fx: 'phx.fx' };
-  const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/' + DATA_FILE, branch: 'master' };
+  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh', fx: 'phx.fx' };
+  const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/data.json', branch: 'master' };
 
   /* =================================================================== xifratge */
   const te = new TextEncoder(), td = new TextDecoder();
@@ -108,8 +108,8 @@
   const PLACE_INFO_CONY = {
     'sender-bosc': { text: "Un sender estret que s'endinsa al bosc. Com més s'hi avança, més fosc i més fred es fa. Si l'Àgata viu enlloc, és per aquí.", href: 'wiki/characters/agata' },
     'cami-triboar': { text: "L'antic camí empedrat que porta cap a Triboar, a l'est." },
-    'cementiri': { text: 'Làpides tombades i pedres cobertes de molsa. Entre les tombes hi creixen arbustos secs.', href: 'wiki/places/runes-de-cony-berry' },
-    'muralla': { text: "El que queda de la muralla del poble. El bosc se l'ha anat menjant pedra a pedra.", href: 'wiki/places/runes-de-cony-berry' },
+    'cementiri': { text: 'Làpides tombades i pedres cobertes de molsa. Entre les tombes hi creixen arbustos secs.', href: 'wiki/places/runes-de-cony-cirera' },
+    'muralla': { text: "El que queda de la muralla del poble. El bosc se l'ha anat menjant pedra a pedra.", href: 'wiki/places/runes-de-cony-cirera' },
     'farga': { text: "Una farga abandonada, amb l'enclusa encara a fora, rovellada." },
     'casa-batlle': { text: 'La casa més gran del poble, amb el pati tancat. Fa temps que les portes no tanquen.' },
     'pou': { text: "El pou de la plaça. L'aigua encara hi és, freda i fosca." },
@@ -165,20 +165,33 @@
     s = s || {};
     s.quests = Array.isArray(s.quests) ? s.quests : [];
     s.ecos = Array.isArray(s.ecos) ? s.ecos : [];
-    s.places = s.places && typeof s.places === 'object' ? s.places : {};
-    s.layout = s.layout && typeof s.layout === 'object' ? s.layout : {};
+    const obj = (o) => (o && typeof o === 'object' ? o : {});
+    /* cada tauler té les seves posicions de papers i els seus textos de llocs (abans només hi havia Phentanil) */
+    s.boards = obj(s.boards);
+    if (s.layout || s.places) { const b = s.boards.phentanil = obj(s.boards.phentanil); b.layout = b.layout || s.layout; b.places = b.places || s.places; }
+    delete s.layout; delete s.places;
+    Object.values(s.boards).forEach((b) => { b.layout = obj(b.layout); b.places = obj(b.places); });
     s.party = s.party || { level: 1, title: '' };
-    s.quests.forEach((q) => { q.steps = Array.isArray(q.steps) ? q.steps : []; q.status = q.status || 'active'; });
+    s.quests.forEach((q) => {
+      q.steps = Array.isArray(q.steps) ? q.steps : []; q.status = q.status || 'active';
+      /* towns: taulers on surt la missió · at: el lloc del mapa de cada tauler */
+      if (!Array.isArray(q.towns) || !q.towns.length) q.towns = ['phentanil'];
+      q.at = obj(q.at);
+      if (q.place && !q.at.phentanil) q.at.phentanil = q.place;
+      delete q.place;
+    });
     return s;
   }
+  const B = () => S.boards[TOWN_ID] || (S.boards[TOWN_ID] = { layout: {}, places: {} });
   const qById = (id) => S.quests.find((q) => q.id === id);
-  const canSee = (q) => dmOn || !q.hidden;
+  const onBoard = (q) => q.towns.includes(TOWN_ID);
+  const canSee = (q) => onBoard(q) && (dmOn || !q.hidden);
   function pubOf(s) {
     const o = clone(s);
     o.quests = o.quests.filter((q) => !q.hidden).map((q) => { delete q.note; return q; });
     o.ecos = o.ecos.map((e) => (e.unlocked ? e : { id: e.id, num: e.num, unlocked: false }));
     if (o.tracked && !o.quests.some((q) => q.id === o.tracked)) o.tracked = null;
-    o.layout = Object.fromEntries(Object.entries(o.layout || {}).filter(([k]) => k === 'map' || k === 'pile' || o.quests.some((q) => q.id === k)));
+    Object.values(o.boards).forEach((b) => { b.layout = Object.fromEntries(Object.entries(b.layout).filter(([k]) => k === 'map' || k === 'pile' || o.quests.some((q) => q.id === k))); });
     return o;
   }
 
@@ -374,22 +387,11 @@ void main(){
     const loads = ['60px Antiquarian', '30px "Antiquarian Scribe"', '27px Alegreya', 'italic 27px Alegreya'].map((f) => document.fonts.load(f).catch(() => null));
     await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 3500))]);
   }
-  async function fetchJson(f) {
-    const r = await fetch(f + '?t=' + Date.now(), { cache: 'no-store' });
-    if (r.status === 404) return null;
+  async function fetchData() {
+    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }
-  /* un tauler que encara no s'ha publicat mai comença buit: les contrasenyes es comproven amb data.json
-     (són les mateixes) i el primer «Publicar al wiki» del DM ja crea el fitxer del poble */
-  async function fetchData() {
-    const d = await fetchJson(DATA_FILE);
-    if (d) return d;
-    const base = DATA_FILE !== 'data.json' && await fetchJson('data.json');
-    if (!base) throw new Error('HTTP 404');
-    return { v: 1, rev: 0, kdf: base.kdf, pub: base.pub, dm: base.dm, blank: true };
-  }
-  const fresh = (o) => (o && REMOTE.blank ? {} : o);
   function pickState() {
     if (FULL) {
       const w = ls.get(LSK.work);
@@ -407,7 +409,7 @@ void main(){
     if (!window.crypto || !crypto.subtle) { fatal('Aquest navegador no pot obrir el tauler (cal una connexió segura).'); return; }
     try { REMOTE = await fetchData(); } catch (e) { fatal("No s'ha pogut carregar el tauler de missions."); return; }
     const kp = ls.get(LSK.kp);
-    if (kp) { KP = await keyIn(kp); if (KP) PUB = fresh(await unseal(KP, REMOTE.pub)); }
+    if (kp) { KP = await keyIn(kp); if (KP) PUB = await unseal(KP, REMOTE.pub); }
     if (!PUB) {
       KP = null;
       await askGate({
@@ -415,12 +417,12 @@ void main(){
         check: async (v) => {
           const k = await derive(v, REMOTE.kdf.sp, REMOTE.kdf.iter), p = await unseal(k, REMOTE.pub);
           if (!p) return 'Contrasenya incorrecta';
-          KP = k; PUB = fresh(p); ls.set(LSK.kp, await keyOut(k)); return null;
+          KP = k; PUB = p; ls.set(LSK.kp, await keyOut(k)); return null;
         }
       });
     }
     const kd = ss.get(LSK.kd);
-    if (kd) { KD = await keyIn(kd); FULL = KD ? fresh(await unseal(KD, REMOTE.dm)) : null; if (!FULL) { KD = null; ss.del(LSK.kd); } }
+    if (kd) { KD = await keyIn(kd); FULL = KD ? await unseal(KD, REMOTE.dm) : null; if (!FULL) { KD = null; ss.del(LSK.kd); } }
     S = pickState();
     await fontsReady();
     initTV();
@@ -479,7 +481,7 @@ void main(){
     const over = OVER.slice(), slots = {};
     quests.forEach((q, n) => {
       /* els papers que el DM ha col·locat a mà no ocupen cap lloc automàtic */
-      const P = S.layout[q.id];
+      const P = B().layout[q.id];
       if (P) { slots[q.id] = geomOf(q.id, { cx: P.cx, cy: P.cy, w: P.w || 285, h: P.h || 398, r: P.r || 0, z: P.z || 40, fixed: true }); return; }
       let sl = null;
       for (const sid of SLOT_PREF[catOf(q)]) { const k = free.findIndex((f) => f.id === sid); if (k >= 0) { sl = free.splice(k, 1)[0]; break; } }
@@ -769,7 +771,7 @@ void main(){
     const svg = $('#labels'); svg.setAttribute('viewBox', '0 0 ' + TOWN.vb.join(' ')); svg.innerHTML = h;
   }
   const plcEl = (id) => $(`.plc[data-p="${id}"]`);
-  const questsAt = (id) => S.quests.filter((q) => canSee(q) && !isDone(q) && q.place === id);
+  const questsAt = (id) => S.quests.filter((q) => canSee(q) && !isDone(q) && q.at[TOWN_ID] === id);
   function setPlace(id) {
     if (T.place === id) return;
     if (T.place) { const o = plcEl(T.place); if (o) o.classList.remove('on'); }
@@ -794,7 +796,7 @@ void main(){
     setPlace(best.id);
     if (T.card) { if (best.id === 'tauler') closeCard(); else openCard(best.id); }
   }
-  function placeText(id) { const o = S.places[id]; return o && typeof o.text === 'string' ? o.text : (PLACE_INFO[id] || {}).text || ''; }
+  function placeText(id) { const o = B().places[id]; return o && typeof o.text === 'string' ? o.text : (PLACE_INFO[id] || {}).text || ''; }
   function placeBox(id) {
     const p = PL[id], v = mapPose(), s = v.s, ox = MAP.x + v.x, oy = MAP.y + v.y, k = MAP.w * s / TOWN.vb[0];
     if (p.icon) return { l: ox + (p.icon[0] - p.icon[2]) * k, r: ox + (p.icon[0] + p.icon[2]) * k, cy: oy + p.icon[1] * k };
@@ -918,14 +920,14 @@ void main(){
 
   /* =================================================================== col·locar papers (mode DM) */
   /* «Moure papers»: el DM arrossega qualsevol paper, el mapa o la pila i els gira amb la nansa ↻ o la roda.
-     La posició es desa a S.layout (va amb la resta de dades en publicar) i el paper ja no ocupa cap lloc
+     La posició es desa al layout del tauler (va amb la resta de dades en publicar) i el paper ja no ocupa cap lloc
      automàtic; amb doble clic hi torna. */
   const arr = { on: false, hover: null, drag: null, wheel: null, wt: null };
   const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
   let fixedSig = '';
   /* mapa i pila: posició del DM o la de sempre; si canvia, hi llisquen des d'on eren */
   function applyFixed(anim) {
-    const lm = S.layout.map || {}, lp = S.layout.pile || {}, sig = JSON.stringify([lm, lp]);
+    const lm = B().layout.map || {}, lp = B().layout.pile || {}, sig = JSON.stringify([lm, lp]);
     if (sig === fixedSig) return;
     const first = !fixedSig; fixedSig = sig;
     const m = $('#bmap'), pile = $('#pile'), om = { x: MAP.x, y: MAP.y }, op = { x: PILE.x, y: PILE.y };
@@ -970,22 +972,22 @@ void main(){
   }
   function arrCommit(it, cx, cy, r, z) {
     cx = Math.round(cx); cy = Math.round(cy); r = Math.round(((r + 540) % 360 - 180) * 10) / 10;
-    if (it.key === 'map') { const a = rad(r), hw = it.w / 2, hh = it.h / 2; S.layout.map = { x: Math.round(cx - Math.cos(a) * hw + Math.sin(a) * hh), y: Math.round(cy - Math.sin(a) * hw - Math.cos(a) * hh), r }; }
-    else if (it.key === 'pile') S.layout.pile = { x: cx - PILE.w / 2, y: cy - PILE.h / 2, r };
-    else S.layout[it.key] = { cx, cy, r, w: it.g.w, h: it.g.h, z: z || it.g.z };
+    if (it.key === 'map') { const a = rad(r), hw = it.w / 2, hh = it.h / 2; B().layout.map = { x: Math.round(cx - Math.cos(a) * hw + Math.sin(a) * hh), y: Math.round(cy - Math.sin(a) * hw - Math.cos(a) * hh), r }; }
+    else if (it.key === 'pile') B().layout.pile = { x: cx - PILE.w / 2, y: cy - PILE.h / 2, r };
+    else B().layout[it.key] = { cx, cy, r, w: it.g.w, h: it.g.h, z: z || it.g.z };
     it.el.classList.remove('arr-up');
     markDirty(); renderBoard(true);
   }
   function arrReset(key) {
-    if (!S.layout[key]) return;
-    delete S.layout[key]; markDirty(); renderBoard(true);
+    if (!B().layout[key]) return;
+    delete B().layout[key]; markDirty(); renderBoard(true);
     setTimeout(() => arrHover(key), 500 * D);
   }
   /* el paper que s'agafa passa a sobre de tots */
   function topZ() {
     const zs = L.ids.map((id) => L.slots[id].z);
     let z = Math.max(40, ...zs) + 1;
-    if (z > 88) { Object.values(S.layout).forEach((P) => { if (P && P.z) P.z = Math.max(20, P.z - 40); }); z = 50; }
+    if (z > 88) { Object.values(B().layout).forEach((P) => { if (P && P.z) P.z = Math.max(20, P.z - 40); }); z = 50; }
     return z;
   }
   function placeHandle(it, cx, cy, r) {
@@ -1107,7 +1109,7 @@ void main(){
       check: async (v) => {
         const k = await derive(v, REMOTE.kdf.sd, REMOTE.kdf.iter), full = await unseal(k, REMOTE.dm);
         if (!full) return 'Contrasenya incorrecta';
-        KD = k; FULL = fresh(full); ss.set(LSK.kd, await keyOut(k)); return null;
+        KD = k; FULL = full; ss.set(LSK.kd, await keyOut(k)); return null;
       }
     });
     if (!ok) return false;
@@ -1174,8 +1176,9 @@ void main(){
   function renderDmCard() {
     const q = T.zEl && qById(T.zEl.dataset.id), c = $('#dmcard');
     if (!dmOn || !q) { hideDmCard(); return; }
-    const c3 = catOf(q), placeOpts = GEOM.filter((p) => p.id !== 'tauler').map((p) => `<option value="${p.id}"${q.place === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
-    const tags = [isDone(q) ? 'Completada' : 'En curs', q.hidden ? 'Oculta als jugadors' : 'Visible', S.tracked === q.id ? 'Seguida' : ''].filter(Boolean);
+    const c3 = catOf(q), placeOpts = GEOM.filter((p) => p.id !== 'tauler').map((p) => `<option value="${p.id}"${q.at[TOWN_ID] === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+    const tags = [isDone(q) ? 'Completada' : 'En curs', q.hidden ? 'Oculta als jugadors' : 'Visible', S.tracked === q.id ? 'Seguida' : ''].filter(Boolean)
+      .concat(q.towns.filter((t) => t !== TOWN_ID).map((t) => 'També a ' + (TOWNS[t] ? TOWNS[t].name : t)));
     const acts = [];
     if (!isDone(q)) acts.push('<button class="btn pri" type="button" data-q="complete">Completar</button>'); else acts.push('<button class="btn" type="button" data-q="reopen">Reobrir</button>');
     acts.push(q.hidden ? '<button class="btn pri" type="button" data-q="reveal">Revelar</button>' : '<button class="btn" type="button" data-q="hide">Amagar</button>');
@@ -1184,13 +1187,14 @@ void main(){
       <div class="dmc-st">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>
       <div class="dmc-acts">${acts.join('')}</div>
       <div class="fl"><span>Tipus</span><div class="seg">${Object.keys(CATS).map((k) => `<button class="btn${c3 === k ? ' on' : ''}" type="button" data-cat="${k}">${k === 'principal' ? 'Principal' : k === 'personal' ? 'Personal' : 'Secundària'}</button>`).join('')}</div></div>
+      <div class="fl"><span>Taulers <small>(la mateixa missió a tots)</small></span><div class="seg">${Object.keys(TOWNS).map((k) => `<button class="btn${q.towns.includes(k) ? ' on' : ''}" type="button" data-town="${k}">${esc(TOWNS[k].name)}</button>`).join('')}</div></div>
       <div class="two">
         <label class="fl"><span>Per a ${c3 === 'personal' ? '' : '<small>(personals)</small>'}</span><input data-k="who" value="${esc(q.who || '')}"${c3 === 'personal' ? '' : ' disabled'}></label>
         <label class="fl"><span>Encàrrec de</span><input data-k="giver" value="${esc(q.giver || '')}"></label>
       </div>
       <div class="two">
         <label class="fl"><span>Lloc (text)</span><input data-k="where" value="${esc(q.where || '')}"></label>
-        <label class="fl"><span>Al mapa</span><select data-k="place"><option value="">Cap lloc</option>${placeOpts}</select></label>
+        <label class="fl"><span>Al mapa de ${esc(TOWN.name)}</span><select data-k="place"><option value="">Cap lloc</option>${placeOpts}</select></label>
       </div>
       <label class="fl"><span>Recompensa ${c3 === 'secundaria' ? '' : '<small>(cartells secundaris)</small>'}</span><input data-k="reward" value="${esc(q.reward || '')}"></label>
       <label class="fl"><span>Nota del DM (no la veu ningú més)</span><textarea data-k="note" rows="3">${esc(q.note || '')}</textarea></label>
@@ -1224,13 +1228,36 @@ void main(){
   }
   function newQuest() {
     const id = 'q' + Date.now().toString(36);
-    S.quests.push({ id, cat: 'secundaria', title: 'Nova missió', who: '', giver: '', where: '', reward: '', text: '', steps: [], status: 'active', hidden: true, note: '', place: '' });
+    S.quests.push({ id, cat: 'secundaria', title: 'Nova missió', who: '', giver: '', where: '', reward: '', text: '', steps: [], status: 'active', hidden: true, note: '', towns: [TOWN_ID], at: {} });
     markDirty(); renderBoard(true);
     setTimeout(() => openDoc(id).then(() => {
       const t = T.zEl && $('.d-t', T.zEl);
       if (t) { t.focus(); const r = document.createRange(); r.selectNodeContents(t); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
     }), 120);
   }
+  const tkey = (t) => norm(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  function mergeBoard(d) {
+    const n = { add: 0, link: 0 }, ids = {};
+    d.quests.forEach((src) => {
+      const at = (src.at && src.at[TOWN_ID]) || src.place || '';
+      let q = qById(src.id) || S.quests.find((x) => tkey(x.title) === tkey(src.title));
+      if (q) {
+        if (!onBoard(q)) q.towns.push(TOWN_ID);
+        if (at && !q.at[TOWN_ID]) q.at[TOWN_ID] = at;
+        if (src.note && !(q.note || '').includes(src.note)) q.note = q.note ? q.note + '\n\n' + src.note : src.note;
+        n.link++;
+      } else {
+        q = normState({ quests: [clone(src)] }).quests[0];
+        q.towns = [TOWN_ID]; q.at = at ? { [TOWN_ID]: at } : {};
+        S.quests.push(q); n.add++;
+      }
+      ids[src.id] = q.id;
+    });
+    Object.assign(B().places, d.places || {});
+    if (!S.tracked && ids[d.tracked]) S.tracked = ids[d.tracked];
+    return n;
+  }
+
   /* edició sobre el paper */
   let editT = null;
   function readField(el, f) {
@@ -1291,7 +1318,7 @@ void main(){
   function onCardInput(e) {
     const t = e.target, q = T.zEl && qById(T.zEl.dataset.id); if (!q) return;
     const k = t.dataset.k; if (!k) return;
-    q[k] = t.value;
+    if (k === 'place') q.at[TOWN_ID] = t.value; else q[k] = t.value;
     markDirty();
     clearTimeout(editT);
     editT = setTimeout(() => { applyDoc(T.zEl, q, T.zEl._g); }, k === 'note' ? 0 : 160);
@@ -1300,6 +1327,14 @@ void main(){
     const b = e.target.closest('button'); if (!b) return;
     const q = T.zEl && qById(T.zEl.dataset.id); if (!q) return;
     if (b.dataset.cat) { q.cat = b.dataset.cat; markDirty(); renderBoard(true); const g = L.slots[q.id]; if (g && !T.zEl._temp) T.zEl._g = g; applyDoc(T.zEl, q, T.zEl._g, true); G.to(T.zEl, Object.assign({ duration: 0.4 * D }, zoomTarget(T.zEl._g))); renderDmCard(); return; }
+    if (b.dataset.town) {
+      const k = b.dataset.town, on = q.towns.includes(k);
+      if (on && q.towns.length === 1) { toast('La missió ha de sortir com a mínim en un tauler.'); return; }
+      q.towns = on ? q.towns.filter((t) => t !== k) : q.towns.concat(k);
+      markDirty();
+      if (!onBoard(q)) { toast('La missió ja no surt en aquest tauler.'); closeDoc().then(() => renderBoard(true)); return; }
+      renderDmCard(); return;
+    }
     if (b.dataset.q) questAction(b.dataset.q);
   }
   async function onBarClick(e) {
@@ -1313,7 +1348,7 @@ void main(){
     else if (a === 'token') askToken(true);
     else if (a === 'export') {
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'missions-' + TOWN_ID + '-' + new Date().toISOString().slice(0, 10) + '.json';
+      const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'missions-' + new Date().toISOString().slice(0, 10) + '.json';
       document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 2000);
     } else if (a === 'import') $('#impFile').click();
   }
@@ -1482,13 +1517,21 @@ void main(){
     $('#dmbar').addEventListener('click', onBarClick);
     $('#pcard').addEventListener('input', (e) => {
       const f = e.target.closest('[data-place]'); if (!f || !dmOn) return;
-      S.places[f.dataset.place] = { text: f.innerText.replace(/ /g, ' ').trim() }; markDirty();
+      B().places[f.dataset.place] = { text: f.innerText.replace(/ /g, ' ').trim() }; markDirty();
     });
     $('#impFile').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
       f.text().then((txt) => {
         const d = JSON.parse(txt); if (!d || !Array.isArray(d.quests)) throw new Error();
-        const go = () => { S = normState(d); markDirty(); renderBoard(true); toast('Missions importades. Revisa-les i publica-les quan vulguis.'); };
+        if (d.board && d.board !== TOWN_ID) { toast(`Aquest fitxer és del tauler de ${TOWNS[d.board] ? TOWNS[d.board].name : d.board}: importa'l allà.`, 4200); return; }
+        /* una còpia sencera ho substitueix tot; un fitxer d'un sol tauler (com les missions d'un poble nou)
+           s'hi afegeix, i les missions que ja existeixen (mateix id o mateix títol) s'enllacen amb aquest tauler */
+        const whole = d.boards || (!d.board && TOWN_ID === 'phentanil');
+        const go = () => {
+          if (whole) { S = normState(d); markDirty(); renderBoard(true); toast('Missions importades. Revisa-les i publica-les quan vulguis.'); return; }
+          const n = mergeBoard(d); markDirty(); renderBoard(true);
+          toast(`${n.add} missions noves i ${n.link} enllaçades amb les que ja hi havia. Revisa-les i publica-les quan vulguis.`, 5200);
+        };
         if (T.zoom) closeAny().then(go); else go();
       }).catch(() => toast('Aquest fitxer no és un tauler de missions vàlid.'));
       e.target.value = '';

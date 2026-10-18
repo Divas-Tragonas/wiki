@@ -1,13 +1,13 @@
 ---
 name: "Àgata"
-description: "Elfa maga que viu a les Runes de Cony Berry i respon una sola pregunta a qui la troba."
+description: "Elfa maga que viu a les Runes de Cony Cirera i respon una sola pregunta a qui la troba."
 role: "Sàvia"
 type: "humanoid"
 status: "unknown"
-tags: ["mag", "elf", "runes-de-cony-berry"]
+tags: ["mag", "elf", "runes-de-cony-cirera"]
 ---
 
-Elfa maga d'aparença encara no coneguda pel grup, retirada a les Runes de Cony Berry al bosc a l'est de Phentanil. Segons Sor Maria, respon a una sola pregunta per visitant i té al seu poder un llibre que la clergue voldria recuperar.
+Elfa maga d'aparença encara no coneguda pel grup, retirada a les Runes de Cony Cirera al bosc a l'est de Phentanil. Segons Sor Maria, respon a una sola pregunta per visitant i té al seu poder un llibre que la clergue voldria recuperar.
 
 ## Moments destacats
 
