@@ -43,8 +43,11 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh', fx: 'phx.fx' };
-  const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/data.json', branch: 'master' };
+  /* cada poble té el seu tauler (?lloc=…), amb el seu mapa i el seu fitxer de dades; les contrasenyes són les mateixes */
+  const TOWN_ID = new URLSearchParams(location.search).get('lloc') === 'cony-cirera' ? 'cony-cirera' : 'phentanil';
+  const DATA_FILE = TOWN_ID === 'phentanil' ? 'data.json' : `data-${TOWN_ID}.json`;
+  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: TOWN_ID === 'phentanil' ? 'phx.work' : 'phx.work.' + TOWN_ID, tok: 'phx.gh', fx: 'phx.fx' };
+  const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/' + DATA_FILE, branch: 'master' };
 
   /* =================================================================== xifratge */
   const te = new TextEncoder(), td = new TextDecoder();
@@ -84,10 +87,10 @@
   };
   const TEX = { principal: ['2', '6', '3', '5'], secundaria: ['1', '3', '5', '4', '2'], personal: ['4', '1', '5'] };
 
-  /* llocs del mapa: noms i fletxes redibuixats amb la tipografia (coordenades del mapa de 4950×3510) */
-  const GEOM = [{"id":"cami-tres-bous","name":"Camí dels Tres Bous","ar":[2553,141,2721,93],"ln":[["CAMÍ dels",2302,140,201],["TRES BOUS",2268,178,252]]},{"id":"can-bertran","name":"Can Bertran","ar":[2837,423,2691,521],"ln":[["CAN BERTRAN",2692,391,334]]},{"id":"mansio-cendra","name":"Mansió de la Cendra","ar":[4580,524,4560,383],"ln":[["MANSIÓ de la",4448,579,283],["CENDRA",4495,618,195]]},{"id":"ferreria","name":"Ferreria","ar":[2375,589,2266,714],"ln":[["FERRERIA",2300,558,249]]},{"id":"casa-bertran","name":"Casa Bertran","ar":[3151,619,2939,681],"ln":[["CASA BERTRAN",3027,570,351]]},{"id":"casa-sor-maria","name":"Casa Sor Maria","ar":[1718,609,1890,898],"ln":[["CASA SOR MARIA",1539,569,379]]},{"id":"gegant-durment","name":"Gegant Durment","ar":[3557,664,3384,750],"ln":[["GEGANT",3511,592,193],["DURMENT",3487,629,239]]},{"id":"santuari-sort","name":"Santuari de la Sort","ar":[1952,732,1977,982],"ln":[["SANTUARI",1919,669,229],["de la SORT",1926,706,214]]},{"id":"hort-damia","name":"Hort d’en Damià","ar":[1008,775,1213,872],"ln":[["HORT d’en DAMIÀ",796,746,378]]},{"id":"alberg-turo","name":"Alberg Turó de la Pedra","ar":[2742,860,2568,862],"ln":[["ALBERG TURÓ",2795,851,329],["de la PEDRA",2828,887,262]]},{"id":"granja-fullaverda","name":"Granja Fullaverda","ar":[4048,1140,3897,1253],"ln":[["GRANJA FULLAVERDA",3716,1109,498]]},{"id":"ajuntament","name":"Ajuntament","ar":[2671,1200,2496,1240],"ln":[["AJUNTAMENT",2696,1180,318]]},{"id":"casa-lluna","name":"Casa Lluna","ar":[1371,1277,1497,1442],"ln":[["CASA LLUNA",1225,1250,283]]},{"id":"tauler","name":"Tauler d’anuncis","icon":[2766,1285,62]},{"id":"casa-arnau","name":"Casa Arnau Ponent","ar":[3532,1366,3389,1279],"ln":[["CASA ARNAU",3307,1389,284],["PONENT",3352,1427,195]]},{"id":"escut-lleo","name":"Companyia Escut de Lleó","ar":[1564,1678,1855,1460],"ln":[["COMPANYIA",1301,1750,273],["ESCUT de LLEÓ",1265,1789,346]]},{"id":"carpinteria","name":"Carpinteria","ar":[2560,1638,2373,1516],"ln":[["CARPINTERIA",2399,1736,325]]},{"id":"llotja-minera","name":"Llotja Minera","ar":[2210,1826,2048,1771],"ln":[["LLOTJA",2240,1867,184],["MINERA",2228,1905,196]]},{"id":"casa-helia","name":"Casa Hèlia","ar":[2851,2231,2618,2093],"ln":[["CASA HÈLIA",2884,2283,278]]},{"id":"cami-miners","name":"Camí dels Miners","ar":[1564,3201,1290,3359],"ln":[["CAMÍ dels MINERS",1653,3193,400]]}];
-  const PL = Object.fromEntries(GEOM.map((p) => [p.id, p]));
-  const PLACE_INFO = {
+  /* llocs del mapa: noms i fletxes redibuixats amb la tipografia (coordenades del mapa a 4950 d'ample;
+     ar és la fletxa [x1, y1, x2, y2] i cada línia és [text, x, y, amplada]) */
+  const GEOM_PHENTANIL = [{"id":"cami-tres-bous","name":"Camí dels Tres Bous","ar":[2553,141,2721,93],"ln":[["CAMÍ dels",2302,140,201],["TRES BOUS",2268,178,252]]},{"id":"can-bertran","name":"Can Bertran","ar":[2837,423,2691,521],"ln":[["CAN BERTRAN",2692,391,334]]},{"id":"mansio-cendra","name":"Mansió de la Cendra","ar":[4580,524,4560,383],"ln":[["MANSIÓ de la",4448,579,283],["CENDRA",4495,618,195]]},{"id":"ferreria","name":"Ferreria","ar":[2375,589,2266,714],"ln":[["FERRERIA",2300,558,249]]},{"id":"casa-bertran","name":"Casa Bertran","ar":[3151,619,2939,681],"ln":[["CASA BERTRAN",3027,570,351]]},{"id":"casa-sor-maria","name":"Casa Sor Maria","ar":[1718,609,1890,898],"ln":[["CASA SOR MARIA",1539,569,379]]},{"id":"gegant-durment","name":"Gegant Durment","ar":[3557,664,3384,750],"ln":[["GEGANT",3511,592,193],["DURMENT",3487,629,239]]},{"id":"santuari-sort","name":"Santuari de la Sort","ar":[1952,732,1977,982],"ln":[["SANTUARI",1919,669,229],["de la SORT",1926,706,214]]},{"id":"hort-damia","name":"Hort d’en Damià","ar":[1008,775,1213,872],"ln":[["HORT d’en DAMIÀ",796,746,378]]},{"id":"alberg-turo","name":"Alberg Turó de la Pedra","ar":[2742,860,2568,862],"ln":[["ALBERG TURÓ",2795,851,329],["de la PEDRA",2828,887,262]]},{"id":"granja-fullaverda","name":"Granja Fullaverda","ar":[4048,1140,3897,1253],"ln":[["GRANJA FULLAVERDA",3716,1109,498]]},{"id":"ajuntament","name":"Ajuntament","ar":[2671,1200,2496,1240],"ln":[["AJUNTAMENT",2696,1180,318]]},{"id":"casa-lluna","name":"Casa Lluna","ar":[1371,1277,1497,1442],"ln":[["CASA LLUNA",1225,1250,283]]},{"id":"tauler","name":"Tauler d’anuncis","icon":[2766,1285,62]},{"id":"casa-arnau","name":"Casa Arnau Ponent","ar":[3532,1366,3389,1279],"ln":[["CASA ARNAU",3307,1389,284],["PONENT",3352,1427,195]]},{"id":"escut-lleo","name":"Companyia Escut de Lleó","ar":[1564,1678,1855,1460],"ln":[["COMPANYIA",1301,1750,273],["ESCUT de LLEÓ",1265,1789,346]]},{"id":"carpinteria","name":"Carpinteria","ar":[2560,1638,2373,1516],"ln":[["CARPINTERIA",2399,1736,325]]},{"id":"llotja-minera","name":"Llotja Minera","ar":[2210,1826,2048,1771],"ln":[["LLOTJA",2240,1867,184],["MINERA",2228,1905,196]]},{"id":"casa-helia","name":"Casa Hèlia","ar":[2851,2231,2618,2093],"ln":[["CASA HÈLIA",2884,2283,278]]},{"id":"cami-miners","name":"Camí dels Miners","ar":[1564,3201,1290,3359],"ln":[["CAMÍ dels MINERS",1653,3193,400]]}];
+  const PLACE_INFO_PHENTANIL = {
     'ajuntament': { text: "On l'alcalde, Arnau Ponent, porta els registres del poble.", href: 'wiki/characters/arnau-ponent' },
     'gegant-durment': { text: 'La taverna El Gegant Dorment, punt de trobada habitual del grup.', href: 'wiki/places/phentanil' },
     'mansio-cendra': { text: "L'antic cau de la Vaina Roja a les afores de Phentanil, ara buidat després de la caiguda de Vara de Vidre.", href: 'wiki/places/mansio-de-la-cendra' },
@@ -100,9 +103,31 @@
     'hort-damia': { text: "L'hort de Damià RoureBlanc, pagès d'edat avançada i vell amic de Sor Maria.", href: 'wiki/characters/damia-roureblanc' },
     'casa-arnau': { text: "Casa d'Arnau Ponent, l'alcalde de Phentanil.", href: 'wiki/characters/arnau-ponent' }
   };
+  /* Cony Cirera: el poble abandonat que el bosc s'ha menjat, a dos dies a l'est de Phentanil (mapa de 1506×1044 a escala 4950) */
+  const GEOM_CONY = [{"id":"sender-bosc","name":"Sender del bosc","ar":[4618,447,4733,697],"ln":[["SENDER",4411,368,216],["del BOSC",4414,406,211]]},{"id":"cami-triboar","name":"Camí de Triboar","ar":[4503,1298,4240,1446],"ln":[["CAMÍ de",4552,1223,197],["TRIBOAR",4535,1261,231]]},{"id":"cementiri","name":"Cementiri vell","ar":[2317,230,2597,401],"ln":[["CEMENTIRI VELL",1868,204,472]]},{"id":"muralla","name":"Muralla enrunada","ar":[3566,559,3320,690],"ln":[["MURALLA",3606,526,249],["ENRUNADA",3586,564,290]]},{"id":"farga","name":"Farga vella","ar":[1538,749,1519,861],"ln":[["FARGA VELLA",1349,730,359]]},{"id":"casa-batlle","name":"Casa del batlle","ar":[2284,1663,2317,1532],"ln":[["CASA del BATLLE",2051,1716,434]]},{"id":"pou","name":"Pou de la plaça","ar":[3073,1814,2935,1722],"ln":[["POU de la PLAÇA",3083,1857,408]]},{"id":"capella","name":"Capella enrunada","ar":[2975,2081,2952,2209],"ln":[["CAPELLA",2838,2005,240],["ENRUNADA",2813,2043,290]]},{"id":"hostal","name":"Hostal vell","ar":[4332,2551,4319,2459],"ln":[["HOSTAL VELL",4144,2613,356]]},{"id":"embarcador","name":"Embarcador","ar":[1183,3195,1002,3096],"ln":[["EMBARCADOR",1199,3238,363]]},{"id":"estany","name":"Estany","ln":[["ESTANY",258,3205,207]]},{"id":"cami-phentanil","name":"Camí de Phentanil","ar":[674,230,526,335],"ln":[["CAMÍ de",756,158,197],["PHENTANIL",697,196,315]]}];
+  const PLACE_INFO_CONY = {
+    'sender-bosc': { text: "Un sender estret que s'endinsa al bosc. Com més s'hi avança, més fosc i més fred es fa. Si l'Àgata viu enlloc, és per aquí.", href: 'wiki/characters/agata' },
+    'cami-triboar': { text: "L'antic camí empedrat que porta cap a Triboar, a l'est." },
+    'cementiri': { text: 'Làpides tombades i pedres cobertes de molsa. Entre les tombes hi creixen arbustos secs.', href: 'wiki/places/runes-de-cony-berry' },
+    'muralla': { text: "El que queda de la muralla del poble. El bosc se l'ha anat menjant pedra a pedra.", href: 'wiki/places/runes-de-cony-berry' },
+    'farga': { text: "Una farga abandonada, amb l'enclusa encara a fora, rovellada." },
+    'casa-batlle': { text: 'La casa més gran del poble, amb el pati tancat. Fa temps que les portes no tanquen.' },
+    'pou': { text: "El pou de la plaça. L'aigua encara hi és, freda i fosca." },
+    'capella': { text: 'Una capella de pedra amb el campanar mig esfondrat.' },
+    'hostal': { text: 'Un hostal gran amb pati i estables, buit des de fa generacions.' },
+    'embarcador': { text: 'Un embarcador de fusta vella. La barca encara sura.' },
+    'estany': { text: "Un estany d'aigües quietes a la vora del poble." },
+    'cami-phentanil': { text: 'El camí per on heu vingut: dos dies cap a ponent fins a Phentanil.', href: 'wiki/places/phentanil' }
+  };
+  const TOWNS = {
+    phentanil: { name: 'Phentanil', map: 'assets/map.webp', vb: [4950, 3510], h: 780, start: 'ajuntament', geom: GEOM_PHENTANIL, info: PLACE_INFO_PHENTANIL },
+    'cony-cirera': { name: 'Cony Cirera', map: 'assets/map-cony-cirera.webp', vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY }
+  };
+  const TOWN = TOWNS[TOWN_ID], GEOM = TOWN.geom, PLACE_INFO = TOWN.info;
+  const PL = Object.fromEntries(GEOM.map((p) => [p.id, p]));
 
   /* tauler: mapa a dalt a l'esquerra i els llocs dels cartells copiats del tauler de referència */
-  const MAP = { x: 28, y: 22, w: 1100, h: 780, r: -0.8, s: 1 };
+  const MAP = { x: 28, y: 22, w: 1100, h: TOWN.h, r: -0.8, s: 1 };
   const PILE = { x: 60, y: 655, w: 285, h: 398, r: -2, s: 1 };
   const MAP0 = Object.assign({}, MAP), PILE0 = Object.assign({}, PILE);
   const REF = [
@@ -349,11 +374,22 @@ void main(){
     const loads = ['60px Antiquarian', '30px "Antiquarian Scribe"', '27px Alegreya', 'italic 27px Alegreya'].map((f) => document.fonts.load(f).catch(() => null));
     await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 3500))]);
   }
-  async function fetchData() {
-    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
+  async function fetchJson(f) {
+    const r = await fetch(f + '?t=' + Date.now(), { cache: 'no-store' });
+    if (r.status === 404) return null;
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }
+  /* un tauler que encara no s'ha publicat mai comença buit: les contrasenyes es comproven amb data.json
+     (són les mateixes) i el primer «Publicar al wiki» del DM ja crea el fitxer del poble */
+  async function fetchData() {
+    const d = await fetchJson(DATA_FILE);
+    if (d) return d;
+    const base = DATA_FILE !== 'data.json' && await fetchJson('data.json');
+    if (!base) throw new Error('HTTP 404');
+    return { v: 1, rev: 0, kdf: base.kdf, pub: base.pub, dm: base.dm, blank: true };
+  }
+  const fresh = (o) => (o && REMOTE.blank ? {} : o);
   function pickState() {
     if (FULL) {
       const w = ls.get(LSK.work);
@@ -371,20 +407,20 @@ void main(){
     if (!window.crypto || !crypto.subtle) { fatal('Aquest navegador no pot obrir el tauler (cal una connexió segura).'); return; }
     try { REMOTE = await fetchData(); } catch (e) { fatal("No s'ha pogut carregar el tauler de missions."); return; }
     const kp = ls.get(LSK.kp);
-    if (kp) { KP = await keyIn(kp); if (KP) PUB = await unseal(KP, REMOTE.pub); }
+    if (kp) { KP = await keyIn(kp); if (KP) PUB = fresh(await unseal(KP, REMOTE.pub)); }
     if (!PUB) {
       KP = null;
       await askGate({
-        kicker: 'Diari de Phentanil', title: 'Tauler de missions', text: 'Escriu la contrasenya del grup per entrar.', ph: 'Contrasenya', btn: 'Entrar', back: true,
+        kicker: 'Diari de ' + TOWN.name, title: 'Tauler de missions', text: 'Escriu la contrasenya del grup per entrar.', ph: 'Contrasenya', btn: 'Entrar', back: true,
         check: async (v) => {
           const k = await derive(v, REMOTE.kdf.sp, REMOTE.kdf.iter), p = await unseal(k, REMOTE.pub);
           if (!p) return 'Contrasenya incorrecta';
-          KP = k; PUB = p; ls.set(LSK.kp, await keyOut(k)); return null;
+          KP = k; PUB = fresh(p); ls.set(LSK.kp, await keyOut(k)); return null;
         }
       });
     }
     const kd = ss.get(LSK.kd);
-    if (kd) { KD = await keyIn(kd); FULL = KD ? await unseal(KD, REMOTE.dm) : null; if (!FULL) { KD = null; ss.del(LSK.kd); } }
+    if (kd) { KD = await keyIn(kd); FULL = KD ? fresh(await unseal(KD, REMOTE.dm)) : null; if (!FULL) { KD = null; ss.del(LSK.kd); } }
     S = pickState();
     await fontsReady();
     initTV();
@@ -718,15 +754,19 @@ void main(){
           `<circle class="icd" cx="${cx}" cy="${cy - 26 * u}" r="${9 * u}"/><path class="icd" d="M${cx - 15 * u} ${cy - 10 * u}h${22 * u}v${36 * u}h${8 * u}v${8 * u}h${-32 * u}v${-8 * u}h${8 * u}v${-28 * u}h${-6 * u}z"/></g>`;
         return;
       }
-      const [x1, y1, x2, y2] = p.ar, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, px = -uy, py = ux;
-      const hl = 40, hw = 17, bx = x2 - ux * hl, by = y2 - uy * hl, sx = x2 - ux * (hl - 4), sy = y2 - uy * (hl - 4);
-      const head = `${x2},${y2} ${(bx + px * hw).toFixed(1)},${(by + py * hw).toFixed(1)} ${(bx - px * hw).toFixed(1)},${(by - py * hw).toFixed(1)}`;
       const tx0 = Math.min(...p.ln.map((l) => l[1])), tx1 = Math.max(...p.ln.map((l) => l[1] + l[3])), ty0 = Math.min(...p.ln.map((l) => l[2])) - 50, ty1 = Math.max(...p.ln.map((l) => l[2])) + 16;
-      h += `<g class="plc" data-p="${p.id}"><line class="hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><rect class="hit" x="${tx0 - 18}" y="${ty0 - 14}" width="${tx1 - tx0 + 36}" height="${ty1 - ty0 + 28}"/>` +
-        `<line class="h" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="hh" points="${head}"/><line class="s" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="sh" points="${head}"/>` +
-        p.ln.map((l) => `<text x="${l[1] + l[3] / 2}" y="${l[2]}">${esc(l[0])}</text>`).join('') + '</g>';
+      h += `<g class="plc" data-p="${p.id}"><rect class="hit" x="${tx0 - 18}" y="${ty0 - 14}" width="${tx1 - tx0 + 36}" height="${ty1 - ty0 + 28}"/>`;
+      /* sense fletxa, el nom va escrit damunt del lloc mateix */
+      if (p.ar) {
+        const [x1, y1, x2, y2] = p.ar, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, px = -uy, py = ux;
+        const hl = 40, hw = 17, bx = x2 - ux * hl, by = y2 - uy * hl, sx = x2 - ux * (hl - 4), sy = y2 - uy * (hl - 4);
+        const head = `${x2},${y2} ${(bx + px * hw).toFixed(1)},${(by + py * hw).toFixed(1)} ${(bx - px * hw).toFixed(1)},${(by - py * hw).toFixed(1)}`;
+        h += `<line class="hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>` +
+          `<line class="h" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="hh" points="${head}"/><line class="s" x1="${x1}" y1="${y1}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}"/><polygon class="sh" points="${head}"/>`;
+      }
+      h += p.ln.map((l) => `<text x="${l[1] + l[3] / 2}" y="${l[2]}">${esc(l[0])}</text>`).join('') + '</g>';
     });
-    $('#labels').innerHTML = h;
+    const svg = $('#labels'); svg.setAttribute('viewBox', '0 0 ' + TOWN.vb.join(' ')); svg.innerHTML = h;
   }
   const plcEl = (id) => $(`.plc[data-p="${id}"]`);
   const questsAt = (id) => S.quests.filter((q) => canSee(q) && !isDone(q) && q.place === id);
@@ -742,7 +782,7 @@ void main(){
       const xs = p.icon ? [p.icon[0]] : p.ln.map((l) => l[1] + l[3] / 2), ys = p.icon ? [p.icon[1]] : p.ln.map((l) => l[2]);
       return { id: p.id, x: xs.reduce((a, b) => a + b, 0) / xs.length, y: ys.reduce((a, b) => a + b, 0) / ys.length };
     });
-    if (!T.place) { setPlace('ajuntament'); return; }
+    if (!T.place) { setPlace(TOWN.start); return; }
     const cur = pts.find((p) => p.id === T.place); if (!cur) return;
     let best = null, bs = Infinity;
     pts.forEach((p) => {
@@ -756,9 +796,9 @@ void main(){
   }
   function placeText(id) { const o = S.places[id]; return o && typeof o.text === 'string' ? o.text : (PLACE_INFO[id] || {}).text || ''; }
   function placeBox(id) {
-    const p = PL[id], v = mapPose(), s = v.s, ox = MAP.x + v.x, oy = MAP.y + v.y, k = MAP.w * s / 4950;
+    const p = PL[id], v = mapPose(), s = v.s, ox = MAP.x + v.x, oy = MAP.y + v.y, k = MAP.w * s / TOWN.vb[0];
     if (p.icon) return { l: ox + (p.icon[0] - p.icon[2]) * k, r: ox + (p.icon[0] + p.icon[2]) * k, cy: oy + p.icon[1] * k };
-    const xs = p.ln.map((l) => l[1]).concat(p.ln.map((l) => l[1] + l[3]), [p.ar[0], p.ar[2]]), ys = p.ln.map((l) => l[2] - 25);
+    const xs = p.ln.map((l) => l[1]).concat(p.ln.map((l) => l[1] + l[3]), p.ar ? [p.ar[0], p.ar[2]] : []), ys = p.ln.map((l) => l[2] - 25);
     return { l: ox + Math.min(...xs) * k, r: ox + Math.max(...xs) * k, cy: oy + (ys.reduce((a, b) => a + b, 0) / ys.length) * k };
   }
   function openCard(id) {
@@ -1067,7 +1107,7 @@ void main(){
       check: async (v) => {
         const k = await derive(v, REMOTE.kdf.sd, REMOTE.kdf.iter), full = await unseal(k, REMOTE.dm);
         if (!full) return 'Contrasenya incorrecta';
-        KD = k; FULL = full; ss.set(LSK.kd, await keyOut(k)); return null;
+        KD = k; FULL = fresh(full); ss.set(LSK.kd, await keyOut(k)); return null;
       }
     });
     if (!ok) return false;
@@ -1273,7 +1313,7 @@ void main(){
     else if (a === 'token') askToken(true);
     else if (a === 'export') {
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'missions-phentanil-' + new Date().toISOString().slice(0, 10) + '.json';
+      const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'missions-' + TOWN_ID + '-' + new Date().toISOString().slice(0, 10) + '.json';
       document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 2000);
     } else if (a === 'import') $('#impFile').click();
   }
@@ -1479,7 +1519,7 @@ void main(){
   /* =================================================================== tauler: inici */
   function initTV() {
     renderLabels();
-    const m = $('#bmap'); m.hidden = false;
+    const m = $('#bmap'); m.hidden = false; m.style.height = MAP.h + 'px';
     applyFixed(false);
     G.set(m, { rotation: MAP.r });
     G.set('#pile', { rotation: PILE.r });
@@ -1499,6 +1539,12 @@ void main(){
       });
     }
   }
+
+  /* mapa, títol i enllaços als taulers dels altres pobles (abans d'arrencar, perquè el mapa ja es vagi baixant) */
+  const mi = $('#mapImg'); mi.src = TOWN.map; mi.alt = 'Mapa de ' + TOWN.name;
+  if (TOWN_ID !== 'phentanil') document.title = 'Missions de ' + TOWN.name + ' — La Mina Perduda del Phentanilo';
+  $('#chrome a').insertAdjacentHTML('afterend', Object.keys(TOWNS).filter((k) => k !== TOWN_ID)
+    .map((k) => `<a class="pill" href="${k === 'phentanil' ? './' : '?lloc=' + k}">${esc(TOWNS[k].name)} →</a>`).join(''));
 
   start();
 })();
