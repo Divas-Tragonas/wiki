@@ -1,3 +1,7 @@
+# La Mina Perduda del Phentanilo
+
+🌐 **Wiki:** https://divas-tragonas.github.io/wiki
+
 # Astro Starter Kit: Minimal
 
 ```sh
