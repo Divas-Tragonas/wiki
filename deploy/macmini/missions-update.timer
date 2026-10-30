@@ -1,0 +1,10 @@
+# Cada 5 minuts (update.sh no fa res si no hi ha res de nou). systemctl enable --now missions-update.timer
+[Unit]
+Description=Actualització de l'API de missions
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

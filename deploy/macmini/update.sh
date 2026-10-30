@@ -1,6 +1,7 @@
 #!/bin/bash
-# Actualitza l'API de missions a la Mac mini. El repositori el manté al dia l'autofetch; aquest script es crida
-# després de cada fetch (o cada pocs minuts): si no hi ha res de nou a l'API, no fa res.
+# Actualitza l'API de missions a la Mac mini (Ubuntu). El repositori el manté al dia l'autofetch; aquest script es
+# crida després de cada fetch (o cada pocs minuts, amb missions-update.timer) com a usuari `missions`: si no hi ha res
+# de nou a l'API, no fa res.
 #
 # Cada versió es construeix a $MISSIONS_HOME/releases/<commit>, es proven els tests, s'aplica cap migració pendent,
 # s'engega de prova en un altre port i, si respon, el servei hi passa (enllaç `current`). Si després no respon, torna a
@@ -8,17 +9,17 @@
 #
 # Variables (totes opcionals):
 #   MISSIONS_REPO   el repositori (per defecte, el d'aquest script)
-#   MISSIONS_HOME   on viuen les versions, el .env i el registre (per defecte ~/missions-api)
-#   MISSIONS_LABEL  l'etiqueta del servei de launchd (per defecte cat.divasytragonas.missions-api)
-#   RESTART_CMD     ordre per reiniciar el servei (per defecte launchctl kickstart -k gui/<uid>/<etiqueta>)
+#   MISSIONS_HOME   on viuen les versions, el .env i el registre (per defecte /opt/missions-api)
+#   SERVICE         el servei de systemd (per defecte missions-api)
+#   RESTART_CMD     ordre per reiniciar el servei (per defecte systemctl restart, amb sudo si no s'és root)
 #   SKIP_TESTS=1    no passar els tests abans d'activar la versió
 #   FORCE=1         reconstruir encara que ja estigui desplegada (o hagi fallat)
 #   PREFLIGHT_PORT  port per a l'engegada de prova (per defecte, PORT + 1000)
 set -euo pipefail
 
 REPO="${MISSIONS_REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
-HOME_DIR="${MISSIONS_HOME:-$HOME/missions-api}"
-LABEL="${MISSIONS_LABEL:-cat.divasytragonas.missions-api}"
+HOME_DIR="${MISSIONS_HOME:-/opt/missions-api}"
+SERVICE="${SERVICE:-missions-api}"
 ENV_FILE="$HOME_DIR/.env"
 KEEP=5
 
@@ -38,12 +39,15 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK"' EXIT
 
-SHA=$(git -C "$REPO" rev-parse HEAD)
+# el clon és d'un altre usuari (el de l'autofetch): sense safe.directory git no hi vol treballar
+git_repo() { git -c safe.directory="$REPO" -C "$REPO" "$@"; }
+
+SHA=$(git_repo rev-parse HEAD)
 DEPLOYED=$(cat "$HOME_DIR/deployed" 2>/dev/null || true)
 if [ "$SHA" = "$DEPLOYED" ] && [ -z "${FORCE:-}" ]; then exit 0; fi
 if [ "$SHA" = "$(cat "$HOME_DIR/failed" 2>/dev/null || true)" ] && [ -z "${FORCE:-}" ]; then exit 0; fi
-if [ -n "$DEPLOYED" ] && [ -z "${FORCE:-}" ] && git -C "$REPO" cat-file -e "$DEPLOYED^{commit}" 2>/dev/null \
-  && git -C "$REPO" diff --quiet "$DEPLOYED" "$SHA" -- api packages package.json package-lock.json; then
+if [ -n "$DEPLOYED" ] && [ -z "${FORCE:-}" ] && git_repo cat-file -e "$DEPLOYED^{commit}" 2>/dev/null \
+  && git_repo diff --quiet "$DEPLOYED" "$SHA" -- api packages package.json package-lock.json; then
   log "commit ${SHA:0:7}: res de nou per a l'API"
   echo "$SHA" > "$HOME_DIR/deployed"
   exit 0
@@ -53,7 +57,7 @@ log "construint ${SHA:0:7}"
 REL="$HOME_DIR/releases/$SHA"
 [ -d "$REL" ] && rm -rf "$REL"
 mkdir -p "$REL"
-git -C "$REPO" archive "$SHA" api packages package.json package-lock.json | tar -x -C "$REL"
+git_repo archive "$SHA" api packages package.json package-lock.json | tar -x -C "$REL"
 (
   cd "$REL"
   npm ci --workspace=@mina/api --include-workspace-root=false --no-audit --no-fund --loglevel=error
@@ -72,7 +76,9 @@ log "migracions"
 node "$REL/api/dist/cli.js" migrate || reject "les migracions han fallat: es queda la versió que hi havia"
 
 restart() {
-  if [ -n "${RESTART_CMD:-}" ]; then eval "$RESTART_CMD"; else launchctl kickstart -k "gui/$(id -u)/$LABEL"; fi
+  if [ -n "${RESTART_CMD:-}" ]; then eval "$RESTART_CMD"
+  elif [ "$(id -u)" = 0 ]; then systemctl restart "$SERVICE"
+  else sudo -n /usr/bin/systemctl restart "$SERVICE"; fi
 }
 # healthy [port] [pid]: respon en 30 s (amb pid, plega de seguida si el procés s'ha aturat)
 healthy() {

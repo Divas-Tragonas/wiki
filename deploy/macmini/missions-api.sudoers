@@ -1,0 +1,3 @@
+# Deixa que l'usuari missions (qui executa update.sh) reiniciï el servei, i res més.
+# Instal·lar amb: install -m 0440 missions-api.sudoers /etc/sudoers.d/missions-api && visudo -c
+missions ALL=(root) NOPASSWD: /usr/bin/systemctl restart missions-api, /usr/bin/systemctl restart missions-api.service

@@ -1,4 +1,4 @@
-/* Servidor de producció (a la Mac mini el posa en marxa launchd). */
+/* Servidor de producció (a la Mac mini, el servei de systemd missions-api). */
 import { serve } from '@hono/node-server';
 import { loadConfig } from './config.ts';
 import { startRuntime } from './runtime.ts';

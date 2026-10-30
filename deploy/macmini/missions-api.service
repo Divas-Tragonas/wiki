@@ -1,0 +1,23 @@
+# API de missions. Copiar a /etc/systemd/system/missions-api.service i: systemctl daemon-reload && systemctl enable --now missions-api
+[Unit]
+Description=API del tauler de missions (La Mina Perduda del Phentanilo)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=missions
+Group=missions
+EnvironmentFile=/opt/missions-api/.env
+WorkingDirectory=/opt/missions-api/current
+ExecStart=/usr/bin/node api/dist/server.js
+Restart=always
+RestartSec=3
+# el registre va al journal: journalctl -u missions-api
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/missions-api
+
+[Install]
+WantedBy=multi-user.target

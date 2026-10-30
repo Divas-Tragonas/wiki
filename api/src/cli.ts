@@ -10,18 +10,33 @@ import { loadConfig } from './config.ts';
 import { migrate, openDatabase, type Database } from './db/client.ts';
 import { changes } from './db/schema.ts';
 import { createSnapshot, pruneSnapshots } from './services/snapshots.ts';
+import { fromLegacy, type CampaignData } from '@mina/model';
 import { decryptLegacyDataJson, exportAll, importReplace } from './services/transfer.ts';
 import * as repo from './store/repo.ts';
 
 const CLI = { role: 'dm' as Role, sessionId: null };
+
+/* què hi ha en unes dades (per comparar el fitxer amb la base de dades) */
+function summary(d: CampaignData): string {
+  const q = d.quests;
+  const towns = Object.entries(d.boards).map(([t, b]) => `${t}: ${q.filter((x) => t in x.towns).length} missions, ${Object.keys(b.layout).length} peces col·locades, ${Object.keys(b.places).length} textos de llocs`);
+  return [
+    `Missions: ${q.length} (${q.filter((x) => x.hidden).length} ocultes, ${q.filter((x) => x.status === 'done').length} completades, ${q.reduce((n, x) => n + x.steps.length, 0)} objectius)`,
+    `Ecos: ${d.ecos.length} (${d.ecos.filter((e) => e.unlocked).length} recuperats)`,
+    `Seguida: ${d.tracked ?? 'cap'}`,
+    ...towns
+  ].join('\n');
+}
 const HISTORY_DAYS = 90;
 
 const HELP = `Ordres:
   migrate                       aplica les migracions pendents
   status                        revisió, missions, contrasenyes i sessions
   set-password <player|dm>      demana la contrasenya nova (o PASSWORD=…); tanca les sessions afectades
-  import <fitxer.json>          substitueix-ho tot per una còpia exportada (en fa una còpia abans)
-  import-data-json <data.json>  importa el data.json xifrat d'abans (demana la contrasenya del DM, o DM_PASSWORD=…)
+  import <fitxer.json>          carrega una còpia exportada a la base de dades
+  import-data-json <data.json>  carrega el data.json xifrat d'abans (demana la contrasenya del DM, o DM_PASSWORD=…)
+      --dry-run                 només diu què hi ha al fitxer, sense tocar la base de dades
+      --force                   substitueix el que ja hi hagi (sense, si ja hi ha missions, no fa res)
   export [fitxer.json]          exporta-ho tot (sense fitxer, a la sortida)
   snapshot [etiqueta]           còpia manual dins de la base de dades
   nightly                       còpia de la nit i neteja (còpies velles, historial de més de ${HISTORY_DAYS} dies, sessions caducades)`;
@@ -81,16 +96,29 @@ async function main(argv: string[]) {
     }
     case 'import':
     case 'import-data-json': {
-      if (!args[0]) throw new Error('Cal el fitxer');
-      let input: unknown = JSON.parse(readFileSync(args[0], 'utf8'));
+      const file = args.find((a) => !a.startsWith('--'));
+      const dryRun = args.includes('--dry-run'), force = args.includes('--force');
+      if (!file) throw new Error('Cal el fitxer');
+      let input: unknown = JSON.parse(readFileSync(file, 'utf8'));
       if (cmd === 'import-data-json') {
         const pw = process.env.DM_PASSWORD || (await ask('Contrasenya del DM del data.json: ', true));
         input = await decryptLegacyDataJson(input, pw);
       }
+      if (!input || typeof input !== 'object' || !Array.isArray((input as { quests?: unknown }).quests)) throw new Error('Aquest fitxer no és un tauler de missions');
+      const { data, skipped } = fromLegacy(input);
+      console.log('Al fitxer:\n' + summary(data));
+      if (skipped.length) console.log(`Es descartaran (id no vàlid o repetit): ${skipped.join(', ')}`);
+      if (dryRun) {
+        console.log('(--dry-run: no s’ha tocat la base de dades)');
+        return;
+      }
       return withDb(async ({ db }) => {
+        const current = await repo.loadAll(db);
+        if ((current.quests.length || current.ecos.length) && !force) {
+          throw new Error(`La base de dades ja té ${current.quests.length} missions i ${current.ecos.length} ecos: no s’ha importat res. Amb --force se substitueixen (abans se’n fa una còpia).`);
+        }
         const r = await importReplace(db, CLI, input);
-        console.log(`Importat: ${r.result.quests} missions, ${r.result.ecos} ecos (revisió ${r.rev}).`);
-        if (r.result.skipped.length) console.log(`Descartades (id no vàlid o repetit): ${r.result.skipped.join(', ')}`);
+        console.log(`Importat (revisió ${r.rev}). A la base de dades:\n` + summary(await repo.loadAll(db)));
       });
     }
     case 'export':

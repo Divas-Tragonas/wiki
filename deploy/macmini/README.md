@@ -1,79 +1,100 @@
-# API de missions a la Mac mini
+# API de missions a la Mac mini (Ubuntu Server)
 
-L'API del tauler de missions (`api/`) corre a la Mac mini com un servei de launchd, amb Postgres. Es manté al dia sola:
-l'autofetch de la Mac mini actualitza el repositori i `update.sh` posa en marxa la versió nova quan `api/` o
-`packages/` han canviat.
+L'API del tauler de missions (`api/`) corre a la Mac mini (Ubuntu Server 24.04) com un servei de systemd, amb
+Postgres, sota un usuari de sistema propi (`missions`). Es manté al dia sola: l'autofetch actualitza el clon del
+repositori i `update.sh` posa en marxa la versió nova quan `api/` o `packages/` han canviat.
 
 ```
-~/missions-api/
-├── .env                 configuració (a partir de env.example; no va al repositori)
-├── current -> releases/<commit>   la versió en marxa
-├── releases/<commit>/   cada versió construïda (es queden les 5 últimes)
-├── deployed             el commit en marxa · failed: l'últim que ha fallat (no es reintenta)
-├── backups/             còpies de cada nit (JSON i pg_dump, 30 dies)
-└── logs/                api.log, update.log, backup.log, preflight.log
+/opt/missions-api/                (propietari: missions)
+├── .env                          configuració (a partir de env.example, mode 600; no va al repositori)
+├── current -> releases/<commit>  la versió en marxa
+├── releases/<commit>/            cada versió construïda (es queden les 5 últimes)
+├── deployed                      el commit en marxa · failed: l'últim que ha fallat (no es reintenta)
+├── backups/                      còpies de cada nit (JSON i pg_dump, 30 dies)
+└── logs/                         preflight.log (la resta, al journal)
 ```
+
+| Fitxer | Què és |
+| :-- | :-- |
+| `update.sh` | construeix, prova i posa en marxa la versió nova (no fa res si no n'hi ha) |
+| `backup.sh` | còpia de cada nit |
+| `missions-api.service` | el servei de l'API |
+| `missions-backup.service` + `.timer` | la còpia, cada nit a les 4:17 |
+| `missions-update.service` + `.timer` | crida `update.sh` cada 5 minuts (només si l'autofetch no el pot cridar ell) |
+| `missions-api.sudoers` | deixa que `missions` reiniciï el servei, i res més |
+| `env.example` | plantilla del `.env` |
 
 ## Posada en marxa
 
-Cal Node 22 (o més nou), Postgres (14 o més nou) i el repositori clonat (és públic: n'hi ha prou amb https).
+Cal Node 22 (de NodeSource, a `/usr/bin/node`), Postgres (el d'Ubuntu 24.04 és el 16) i el clon del repositori
+(és públic: n'hi ha prou amb https) llegible per a l'usuari `missions`.
 
-1. **Base de dades**: un usuari i una base de dades propis.
+1. **Usuari**: `useradd --system --home-dir /opt/missions-api --create-home --shell /usr/sbin/nologin missions`.
+2. **Base de dades**:
    ```bash
-   createuser missions --pwprompt
-   createdb missions --owner missions
+   sudo -u postgres createuser missions --pwprompt
+   sudo -u postgres createdb missions --owner missions
    ```
-2. **Configuració**: `mkdir -p ~/missions-api && cp deploy/macmini/env.example ~/missions-api/.env`, i omplir
-   `DATABASE_URL` i `ALLOWED_ORIGINS` (l'adreça del wiki). `chmod 600 ~/missions-api/.env`.
-3. **Servei**: copiar `missions-api.plist` a `~/Library/LaunchAgents/cat.divasytragonas.missions-api.plist`, substituint
-   `__HOME__` (el directori de l'usuari) i `__NODE_DIR__` (la carpeta on és `node`, p. ex. `/opt/homebrew/bin`), i
-   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/cat.divasytragonas.missions-api.plist`.
-   (Si a la Mac mini els serveis van com a LaunchDaemons o amb un altre gestor, cal fer el mateix allà i posar l'ordre de
-   reinici a `RESTART_CMD`.)
-4. **Primera versió**: `deploy/macmini/update.sh` (construeix, passa els tests, migra, prova i engega). Comprovar:
-   `curl http://127.0.0.1:8787/healthz` → `{"ok":true,…}`.
-5. **Contrasenyes** (noves: les d'abans estan, xifrades, a l'historial públic del repositori):
+3. **Configuració**: `install -o missions -g missions -m 600 deploy/macmini/env.example /opt/missions-api/.env` i
+   omplir `DATABASE_URL` (amb la contrasenya de l'usuari de Postgres) i `ALLOWED_ORIGINS` (l'adreça del wiki).
+4. **Servei i permisos**:
    ```bash
-   cd ~/missions-api/current && set -a && . ~/missions-api/.env && set +a
-   node api/dist/cli.js set-password player
-   node api/dist/cli.js set-password dm
+   install -m 0440 deploy/macmini/missions-api.sudoers /etc/sudoers.d/missions-api && visudo -c
+   cp deploy/macmini/missions-api.service /etc/systemd/system/ && systemctl daemon-reload
    ```
-6. **Les missions d'abans**: abans, el DM ha de publicar des del tauler vell els canvis que tingui pendents. Després:
+5. **Primera versió** (construeix, passa els tests, migra, prova en un altre port i engega):
    ```bash
-   node api/dist/cli.js import-data-json <repositori>/public/missions/data.json   # demana la contrasenya del DM d'abans
-   node api/dist/cli.js status
+   sudo -u missions deploy/macmini/update.sh
+   systemctl enable missions-api    # update.sh ja l'ha engegat; així també arrenca en reiniciar
+   curl http://127.0.0.1:8787/healthz   # {"ok":true,…}
    ```
-7. **Actualitzacions**: subscriure el repositori a l'autofetch i fer que, després de cada actualització, s'executi
-   `deploy/macmini/update.sh` (amb el registre a `~/missions-api/logs/update.log`). Si l'autofetch no pot executar res
-   després d'actualitzar, `missions-update.plist` el crida cada 5 minuts (no fa res si no hi ha res de nou).
-8. **Còpies de cada nit**: `missions-nightly.plist` (a les 4:17). Amb `RCLONE_REMOTE` al `.env`, també fora de la Mac mini.
-9. **Accés des de fora**: el servei només escolta a `127.0.0.1`. Per publicar-lo cal un túnel (Cloudflare Tunnel cap a
-   `http://127.0.0.1:8787`, o el mecanisme que ja facin servir les altres APIs de la Mac mini) amb HTTPS. Amb
-   Cloudflare, posar `TRUST_PROXY=1` al `.env`. L'adreça pública va a la variable `MISSIONS_API_URL` del repositori de
-   GitHub (i a `PUBLIC_MISSIONS_API_URL` de Vercel).
-
-La Mac mini ha d'estar configurada per no adormir-se i per arrencar sola després d'un tall de llum.
+6. **Contrasenyes** (noves: les d'abans són, xifrades, a l'historial públic del repositori). Totes les ordres de la CLI
+   es fan així, com a `missions` i amb el `.env` carregat:
+   ```bash
+   cli() { sudo -u missions bash -c 'set -a; . /opt/missions-api/.env; set +a; cd /opt/missions-api/current && node api/dist/cli.js "$@"' cli "$@"; }
+   cli set-password player
+   cli set-password dm
+   ```
+7. **Les missions d'abans** (`public/missions/data.json`, xifrat amb la contrasenya del DM d'abans). Abans, el DM ha de
+   publicar des del tauler vell el que tingui pendent i deixar d'editar-hi. Després:
+   ```bash
+   cli import-data-json <clon>/public/missions/data.json --dry-run   # diu què hi ha, sense tocar res
+   cli import-data-json <clon>/public/missions/data.json             # el carrega (si la base de dades és buida)
+   cli status
+   ```
+   Si la base de dades ja té missions no fa res (perquè no es perdi feina feta al tauler nou); `--force` les
+   substitueix, i abans en fa una còpia.
+8. **Actualitzacions**: subscriure el clon a l'autofetch i fer que, després de cada actualització, executi
+   `sudo -u missions <clon>/deploy/macmini/update.sh`. Si l'autofetch no pot executar res després d'actualitzar,
+   `missions-update.service` + `.timer` (substituint `__REPO__` pel camí del clon) el criden cada 5 minuts.
+9. **Còpies de cada nit**: `missions-backup.service` + `.timer` (substituint `__REPO__`). Amb `RCLONE_REMOTE` al `.env`,
+   també fora de la màquina.
+10. **Accés des de fora**: el servei només escolta a `127.0.0.1:8787`. Amb Tailscale Funnel:
+    `tailscale funnel --bg 8787` (l'API queda a `https://<màquina>.<tailnet>.ts.net`, i es manté després de reiniciar).
+    Amb Funnel, `TRUST_PROXY=0`. L'adreça pública va a la variable `MISSIONS_API_URL` del repositori de GitHub (i a
+    `PUBLIC_MISSIONS_API_URL` de Vercel), i l'origen del wiki a `ALLOWED_ORIGINS`.
 
 ## Ordres de la CLI
 
-Des de `~/missions-api/current`, amb el `.env` carregat (`set -a; . ~/missions-api/.env; set +a`):
+Amb la funció `cli` del pas 6:
 
 | Ordre | Què fa |
 | :-- | :-- |
-| `node api/dist/cli.js status` | revisió, missions, contrasenyes i sessions |
-| `node api/dist/cli.js set-password player\|dm` | contrasenya nova; tanca les sessions afectades |
-| `node api/dist/cli.js import <fitxer.json>` | substitueix-ho tot per una exportació (en fa una còpia abans) |
-| `node api/dist/cli.js import-data-json <data.json>` | importa el `data.json` xifrat d'abans |
-| `node api/dist/cli.js export [fitxer.json]` | exporta-ho tot |
-| `node api/dist/cli.js snapshot [etiqueta]` | còpia dins de la base de dades |
-| `node api/dist/cli.js nightly` | còpia de la nit i neteja (ho fa `backup.sh`) |
+| `cli status` | revisió, missions, contrasenyes i sessions |
+| `cli set-password player\|dm` | contrasenya nova; tanca les sessions afectades |
+| `cli import <fitxer.json> [--dry-run] [--force]` | carrega una exportació (la de «Exportar» del tauler) |
+| `cli import-data-json <data.json> [--dry-run] [--force]` | carrega el `data.json` xifrat d'abans |
+| `cli export [fitxer.json]` | exporta-ho tot |
+| `cli snapshot [etiqueta]` | còpia dins de la base de dades |
+| `cli nightly` | còpia de la nit i neteja (ho fa `backup.sh`) |
 
 ## Si alguna cosa va malament
 
+- **Registre**: `journalctl -u missions-api` (l'API), `journalctl -u missions-update -u missions-backup`.
 - **Una versió nova no arrenca**: `update.sh` la prova en un altre port abans de canviar i, si falla, es queda amb la que
-  hi havia (`logs/update.log`, `logs/preflight.log`). No la torna a provar fins que hi hagi un commit nou; per forçar-ho,
-  `FORCE=1 deploy/macmini/update.sh`.
-- **Tornar a una versió anterior a mà**: `ln -sfn ~/missions-api/releases/<commit> ~/missions-api/current` i
-  `launchctl kickstart -k gui/$(id -u)/cat.divasytragonas.missions-api`.
-- **Recuperar dades**: des del tauler (Historial → Còpies → Restaurar), amb `cli.js import backups/missions-<data>.json`,
+  hi havia (`logs/preflight.log`). No la torna a provar fins que hi hagi un commit nou; per forçar-ho,
+  `sudo -u missions FORCE=1 <clon>/deploy/macmini/update.sh`.
+- **Tornar a una versió anterior a mà**: `sudo -u missions ln -sfn /opt/missions-api/releases/<commit> /opt/missions-api/current`
+  i `systemctl restart missions-api`.
+- **Recuperar dades**: des del tauler (Historial → Còpies → Restaurar), amb `cli import backups/missions-<data>.json --force`,
   o amb `pg_restore` del `.dump`.

@@ -1,0 +1,12 @@
+# Mira si el repositori té una versió nova de l'API i, si en té, la posa en marxa (update.sh). Només cal si
+# l'autofetch no pot executar update.sh després de cada actualització. Substituir __REPO__.
+[Unit]
+Description=Actualització de l'API de missions
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=missions
+Group=missions
+Environment=MISSIONS_HOME=/opt/missions-api
+ExecStart=/bin/bash __REPO__/deploy/macmini/update.sh

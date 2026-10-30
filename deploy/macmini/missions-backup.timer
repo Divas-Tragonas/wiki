@@ -1,0 +1,10 @@
+# Cada nit a les 4:17 (si la màquina estava apagada, en engegar-se). systemctl enable --now missions-backup.timer
+[Unit]
+Description=Còpia de cada nit de l'API de missions
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

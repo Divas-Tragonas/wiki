@@ -4,7 +4,7 @@
 # amb RCLONE_REMOTE al .env (p. ex. r2:missions-backups) també es copien fora de la Mac mini.
 set -euo pipefail
 
-HOME_DIR="${MISSIONS_HOME:-$HOME/missions-api}"
+HOME_DIR="${MISSIONS_HOME:-/opt/missions-api}"
 set -a
 # shellcheck disable=SC1090
 . "$HOME_DIR/.env"

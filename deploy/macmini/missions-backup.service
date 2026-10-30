@@ -1,0 +1,11 @@
+# Còpia de cada nit (la dispara missions-backup.timer). Substituir __REPO__ pel camí del clon del repositori.
+[Unit]
+Description=Còpia de cada nit de l'API de missions
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=missions
+Group=missions
+Environment=MISSIONS_HOME=/opt/missions-api
+ExecStart=/bin/bash __REPO__/deploy/macmini/backup.sh

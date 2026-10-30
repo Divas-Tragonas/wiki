@@ -151,8 +151,17 @@ describe('the old encrypted data.json', () => {
         });
       writeFileSync(join(dir, 'data.json'), JSON.stringify(await encryptLikeTheOldBoard(state, 'Drac')));
       await expect(cli(['import-data-json', join(dir, 'data.json')], { DM_PASSWORD: 'wrong' })).rejects.toMatchObject({ stderr: expect.stringContaining('no obre') });
+      const dry = await cli(['import-data-json', join(dir, 'data.json'), '--dry-run'], { DM_PASSWORD: 'drac' });
+      expect(dry.stdout).toContain('Missions: 1 (1 ocultes, 0 completades, 0 objectius)');
+      expect(dry.stdout).toContain('no s’ha tocat la base de dades');
+      expect((await cli(['status'])).stdout).toContain('Missions: 0');
       const imp = await cli(['import-data-json', join(dir, 'data.json')], { DM_PASSWORD: 'drac' });
-      expect(imp.stdout).toContain('Importat: 1 missions');
+      expect(imp.stdout).toContain('Importat (revisió 1)');
+      expect(imp.stdout).toContain('phentanil: 1 missions');
+      /* un segon cop no trepitja el que ja hi ha, si no es diu --force */
+      const again = await cli(['import-data-json', join(dir, 'data.json')], { DM_PASSWORD: 'drac' }).catch((e) => e);
+      expect(again.stderr).toContain('ja té 1 missions');
+      expect((await cli(['import-data-json', join(dir, 'data.json'), '--force'], { DM_PASSWORD: 'drac' })).stdout).toContain('Importat (revisió 2)');
       await cli(['set-password', 'player'], { PASSWORD: 'grup nou' });
       expect((await cli(['set-password', 'dm'], { PASSWORD: 'abc' }).catch((e) => e)).stderr).toContain('mínim 4');
       const st = await cli(['status']);
