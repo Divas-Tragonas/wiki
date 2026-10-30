@@ -2,46 +2,28 @@
 
 🌐 **Wiki:** https://divas-tragonas.github.io/wiki
 
-# Astro Starter Kit: Minimal
+Wiki de la campanya de D&D 5e: personatges, llocs, cròniques de cada sessió i el tauler de missions del grup.
+Feta amb [Astro](https://astro.build) i publicada a GitHub Pages.
 
-```sh
-npm create astro@latest -- --template minimal
-```
+## Comandes
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Cal Node 22 (vegeu `.nvmrc`).
 
-## 🚀 Project Structure
+| Comanda           | Què fa                                                  |
+| :---------------- | :------------------------------------------------------ |
+| `npm install`     | Instal·la les dependències                              |
+| `npm run dev`     | Servidor de desenvolupament a `localhost:4321/wiki`     |
+| `npm run check`   | Comprova els tipus i el contingut                       |
+| `npm run build`   | Construeix el lloc a `dist/`                            |
+| `npm run preview` | Previsualitza el lloc construït                         |
 
-Inside of your Astro project, you'll see the following folders and files:
+## On és cada cosa
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+- `src/content/` — el contingut en Markdown: `characters/`, `places/` i `croniques/`.
+- `src/pages/`, `src/layouts/`, `src/components/` — les pàgines del wiki.
+- `src/lib/` — rutes, etiquetes en català, format de dates i dates de l'últim canvi.
+- `public/missions/` — el tauler de missions, una pàgina estàtica independent.
+- `transcripts/` — transcripcions de les sessions, d'on surten les cròniques.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Cada push a `master` republica el lloc (`.github/workflows/deploy.yml`). Les instruccions per afegir
+contingut i els detalls del tauler de missions són a [`CLAUDE.md`](CLAUDE.md).
