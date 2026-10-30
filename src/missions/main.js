@@ -17,6 +17,7 @@ import {
 import { cycleFx, initFx, liftTo, setHoleSource } from './light.js';
 import { fatal, fit, stage, toStage, toast } from './ui.js';
 import { askGate, gateOpen } from './gate.js';
+import { askViewer, pixelOn, toBoard, toPixel } from './pixel.js';
 import { checkToken, putData } from './github.js';
 
 /* =================================================================== elements */
@@ -524,6 +525,18 @@ setHoleSource(({ el, kind }) => {
   return [x + W / 2, y + H / 2, W / 2 * s, H / 2 * s, r];
 });
 
+/* mapa en píxel (pixel.js): abans de l'onada, el mapa ha de quedar ampliat, sense fitxes i a la mida inicial */
+function startPixel() {
+  toPixel(async () => {
+    setArrange(false);
+    if (view.zoom !== 'map') await openMap();
+    closeCard();
+    setPlace(null);
+    const v = viewOf(), o = v && poseOf(v.el);
+    if (o && Math.abs(o.s - v.base.s) > 1e-3) { setPose(v, Object.assign({}, v.base), 0.35); await wait(380); }
+  });
+}
+
 /* =================================================================== zoom i desplaçament */
 /* Sobre el paper o el mapa ampliats, la roda del ratolí acosta cap al punt on és el ratolí i el botó del mig
    arrossega. Tornar a la mida inicial amb la roda el recol·loca on era. */
@@ -565,6 +578,7 @@ function setPose(v, o, dur) {
 }
 const PANELS = '#dmcard, #dmbar, #chrome';
 function onWheel(e) {
+  if (pixelOn()) return;
   if (arrange.on) { arrWheel(e); return; }
   const v = viewOf();
   if (!v || closestIn(e.target, PANELS + ', #pcard')) return;
@@ -579,7 +593,7 @@ function onWheel(e) {
 }
 let pan = null;
 function onPanStart(e) {
-  if (e.button !== 1) return;
+  if (e.button !== 1 || pixelOn()) return;
   const v = viewOf();
   if (!v || closestIn(e.target, PANELS)) return;
   e.preventDefault();
@@ -868,6 +882,7 @@ function renderDmBar() {
   E.dmbar.innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
     <button class="btn" type="button" data-dm="new">+ Nova missió</button>
     <button class="btn${arrange.on ? ' on' : ''}" type="button" data-dm="arrange">${arrange.on ? 'Fet' : 'Moure papers'}</button>
+    ${TOWN.pixel ? '<button class="btn" type="button" data-dm="pixel" title="Transforma el mapa en el de l\'RPG Map Viewer (tecla P)">Mapa en píxel</button><button class="btn" type="button" data-dm="viewer" title="Adreça de l\'RPG Map Viewer">Visor</button>' : ''}
     <span class="sep"></span><span class="stat${isDirty() ? ' dirty' : ''}" title="${st}">${st}</span>
     <button class="btn pri" type="button" data-dm="publish"${isDirty() || armedForce ? '' : ' disabled'}>Publicar al wiki</button>
     <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button><button class="btn" type="button" data-dm="token">Clau</button>
@@ -1181,6 +1196,8 @@ function onBarClick(e) {
   const a = b.dataset.dm;
   if (arrange.on && (a === 'new' || a === 'import' || a === 'exit')) setArrange(false);
   if (a === 'arrange') setArrange(!arrange.on);
+  else if (a === 'pixel') startPixel();
+  else if (a === 'viewer') askViewer();
   else if (a === 'new') newQuest();
   else if (a === 'publish') publish(armedForce);
   else if (a === 'exit') setDm(false);
@@ -1274,6 +1291,14 @@ const typing = (t) => closestIn(t, 'input,textarea,select,[contenteditable]');
 const KEY_ACTS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', ' ': 'ok', Escape: 'back', Backspace: 'back', m: 'map', M: 'map' };
 function onKey(e) {
   if (gateOpen() || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+  /* amb el mapa en píxel a sobre, el tauler no es toca: Esc hi torna */
+  if (pixelOn()) {
+    const k = e.key.toLowerCase();
+    if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); toBoard(); }
+    else if (k === 'd' && dmOn) setDm(false);
+    else if (k === 'f') fullscreen();
+    return;
+  }
   firstInput();
   setInput('kb');
   if (arrange.on && e.key === 'Escape') { e.preventDefault(); setArrange(false); return; }
@@ -1281,10 +1306,11 @@ function onKey(e) {
   if (KEY_ACTS[e.key]) { e.preventDefault(); act(KEY_ACTS[e.key]); }
   else if (k === 'f') fullscreen();
   else if (k === 'd') setDm(!dmOn);
+  else if (k === 'p' && dmOn && TOWN.pixel) startPixel();
   else if (k === 'l') cycleFx();
 }
 function onClick(e) {
-  if (gateOpen()) return;
+  if (gateOpen() || pixelOn()) return;
   firstInput();
   const t = e.target, path = e.composedPath ? e.composedPath() : [];
   if (path.some((n) => n && ['dmbar', 'dmcard', 'chrome', 'gate'].includes(n.id))) return;
@@ -1314,7 +1340,7 @@ function onClick(e) {
   else if (t.closest('#bmap')) openMap();
 }
 function onHover(e) {
-  if (gateOpen()) return;
+  if (gateOpen() || pixelOn()) return;
   const t = e.target;
   if (arrange.on) { if (!t.closest('#rhandle')) arrHover(arrKeyAt(t)); return; }
   if (view.zoom === 'map') {

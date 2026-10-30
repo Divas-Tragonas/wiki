@@ -262,3 +262,31 @@ body:not(.idle) .chrome.show { opacity: 1; pointer-events: auto; }
 .hint b { color: #f0c27a; font-weight: 700; }
 .toast { position: absolute; left: 50%; top: 92px; z-index: 140; transform: translateX(-50%); max-width: 900px; padding: 12px 26px 11px; border-radius: 999px; background: rgba(22, 17, 12, .82); color: #efe4c9; font-size: 21px; text-align: center; opacity: 0; pointer-events: none; }
 .fatal { position: absolute; inset: 0; display: grid; place-items: center; color: #efe4c9; font-size: 26px; z-index: 200; }
+
+/* ---------- mapa en píxel (RPG Map Viewer) ----------
+   Fora de l'escenari (#stage), en píxels de la finestra: la pantalla de jugador ha de tenir la mida real
+   de la pantalla i no la de l'escenari escalat. */
+#px { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+#px .px-bk { position: absolute; inset: 0; background: #000; opacity: 0; }
+/* l'onada: cada casella és un bloc amb dues cares que s'aixeca, gira sobre la diagonal i torna a baixar */
+.px-wave { position: absolute; transform-style: preserve-3d; perspective-origin: 50% 50%; }
+.px-wave i { position: absolute; display: block; transform-style: preserve-3d; }
+.px-wave b { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; background-repeat: no-repeat; }
+.px-wave b::after { content: ""; position: absolute; inset: 0; opacity: 0; background: linear-gradient(135deg, rgba(255, 244, 214, .55), rgba(255, 244, 214, 0) 45%, rgba(10, 6, 2, .5)); box-shadow: inset 0 0 0 1px rgba(20, 12, 4, .35); }
+.px-wave b.k { transform: rotate3d(1, -1, 0, 180deg); }
+.px-wave.pix-f b.f, .px-wave.pix-k b.k { image-rendering: pixelated; }
+.px-wave.go i { animation: px-flip var(--t) cubic-bezier(.45, 0, .3, 1) var(--d) both; }
+.px-wave.go b::after { animation: px-shade var(--t) ease-in-out var(--d) both; }
+@keyframes px-flip {
+  0% { transform: translateZ(0) rotate3d(1, -1, 0, 0deg); }
+  45% { transform: translateZ(var(--lz)) rotate3d(1, -1, 0, 70deg); }
+  70% { transform: translateZ(var(--lz)) rotate3d(1, -1, 0, 150deg); }
+  100% { transform: translateZ(0) rotate3d(1, -1, 0, 180deg); }
+}
+@keyframes px-shade { 0%, 100% { opacity: 0; } 40%, 70% { opacity: 1; } }
+.px-live { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; background: #000; }
+.px-live iframe { display: block; width: 100%; height: 100%; border: 0; background: #000; pointer-events: none; }
+.px-msg { position: absolute; left: 50%; bottom: 6vh; transform: translateX(-50%); max-width: 80vw; padding: .6em 1.4em .55em; border-radius: 999px; background: rgba(22, 17, 12, .85); color: #efe4c9; font: 400 clamp(15px, 1.1vw, 22px) "Alegreya", Georgia, serif; text-align: center; opacity: 0; }
+.px-back { position: absolute; left: 22px; top: 18px; padding: .5em 1.1em .45em; border-radius: 999px; background: rgba(22, 17, 12, .8); color: #efe4c9; font: 400 clamp(14px, 1vw, 19px) "Alegreya", Georgia, serif; opacity: .3; pointer-events: auto; transition: opacity .3s; }
+.px-back:hover, .px-back:focus-visible { opacity: 1; }
+body.idle .px-back { opacity: 0; }

@@ -81,6 +81,10 @@ const PLACE_INFO_CONY = {
 /* vb: mida del mapa en coordenades de GEOM · h: alçada del mapa al tauler (1100 d'ample) · start: primer lloc amb les fletxes */
 export const TOWNS = {
   phentanil: { name: 'Phentanil', map: mapPhentanil, vb: [4950, 3510], h: 780, start: 'ajuntament', geom: GEOM_PHENTANIL, info: PLACE_INFO_PHENTANIL },
-  'cony-cirera': { name: 'Cony Cirera', map: mapCony, vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY }
+  'cony-cirera': {
+    name: 'Cony Cirera', map: mapCony, vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY,
+    /* el mateix poble a l'RPG Map Viewer (missió «conyberry»): mapa de 36×25 caselles amb la mateixa proporció (pixel.js) */
+    pixel: { map: 'missions/conyberry/mapa.png', w: 1728, h: 1200, cols: 36, rows: 25 }
+  }
 };
 
