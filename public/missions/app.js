@@ -46,7 +46,8 @@
   /* cada poble té el seu tauler (?lloc=…) amb el seu mapa; les missions són les mateixes per a tots (data.json)
      i cada una diu a quins taulers surt, així que una missió de dos pobles és la mateixa als dos */
   const TOWN_ID = new URLSearchParams(location.search).get('lloc') === 'cony-cirera' ? 'cony-cirera' : 'phentanil';
-  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh', fx: 'phx.fx' };
+  const LSK = { kp: 'phx.kp', kd: 'phx.kd', work: 'phx.work', tok: 'phx.gh', fx: 'phx.fx', viewer: 'phx.viewer' };
+  const VIEWER_DEFAULT = 'http://localhost:3001';
   const GH = { owner: 'divas-tragonas', repo: 'wiki', path: 'public/missions/data.json', branch: 'master' };
 
   /* =================================================================== xifratge */
@@ -121,7 +122,9 @@
   };
   const TOWNS = {
     phentanil: { name: 'Phentanil', map: 'assets/map.webp', vb: [4950, 3510], h: 780, start: 'ajuntament', geom: GEOM_PHENTANIL, info: PLACE_INFO_PHENTANIL },
-    'cony-cirera': { name: 'Cony Cirera', map: 'assets/map-cony-cirera.webp', vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY }
+    'cony-cirera': { name: 'Cony Cirera', map: 'assets/map-cony-cirera.webp', vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY,
+      /* el mateix poble a l'RPG Map Viewer (missió «conyberry»): mapa de 36×25 caselles amb la mateixa proporció */
+      pixel: { map: 'missions/conyberry/mapa.png', w: 1728, h: 1200, cols: 36, rows: 25 } }
   };
   const TOWN = TOWNS[TOWN_ID], GEOM = TOWN.geom, PLACE_INFO = TOWN.info;
   const PL = Object.fromEntries(GEOM.map((p) => [p.id, p]));
@@ -849,6 +852,176 @@ void main(){
     return wait(600);
   }
 
+  /* =================================================================== mapa en píxel (RPG Map Viewer) */
+  /* El DM tria «Mapa en píxel» i el mapa pintat es transforma en el del visor amb una onada de caselles que
+     s'aixequen i giren, de la cantonada de dalt a l'esquerra a la de baix a la dreta. Després hi entra la
+     pantalla de jugador del visor en directe (iframe de /player?embed=1), que s'eixampla a tota la pantalla i
+     segueix la càmera del DM. El visor en mode DM és en una altra finestra: la pantalla incrustada hi parla
+     pel WebSocket de la seva API, com la tauleta.
+     - L'onada: una casella per casella del mapa del visor (cols×rows), amb el tros del mapa pintat per davant
+       i el de píxel per darrere. Animació CSS de transform i opacity (corre al compositor encara que el
+       tauler vagi carregat).
+     - Encaix: mentre dura l'onada, la pantalla de jugador ensenya el mapa sencer (`fit`), escalat i retallat
+       exactament damunt del mapa del tauler; en eixamplar-se, deixa el mapa sencer i llisca cap a la càmera del DM. */
+  const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false, conn: '' };
+  const viewerUrl = () => String(ls.get(LSK.viewer) || VIEWER_DEFAULT).replace(/\/+$/, '');
+  const pxPixelSrc = () => viewerUrl() + '/' + TOWN.pixel.map;
+  function loadImg(src) {
+    return new Promise((res, rej) => { const im = new Image(); im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => res(im)); im.onerror = rej; im.src = src; });
+  }
+  function pxRoot() {
+    let r = $('#px');
+    if (!r) { r = document.createElement('div'); r.id = 'px'; document.body.appendChild(r); }
+    if (!r.firstChild) {
+      r.innerHTML = '<div class="px-bk"></div><div class="px-msg"></div><button type="button" class="px-back" title="Tornar al tauler (Esc)">← Tauler</button>';
+      $('.px-back', r).addEventListener('click', () => toBoard());
+    }
+    r.hidden = false;
+    return r;
+  }
+  /* rectangle del mapa del tauler, en píxels de la finestra (amb el mapa ampliat no té gir) */
+  const mapRect = () => { const b = $('#mapImg').getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; };
+  /* l'onada: `from` és la imatge de davant (la que es veu ara) i `to` la de darrere (la que queda) */
+  function wave(R, from, to) {
+    const { cols, rows } = TOWN.pixel, tw = R.w / cols, th = R.h / rows;
+    const step = 0.03, dur = 0.95, lift = Math.max(tw, th) * 1.6;
+    const box = document.createElement('div');
+    box.className = 'px-wave';
+    Object.assign(box.style, { left: R.x + 'px', top: R.y + 'px', width: R.w + 'px', height: R.h + 'px', perspective: Math.round(R.w * 1.1) + 'px' });
+    const css = `.px-wave{--lz:${lift.toFixed(1)}px}`;
+    let h = `<style>${css}</style>`;
+    const bg = (src, x, y) => `background-image:url("${src}");background-size:${R.w}px ${R.h}px;background-position:${-x}px ${-y}px`;
+    for (let r = 0; r < rows; r++) {
+      const y0 = Math.round(r * th), y1 = Math.round((r + 1) * th);
+      for (let c = 0; c < cols; c++) {
+        const x0 = Math.round(c * tw), x1 = Math.round((c + 1) * tw);
+        /* un píxel de més perquè no es vegin les juntes; una mica d'atzar perquè l'onada no sigui una regla */
+        const d = ((c + r) * step + ((hashOf(c + ',' + r) % 7) - 3) * 0.004) * D;
+        h += `<i style="left:${x0}px;top:${y0}px;width:${x1 - x0 + 1}px;height:${y1 - y0 + 1}px;--d:${d.toFixed(3)}s">` +
+          `<b class="f" style='${bg(from, x0, y0)}'></b><b class="k" style='${bg(to, x0, y0)}'></b></i>`;
+      }
+    }
+    box.innerHTML = h;
+    box.style.setProperty('--t', (dur * D).toFixed(3) + 's');
+    box.classList.toggle('pix-f', from === pxPixelSrc());
+    box.classList.toggle('pix-k', to === pxPixelSrc());
+    const root = pxRoot();
+    root.insertBefore(box, PX.wrap && PX.wrap.parentNode === root ? PX.wrap : $('.px-msg', root));
+    const total = ((cols + rows - 2) * step + 0.02 + dur) * D * 1000;
+    void box.offsetWidth; box.classList.add('go');
+    return { el: box, done: new Promise((res) => setTimeout(res, total + 60)) };
+  }
+  /* la pantalla de jugador és de la mida de la finestra: transformació que en posa el mapa damunt de R, i el retall del mapa */
+  function frameFit(R) {
+    const P = TOWN.pixel, W = innerWidth, H = innerHeight, s = Math.min(W / P.w, H / P.h), Mw = P.w * s, Mh = P.h * s, k = R.w / Mw;
+    const mx = (W - Mw) / 2, my = (H - Mh) / 2;
+    return { x: R.x - k * mx, y: R.y + (R.h - k * Mh) / 2 - k * my, s: k, clip: `inset(${my}px ${mx}px ${my}px ${mx}px)` };
+  }
+  function pxMsg(txt) {
+    const m = $('.px-msg', pxRoot()); m.textContent = txt || '';
+    G.to(m, { opacity: txt ? 1 : 0, duration: 0.3 * D, overwrite: 'auto' });
+  }
+  function pxStatus() {
+    if (PX.phase !== 'static') return;
+    if (PX.conn === 'closed') pxMsg("No hi ha connexió amb el visor: comprova que la seva API (port 3000) està engegada.");
+    else if (PX.conn === 'open') pxMsg('Connectat. Esperant que el DM obri ' + TOWN.name + ' al visor…');
+    else pxMsg('Connectant amb el visor…');
+  }
+  addEventListener('message', (e) => {
+    if (!PX.frame || e.source !== PX.frame.contentWindow) return;
+    const d = e.data; if (!d || d.rpg !== 'player') return;
+    PX.ready = !!d.ready; PX.conn = String(d.conn || '');
+    pxStatus();
+    if (PX.ready && PX.phase === 'static' && !PX.busy) goLive();
+  });
+  const pxPost = (fit) => { if (PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage({ rpg: 'embed', fit }, '*'); };
+
+  async function toPixel() {
+    if (!TOWN.pixel || PX.on || PX.busy) return;
+    PX.busy = true; setArrange(false);
+    let pix;
+    try { pix = await loadImg(pxPixelSrc()); } catch (e) {
+      PX.busy = false;
+      toast(`No trobo el visor a ${viewerUrl()}. És engegat? (Mode DM → «Visor» per canviar l'adreça)`, 5200);
+      return;
+    }
+    PX.on = true; PX.ready = false; PX.conn = ''; PX.phase = 'wave';
+    /* la pantalla de jugador es comença a carregar ara: l'onada en dissimula l'espera */
+    const root = pxRoot();
+    const wrap = document.createElement('div'); wrap.className = 'px-live';
+    const fr = document.createElement('iframe');
+    fr.src = viewerUrl() + '/player?embed=1&fit=1'; fr.title = 'Pantalla de jugador'; fr.tabIndex = -1;
+    wrap.appendChild(fr); root.insertBefore(wrap, $('.px-msg', root));
+    PX.wrap = wrap; PX.frame = fr;
+    G.set(wrap, { opacity: 0 });
+    if (T.zoom !== 'map') await openMap();
+    closeCard(); setPlace(null);
+    const v = viewOf(); if (v) { const o = poseOf(v.el); if (o && Math.abs(o.s - v.base.s) > 1e-3) { setPose(v, Object.assign({}, v.base), 0.35); await wait(380); } }
+    G.to('#labels', { opacity: 0, duration: 0.3 * D });
+    await wait(320);
+    const R = mapRect();
+    const f = frameFit(R);
+    G.set(wrap, { x: f.x, y: f.y, scale: f.s, transformOrigin: '0 0' }); wrap.style.clipPath = f.clip;
+    const w = wave(R, mi.src, pix.src); PX.waveEl = w.el;
+    await w.done;
+    PX.phase = 'static'; PX.busy = false;
+    if (PX.ready) goLive(); else pxStatus();
+  }
+  async function goLive() {
+    if (PX.phase !== 'static' || PX.busy) return;
+    PX.busy = true; PX.phase = 'going'; pxMsg('');
+    await new Promise((res) => G.to(PX.wrap, { opacity: 1, duration: 0.7 * D, onComplete: res }));
+    if (PX.waveEl) { PX.waveEl.remove(); PX.waveEl = null; }
+    PX.phase = 'live';
+    /* s'eixampla a tota la pantalla; el tauler queda a fosc darrere i deixa de pintar-se. El retall (només el
+       mapa, sense les franges negres de la pantalla) es manté fins al final: a sobre del fons negre no es nota */
+    G.to('.px-bk', { opacity: 1, duration: 0.9 * D, ease: 'power2.inOut' });
+    await new Promise((res) => G.to(PX.wrap, { x: 0, y: 0, scale: 1, duration: 1.1 * D, ease: 'power3.inOut', onComplete: res }));
+    PX.wrap.style.transform = 'none'; PX.wrap.style.clipPath = 'none';
+    stage.style.visibility = 'hidden';
+    pxPost(false);
+    PX.busy = false;
+  }
+  async function toBoard() {
+    if (!PX.on || PX.busy || PX.phase === 'wave') return;
+    PX.busy = true; pxMsg('');
+    const R = mapRect(), pix = pxPixelSrc();
+    if (PX.phase === 'live') {
+      /* primer el mapa sencer, després s'encongeix damunt del mapa del tauler */
+      pxPost(true);
+      await wait(1300);
+      stage.style.visibility = '';
+      const f = frameFit(R);
+      G.set(PX.wrap, { x: 0, y: 0, scale: 1, transformOrigin: '0 0' });
+      PX.wrap.style.clipPath = f.clip;
+      G.to('.px-bk', { opacity: 0, duration: 0.9 * D, ease: 'power2.inOut' });
+      await new Promise((res) => G.to(PX.wrap, { x: f.x, y: f.y, scale: f.s, duration: 1.1 * D, ease: 'power3.inOut', onComplete: res }));
+    }
+    if (PX.waveEl) { PX.waveEl.remove(); PX.waveEl = null; }
+    const w = wave(R, pix, mi.src); PX.waveEl = w.el;
+    if (PX.wrap) { const el = PX.wrap; await new Promise((res) => G.to(el, { opacity: 0, duration: 0.3 * D, onComplete: res })); el.remove(); }
+    PX.wrap = null; PX.frame = null; PX.phase = 'wave';
+    /* el contingut de l'onada ja és a sota: s'hi pot posar l'animació en marxa */
+    await w.done;
+    G.to('#labels', { opacity: 1, duration: 0.4 * D });
+    w.el.remove(); PX.waveEl = null;
+    $('#px').hidden = true;
+    PX.on = false; PX.busy = false; PX.phase = '';
+  }
+  async function askViewer() {
+    const cur = viewerUrl();
+    await askGate({
+      kicker: 'Mode DM', title: 'Adreça del visor', wide: true, type: 'text', ph: VIEWER_DEFAULT, btn: 'Desar', cancel: 'Cancel·lar',
+      text: `L'RPG Map Viewer amb ${TOWN.name} obert en mode DM. Ara: <b>${esc(cur)}</b>. Des d'aquesta pàgina (https) el navegador només hi deixa entrar per <b>https</b> o per <b>http://localhost</b>.`,
+      check: async (val) => {
+        let u; try { u = new URL(val.trim()); } catch (e) { return 'No és una adreça vàlida (ha de començar per http:// o https://)'; }
+        if (!/^https?:$/.test(u.protocol)) return 'Ha de començar per http:// o https://';
+        if (location.protocol === 'https:' && u.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname)) return 'Des d’una pàgina https el navegador bloqueja http:// d’una altra màquina. Fes servir http://localhost o una adreça https.';
+        ls.set(LSK.viewer, (u.origin + u.pathname).replace(/\/+$/, '')); toast('Visor: ' + viewerUrl()); return null;
+      }
+    });
+  }
+
   /* =================================================================== zoom i desplaçament */
   /* Sobre el paper o el mapa ampliats, la roda del ratolí acosta cap al punt on és el ratolí i el botó
      del mig arrossega. Tornar a la mida inicial amb la roda el recol·loca on era. */
@@ -888,6 +1061,7 @@ void main(){
     else { G.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
   }
   function onWheel(e) {
+    if (PX.on) return;
     if (arr.on) { arrWheel(e); return; }
     const v = viewOf(); if (!v) return;
     if (e.target.closest && e.target.closest('#dmcard, #dmbar, #pcard, #chrome')) return;
@@ -902,7 +1076,7 @@ void main(){
   }
   let pan = null;
   function onPanStart(e) {
-    if (e.button !== 1) return;
+    if (e.button !== 1 || PX.on) return;
     const v = viewOf(); if (!v) return;
     if (e.target.closest && e.target.closest('#dmcard, #dmbar, #chrome')) return;
     e.preventDefault();
@@ -1143,6 +1317,7 @@ void main(){
     $('#dmbar').innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
       <button class="btn" type="button" data-dm="new">+ Nova missió</button>
       <button class="btn${arr.on ? ' on' : ''}" type="button" data-dm="arrange">${arr.on ? 'Fet' : 'Moure papers'}</button>
+      ${TOWN.pixel ? '<button class="btn" type="button" data-dm="pixel" title="Transforma el mapa en el de l\'RPG Map Viewer (tecla P)">Mapa en píxel</button><button class="btn" type="button" data-dm="viewer" title="Adreça de l\'RPG Map Viewer">Visor</button>' : ''}
       <span class="sep"></span><span class="stat${WORK && WORK.dirty ? ' dirty' : ''}" title="${esc(st)}">${esc(st)}</span>
       <button class="btn pri" type="button" data-dm="publish"${WORK && WORK.dirty ? '' : ' disabled'}>Publicar al wiki</button>
       <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button><button class="btn" type="button" data-dm="token">Clau</button>
@@ -1342,6 +1517,8 @@ void main(){
     const a = b.dataset.dm;
     if (arr.on && (a === 'new' || a === 'import' || a === 'exit')) setArrange(false);
     if (a === 'arrange') setArrange(!arr.on);
+    else if (a === 'pixel') toPixel();
+    else if (a === 'viewer') askViewer();
     else if (a === 'new') newQuest();
     else if (a === 'publish') publish(armedForce);
     else if (a === 'exit') setDm(false);
@@ -1447,16 +1624,25 @@ void main(){
     document.addEventListener('keydown', (e) => {
       if (!$('#gate').hidden || e.metaKey || e.ctrlKey || e.altKey) return;
       if (typing(e.target)) return;
+      /* amb el mapa en píxel a sobre, el tauler no es toca: Esc hi torna */
+      if (PX.on) {
+        const k = e.key;
+        if (k === 'Escape' || k === 'Backspace') { e.preventDefault(); toBoard(); }
+        else if ((k === 'd' || k === 'D') && dmOn) setDm(false);
+        else if (k === 'f' || k === 'F') fullscreen();
+        return;
+      }
       firstInput(); setInput('kb');
       if (arr.on && e.key === 'Escape') { e.preventDefault(); setArrange(false); return; }
       const k = e.key, map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', ' ': 'ok', Escape: 'back', Backspace: 'back', m: 'map', M: 'map' };
       if (map[k]) { e.preventDefault(); act(map[k]); }
       else if (k === 'f' || k === 'F') fullscreen();
       else if (k === 'd' || k === 'D') setDm(!dmOn);
+      else if ((k === 'p' || k === 'P') && dmOn && TOWN.pixel) toPixel();
       else if (k === 'l' || k === 'L') cycleFx();
     });
     document.addEventListener('click', (e) => {
-      if (!$('#gate').hidden) return;
+      if (!$('#gate').hidden || PX.on) return;
       firstInput();
       const t = e.target, path = e.composedPath ? e.composedPath() : [];
       if (path.some((n) => n && (n.id === 'dmbar' || n.id === 'dmcard' || n.id === 'chrome' || n.id === 'gate'))) return;
@@ -1479,7 +1665,7 @@ void main(){
       if (t.closest('#bmap')) { openMap(); }
     });
     document.addEventListener('mouseover', (e) => {
-      if (!$('#gate').hidden) return;
+      if (!$('#gate').hidden || PX.on) return;
       if (arr.on) { if (!e.target.closest('#rhandle')) arrHover(arrKeyAt(e.target)); return; }
       if (T.zoom === 'map') { if (e.target.closest('#pcard')) return; const pl = e.target.closest('.plc'); setPlace(pl ? pl.dataset.p : T.card); return; }
       if (T.zoom) return;
