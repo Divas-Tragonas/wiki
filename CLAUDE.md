@@ -5,12 +5,17 @@ Wiki de campanya D&D 5e construïda amb **Astro 6 + Tailwind CSS 4**. Totes les 
 ## Comandes principals
 
 ```bash
-nvm use          # Node 22 requerit (vegeu .nvmrc)
-npm run dev      # servidor de desenvolupament a localhost:4321/wiki
-npm run check    # comprova tipus i contingut (també es fa al workflow abans del build)
-npm run build    # genera el lloc a /dist
-npm run preview  # previsualitza el build final
+nvm use            # Node 22 requerit (vegeu .nvmrc)
+npm install        # tot el repositori (wiki, api/ i packages/model/ són espais de treball d'npm)
+npm run dev        # wiki a localhost:4321/wiki
+npm run dev -w @mina/api   # API de missions a localhost:8787 (PGlite a api/.dev-data, contrasenyes «grup» i «dm»)
+npm run check      # tipus del wiki, de l'API i del model (també als workflows)
+npm test           # tests del model i de l'API (PGlite; amb TEST_DATABASE_URL=postgres://…/postgres, contra Postgres)
+npm run test:e2e   # proves de punta a punta del tauler amb Playwright (engega l'API i el wiki sols)
+npm run build      # genera el lloc a /dist
 ```
+
+Per provar el tauler en local: `npm run dev -w @mina/api` en un terminal i `PUBLIC_MISSIONS_API_URL=http://127.0.0.1:8787 npm run dev` en un altre.
 
 ## Estructura del projecte
 
@@ -20,7 +25,7 @@ src/
 │   ├── characters/      # fitxers .md de PNJs, enemics i faccions
 │   ├── places/          # fitxers .md dels llocs del món
 │   └── croniques/       # fitxers .md de cada sessió
-├── missions/            # codi, estils, mapes, textures i fonts del tauler de missions
+├── missions/            # el tauler de missions: codi, estils, mapes, textures i fonts
 ├── content.config.ts    # esquema dels camps de cada col·lecció
 ├── pages/               # rutes del lloc (no cal tocar-les normalment); missions/index.astro és el tauler
 ├── layouts/             # BaseLayout i EntryLayout (fitxa amb columna lateral)
@@ -29,6 +34,10 @@ src/
 │   ├── site.ts          # rutes (`url`, `routes`), etiquetes en català, format de dates i ordenació
 │   └── git.ts           # data de l'últim commit de cada fitxer (per als «Últims canvis» de la portada)
 └── styles/global.css    # colors i fonts (`@theme`), `.page`, `.cards-grid` i estils del Markdown
+packages/model/          # @mina/model: dades del tauler compartides per l'API i el tauler (vegeu «Tauler de missions»)
+api/                     # @mina/api: l'API de missions que corre a la Mac mini
+e2e/                     # proves de punta a punta del tauler (Playwright)
+deploy/macmini/          # posada en marxa i actualització automàtica de l'API a la Mac mini
 ```
 
 La col·lecció `characters` inclou PNJs, enemics, faccions **i els personatges jugadors del grup**. Els PCs es guarden amb informació mínima (només frontmatter identificatiu: `pc: true`, `player`, `race`, `pcClass`, `level`) perquè cada jugador conserva la seva fitxa detallada fora d'aquesta wiki i el grup manté una imatge pròpia de cada company. No hi afegeixis biografies, trasfons ni "moments destacats" —la wiki és un registre narratiu, no una fitxa de personatge.
@@ -86,11 +95,12 @@ tags: ["tag1", "tag2"]
 Contingut lliure en Markdown...
 ```
 
-## Desplegament a GitHub Pages
+## Desplegament
 
-El workflow `.github/workflows/deploy.yml` es dispara automàticament en cada push a `master`. El lloc es publica a `https://divas-tragonas.github.io/wiki`.
-
-Per activar-ho per primera vegada al repo de GitHub: **Settings → Pages → Source → GitHub Actions**.
+- **Wiki (GitHub Pages)**: `.github/workflows/deploy.yml` a cada push a `master`, a `https://divas-tragonas.github.io/wiki`. Necessita la variable del repositori `MISSIONS_API_URL` (Settings → Secrets and variables → Actions → Variables) amb l'adreça pública de l'API: sense ella no publica res, perquè el tauler no sabria on anar.
+- **Wiki (Vercel)**: `vercel.json` ja ho configura; al projecte cal `SITE_BASE=/`, `SITE_URL=https://<domini>`, `PUBLIC_MISSIONS_API_URL=https://<api>` i `VERCEL_DEEP_CLONE=true` (historial sencer per als «Últims canvis»). Els commits que només toquen `api/`, `deploy/` o `e2e/` no el reconstrueixen.
+- **API (Mac mini)**: no la desplega GitHub. L'autofetch de la Mac mini manté el repositori al dia i `deploy/macmini/update.sh` construeix, prova i posa en marxa la versió nova si `api/` o `packages/` han canviat (vegeu `deploy/macmini/README.md`).
+- **CI**: `.github/workflows/ci.yml` passa el check, tots els tests (PGlite i Postgres 16) i les proves de punta a punta a cada push i pull request.
 
 ## Notes tècniques
 
@@ -103,24 +113,37 @@ Per activar-ho per primera vegada al repo de GitHub: **Settings → Pages → So
 
 ## Tauler de missions
 
-Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar. No fa servir el layout del wiki ni Tailwind: és `src/pages/missions/index.astro` (el marcatge) amb el codi, els estils i els fitxers a `src/missions/`. El build ho empaqueta i posa un hash als noms dels fitxers (`/wiki/_astro/…`), així que després d'un desplegament ningú es queda amb una barreja de codi vell i nou. Només `data.json` és a `public/missions/`, perquè el mode DM l'hi desa amb l'API de GitHub i el tauler el baixa nou cada cop.
+Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar, sense el layout del wiki ni Tailwind: `src/pages/missions/index.astro` (marcatge) i `src/missions/` (codi, estils, mapes, textures, fonts). Les missions són a l'**API de la Mac mini**; el tauler hi entra amb la contrasenya del grup, carrega el tauler del seu poble i rep els canvis en directe. Si el servidor no respon, ensenya l'última còpia que va rebre (sense res del DM), només per mirar.
 
-- `main.js`: l'aplicació (arrencada, papers, zoom, mapa, moure papers, mode DM, publicar i entrada de teclat, ratolí i comandament).
-- `towns.js`: els pobles (`TOWNS`) amb els noms del mapa (`GEOM_PHENTANIL`, `GEOM_CONY`) i els textos dels llocs; `current-town.js` tria el del `?lloc=`.
-- `layout.js`: geometria del tauler (llocs dels papers, textures, escales).
-- `data.js`: l'estat de les missions (`normState`, que també migra dades antigues) i la part pública (`publicView`).
-- `light.js`: la llum (ombra d'arbres) i el WebGL de la llum viva.
-- `pixel.js`: el «Mapa en píxel» (onada de caselles i pantalla de jugador de l'RPG Map Viewer incrustada).
-- `crypto.js`, `github.js`, `gate.js`, `ui.js`, `util.js`: xifratge, publicació a GitHub, la porta de les contrasenyes, escenari i avisos, i utilitats.
-- `app.css` i `assets/`: estils, mapes, textures de paper (`paper-*.webp`) amb les seves ombres (`sh-*.webp`) i les tipografies Antiquarian. GSAP ve de npm.
-- Les fitxes dels llocs del mapa enllacen al wiki amb `character` o `place` (a `towns.js`); si la pàgina no existeix, el build falla.
+### Com està fet
 
-- Les dades són a `public/missions/data.json`, **xifrades** (AES-GCM amb clau PBKDF2): `pub` és el que veu el grup (contrasenya del grup) i `dm` és l'estat complet amb missions ocultes i notes (contrasenya del DM). Les contrasenyes no són enlloc del repositori. No editis aquest fitxer a mà.
-- Les missions s'editen des del mateix tauler en **mode DM** (botó «Mode DM» o tecla D). «Publicar al wiki» desa `data.json` a `master` amb l'API de GitHub (cal una clau d'accés amb permís d'escriptura al repositori, que es guarda només al navegador del DM) i el workflow de Pages republica el lloc.
-- Hi ha un tauler per poble: Phentanil a `/wiki/missions/` i Cony Cirera a `/wiki/missions/?lloc=cony-cirera`, amb botons a la part de dalt per passar d'un a l'altre. Cada poble es configura a `TOWNS` (`src/missions/towns.js`). Totes les missions viuen al mateix `data.json`: cada missió té `towns` (els taulers on surt) i `at` (el seu lloc al mapa de cada tauler), així que una missió que surt a dos taulers és la mateixa i en comparteix el progrés. Les posicions dels papers i els textos dels llocs són de cada tauler (`boards`). A la fitxa del DM, «Taulers» enllaça o desenllaça una missió d'un poble.
-- «Importar» amb un fitxer d'un sol tauler (camp `board`, o qualsevol fitxer sense `boards` importat fora de Phentanil) afegeix les missions a aquell tauler i enllaça les que ja existeixen pel mateix id o pel mateix títol; una còpia sencera (amb `boards`) ho substitueix tot.
-- Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (`GEOM_PHENTANIL` i `GEOM_CONY` a `src/missions/towns.js`, a 4950 d'ample), sobre `src/missions/assets/map.webp` i `map-cony-cirera.webp` (mapes sense etiquetes).
-- Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `src/missions/main.js`).
-- **Mapa en píxel** (Cony Cirera, mode DM: botó «Mapa en píxel» o tecla P): el mapa pintat es transforma en el de la missió de l'RPG Map Viewer amb una onada de caselles (una per casella del mapa del visor, 36×25) que s'aixequen i giren de la cantonada de dalt a l'esquerra a la de baix a la dreta. Després hi entra la pantalla de jugador del visor en directe (iframe de `/player?embed=1`), que s'eixampla a tota la pantalla i segueix la càmera del DM. Esc o «← Tauler» hi torna amb l'onada al revés. El DM té el visor obert en una altra finestra amb la missió de Cony Cirera i **la API del visor engegada** (la pantalla incrustada s'hi connecta pel WebSocket). L'adreça del visor es canvia amb «Visor» (per defecte `http://localhost:3001`, desada al navegador); des de la wiki (`https`) només val `https` o `http://localhost`. El mapa en píxel es llegeix del visor mateix (`<visor>/missions/conyberry/mapa.png`): si no respon, es diu i no es fa res. Es configura a `TOWNS[...].pixel` (`src/missions/towns.js`), el codi és a `src/missions/pixel.js` i el protocol amb la pantalla incrustada és al `CLAUDE.md` del visor.
-- Rendiment (el tauler sol anar en un ordinador carregat durant la sessió): la llum té tres nivells que es trien amb la tecla L o el botó «Llum» i es recorden al navegador. «Suau» (per defecte) mou l'ombra d'arbres per JS ~8 cops per segon; «quieta» no la mou gens; «viva» és l'ombra en WebGL (també amb `?gl=1`). L'ombra dels papers no és un `filter: drop-shadow` sinó una imatge ja desenfocada (`src/missions/assets/sh-*.webp`) al mateix `::before` que la textura; si s'afegeix una textura nova cal generar-ne també l'ombra.
-- En mode DM, «Moure papers» deixa arrossegar i girar (nansa ↻ o roda) cada paper, el mapa i la pila. Les posicions es desen a `layout` dins de les dades (es publiquen amb la resta) i el doble clic torna una peça al seu lloc automàtic.
+- **`packages/model`** (`@mina/model`): la font única de les dades. `schema.ts` (forma de missions, objectius, ecos, posicions i cossos de petició, amb zod), `towns.ts` (pobles i llocs del mapa: noms, coordenades, textos de les fitxes, enllaços al wiki), `visibility.ts` (què veu un jugador i què el DM), `changes.ts` (esdeveniments en directe que surten de cada canvi, filtrats per rol i poble) i `legacy.ts` (el format antic de `data.json` i d'«Exportar», en els dos sentits).
+- **`api/`** (`@mina/api`, Hono + Drizzle + Postgres; PGlite per desenvolupar i provar):
+  - `src/db/` taules i migracions (`npm run db:generate -w @mina/api` després de canviar `schema.ts`; s'apliquen soles). Les migracions han de ser compatibles amb la versió anterior: s'apliquen abans de canviar de versió.
+  - `src/store/uow.ts`: **tot canvi passa per la unitat de treball**. Desa només el que ha canviat, puja la versió de cada missió i la revisió de la campanya, i apunta el canvi a `changes` amb l'estat d'abans i de després (historial, desfer i esdeveniments).
+  - `src/services/domain.ts` les regles de cada acció; `history.ts` desfer; `snapshots.ts` còpies; `transfer.ts` importar/exportar i llegir el `data.json` xifrat d'abans.
+  - `src/realtime/hub.ts` els esdeveniments (SSE a `GET /v1/events`): es llegeixen de `changes` per ordre de revisió, de manera que arriben en ordre, també els que fa la CLI, i qui es reconnecta rep el que s'ha perdut.
+  - `src/http/` les rutes de `/v1` (cada ruta porta el seu middleware: `authed` o `dmAuthed`). `src/cli.ts` la CLI de la Mac mini.
+  - Sessions amb clau *bearer* (el tauler la guarda al navegador): jugador un any; el permís de DM caduca als 30 dies o després de 12 h sense fer-lo servir. Contrasenyes amb scrypt a la taula `credentials`, que només canvia la CLI (`set-password`); com abans, no distingeixen majúscules ni espais.
+- **El tauler** (`src/missions/`):
+  - `main.js` l'aplicació (papers, zoom, mapa, moure papers, mode DM, historial, entrada); `api.js` el client (peticions i canal d'esdeveniments amb `fetch`); `remote.js` la sincronització: cada canvi del DM s'aplica de seguida al tauler i s'envia en una cua ordenada que es reintenta sense connexió; mentre un element té canvis per enviar, els esdeveniments no el toquen.
+  - `towns.js` els pobles de `@mina/model` amb els mapes; `layout.js` geometria; `light.js` la llum; `pixel.js` el «Mapa en píxel»; `gate.js`, `ui.js`, `util.js`.
+  - `app.css` i `assets/`: textures de paper (`paper-*.webp`) amb les seves ombres (`sh-*.webp`), mapes i tipografies Antiquarian. GSAP ve de npm.
+  - Les fitxes dels llocs del mapa enllacen al wiki amb `character` o `place` (a `packages/model/src/towns.ts`); si la pàgina no existeix, el build falla.
+
+### Funcionament
+
+- Hi ha un tauler per poble: Phentanil a `/wiki/missions/` i Cony Cirera a `/wiki/missions/?lloc=cony-cirera`. Una missió surt als taulers de `towns` (un mapa poble → lloc del mapa), així que la mateixa missió pot ser a dos pobles i en comparteix el progrés. Posicions dels papers i textos dels llocs són de cada tauler.
+- **Mode DM** (botó «Mode DM» o tecla D, amb la contrasenya del DM): s'escriu sobre el paper i a la fitxa del DM, i **cada canvi es desa sol** i surt al moment a les altres pantalles (la barra diu «Tot desat», «Desant…» o «Sense connexió»). Les missions noves neixen ocultes. Si dues pantalles del DM canvien la mateixa missió alhora, la segona rep la versió de la primera i un avís.
+- **Historial** (barra del DM): els últims canvis amb «Desfer», les còpies (de cada nit, d'abans d'importar o restaurar, i les que fa el DM) amb «Restaurar», i els dispositius amb sessió (es poden treure).
+- **Exportar** baixa tota la campanya en el format antic (es pot tornar a importar). **Importar** una còpia sencera (amb `boards`) ho substitueix tot (abans en fa una còpia); un fitxer d'un sol tauler (`board`, o qualsevol sense `boards` importat fora de Phentanil) afegeix les missions a aquell tauler i enllaça les que ja hi són pel mateix id o pel mateix títol.
+- Sortir del mode DM treu el permís de DM a la sessió d'aquella pantalla: per tornar-hi cal la contrasenya.
+- Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (a 4950 d'ample), sobre `src/missions/assets/map.webp` i `map-cony-cirera.webp` (mapes sense etiquetes).
+- Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `main.js`).
+- **Mapa en píxel** (Cony Cirera, mode DM: botó «Mapa en píxel» o tecla P): el mapa pintat es transforma en el de la missió de l'RPG Map Viewer amb una onada de caselles (una per casella del mapa del visor, 36×25). Després hi entra la pantalla de jugador del visor en directe (iframe de `/player?embed=1`), que s'eixampla a tota la pantalla i segueix la càmera del DM. Esc o «← Tauler» hi torna amb l'onada al revés. El DM té el visor obert en una altra finestra amb la missió de Cony Cirera i **la API del visor engegada**. L'adreça del visor es canvia amb «Visor» (per defecte `http://localhost:3001`, desada al navegador); des de la wiki (`https`) només val `https` o `http://localhost`. Es configura a `pixel` de Cony Cirera a `packages/model/src/towns.ts`, el codi és a `src/missions/pixel.js` i el protocol amb la pantalla incrustada és al `CLAUDE.md` del visor.
+- Rendiment (el tauler sol anar en un ordinador carregat durant la sessió): la llum té tres nivells que es trien amb la tecla L o el botó «Llum» i es recorden al navegador. «Suau» (per defecte) mou l'ombra d'arbres per JS ~8 cops per segon; «quieta» no la mou gens; «viva» és l'ombra en WebGL (també amb `?gl=1`). L'ombra dels papers no és un `filter: drop-shadow` sinó una imatge ja desenfocada (`sh-*.webp`) al mateix `::before` que la textura; si s'afegeix una textura nova cal generar-ne també l'ombra.
+- En mode DM, «Moure papers» deixa arrossegar i girar (nansa ↻ o roda) cada paper, el mapa i la pila; les posicions es desen soles i el doble clic torna una peça al seu lloc automàtic.
+
+### El `data.json` d'abans
+
+`public/missions/data.json` és el tauler d'abans de l'API (xifrat; la part `dm` amb la contrasenya del DM). Ja no el fa servir ningú: és aquí només perquè la Mac mini l'importi un cop (`node api/dist/cli.js import-data-json public/missions/data.json`). Un cop importat, es pot esborrar del repositori i les contrasenyes s'han de canviar (l'historial de git en conserva les versions xifrades).

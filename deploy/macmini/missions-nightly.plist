@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Còpia de cada nit a les 4:17. Substitueix __HOME__, __REPO__ i __NODE_DIR__ i copia'l a
+     ~/Library/LaunchAgents/cat.divasytragonas.missions-nightly.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>cat.divasytragonas.missions-nightly</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>__REPO__/deploy/macmini/backup.sh</string></array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>__NODE_DIR__:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string></dict>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>4</integer><key>Minute</key><integer>17</integer></dict>
+  <key>StandardOutPath</key><string>__HOME__/missions-api/logs/backup.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/missions-api/logs/backup.log</string>
+</dict>
+</plist>

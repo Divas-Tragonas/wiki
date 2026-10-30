@@ -27,8 +27,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Adreça de l'API de missions
+        run: |
+          if [ -z "${{ vars.MISSIONS_API_URL }}" ]; then
+            echo "::error::Falta la variable MISSIONS_API_URL (Settings → Secrets and variables → Actions → Variables): l'adreça pública de l'API de missions de la Mac mini. Sense ella el tauler no sabria on anar i no es publica res."
+            exit 1
+          fi
       - run: npm run check
       - run: npm run build
+        env:
+          PUBLIC_MISSIONS_API_URL: ${{ vars.MISSIONS_API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

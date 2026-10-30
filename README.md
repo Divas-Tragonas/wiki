@@ -7,24 +7,29 @@ Feta amb [Astro](https://astro.build) i publicada a GitHub Pages.
 
 ## Comandes
 
-Cal Node 22 (vegeu `.nvmrc`).
+Cal Node 22 (vegeu `.nvmrc`). El repositori té tres espais de treball d'npm: el wiki (l'arrel), `api/` i `packages/model/`.
 
-| Comanda           | Què fa                                                  |
-| :---------------- | :------------------------------------------------------ |
-| `npm install`     | Instal·la les dependències                              |
-| `npm run dev`     | Servidor de desenvolupament a `localhost:4321/wiki`     |
-| `npm run check`   | Comprova els tipus i el contingut                       |
-| `npm run build`   | Construeix el lloc a `dist/`                            |
-| `npm run preview` | Previsualitza el lloc construït                         |
+| Comanda                      | Què fa                                                          |
+| :--------------------------- | :-------------------------------------------------------------- |
+| `npm install`                | Instal·la les dependències de tot                               |
+| `npm run dev`                | Wiki a `localhost:4321/wiki`                                    |
+| `npm run dev -w @mina/api`   | API de missions a `localhost:8787` (sense Postgres: PGlite)     |
+| `npm run check`              | Comprova els tipus del wiki, l'API i el model                   |
+| `npm test`                   | Tests del model i de l'API                                      |
+| `npm run test:e2e`           | Proves de punta a punta del tauler (Playwright)                 |
+| `npm run build`              | Construeix el lloc a `dist/`                                    |
 
 ## On és cada cosa
 
 - `src/content/` — el contingut en Markdown: `characters/`, `places/` i `croniques/`.
 - `src/pages/`, `src/layouts/`, `src/components/` — les pàgines del wiki.
 - `src/lib/` — rutes, etiquetes en català, format de dates i dates de l'últim canvi.
-- `src/pages/missions/` i `src/missions/` — el tauler de missions (pàgina a pantalla completa, sense el layout del wiki).
-- `public/missions/data.json` — les missions, xifrades; el tauler les hi desa des del mode DM.
+- `src/pages/missions/` i `src/missions/` — el tauler de missions.
+- `api/` — l'API de missions (Hono + Postgres), que corre a la Mac mini.
+- `packages/model/` — les dades del tauler compartides per l'API i el tauler.
+- `deploy/macmini/` — posada en marxa i actualització automàtica de l'API.
+- `e2e/` — proves de punta a punta del tauler.
 - `transcripts/` — transcripcions de les sessions, d'on surten les cròniques.
 
-Cada push a `master` republica el lloc (`.github/workflows/deploy.yml`). Les instruccions per afegir
-contingut i els detalls del tauler de missions són a [`CLAUDE.md`](CLAUDE.md).
+Cada push a `master` republica el wiki (`.github/workflows/deploy.yml`) i la Mac mini actualitza l'API sola. Les
+instruccions per afegir contingut i els detalls del tauler de missions són a [`CLAUDE.md`](CLAUDE.md).
