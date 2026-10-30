@@ -77,7 +77,7 @@ body.panning, body.panning * { cursor: grabbing !important; }
 .doc.c-principal { --c: var(--red); }
 .doc.c-secundaria { --c: var(--green); }
 .doc.c-personal { --c: var(--indigo); }
-.doc.zoomed { cursor: default; }
+.doc.zoomed { z-index: 110 !important; cursor: default; }
 .doc.hid { opacity: .55; }
 .doc.hid.zoomed { opacity: 1; }
 .doc-in {
@@ -123,7 +123,6 @@ body.panning, body.panning * { cursor: grabbing !important; }
 .doc.done .d-stamp { opacity: .88; }
 .d-hid { position: absolute; right: 8%; top: 4%; z-index: 3; padding: 6px 16px 2px; border: 4px solid var(--ink-2); font-family: var(--fd); font-size: 30px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: rgba(240, 228, 200, .55); transform: rotate(5deg); display: none; }
 .doc.hid .d-hid { display: block; }
-.doc.zoomed { z-index: 110 !important; }
 
 /* edició (mode DM, paper ampliat) */
 .doc.editing [data-f] { outline: none; border-radius: 3px; transition: background .15s, box-shadow .15s; }
@@ -180,10 +179,9 @@ body.panning, body.panning * { cursor: grabbing !important; }
 .gobo { position: absolute; left: -80px; top: -50px; width: 2080px; height: 1180px; z-index: 115; pointer-events: none; background: url(assets/gobo-sh.webp) center / 2080px 1387px no-repeat; opacity: .36; transition: opacity .5s ease; }
 .gobo.g2 { opacity: .12; transform-origin: 70% 30%; }
 #stage.fx-suau .gobo { will-change: transform; }
-#stage.lift .gobo { opacity: .07; }
 /* llum suau i quieta: amb un paper o el mapa ampliats l'ombra passa per sota (entre .dim i la peça); si quedava
    per sobre, en fer zoom o arrossegar semblava un vidre quiet damunt d'un paper que es mou. La viva ja hi fa un forat */
-#stage.lift .gobo { z-index: 105; }
+#stage.lift .gobo { opacity: .07; z-index: 105; }
 .gobo-gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 115; pointer-events: none; display: none; }
 #stage.gl .gobo-gl { display: block; }
 #stage.gl .gobo { display: none; }
@@ -224,6 +222,7 @@ body.arr-drag, body.arr-drag * { cursor: grabbing !important; }
 .seg .btn { flex: 1; padding-inline: 8px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
 .dmc-help { margin: 6px 0 0; font-size: 17px; line-height: 1.4; color: var(--ink-3); }
+.dmc-acts.dmc-end { margin: 14px 0 0; }
 
 /* ---------- barra del DM ---------- */
 .dmbar { position: absolute; left: 50%; top: 12px; z-index: 130; display: flex; align-items: center; gap: 14px; padding: 14px 30px 11px; transform: translateX(-50%) rotate(-.4deg); background: url(assets/paper-1r.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 8px 10px rgba(20, 12, 6, .45)); color: var(--ink); white-space: nowrap; }
