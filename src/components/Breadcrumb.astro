@@ -1,0 +1,48 @@
+---
+interface Props {
+  /* l'últim element és la pàgina actual i no porta enllaç */
+  items: { label: string; href?: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<nav class="breadcrumb" aria-label="Ruta">
+  {items.map((item, i) => (
+    <>
+      {i > 0 && <span class="sep" aria-hidden="true">›</span>}
+      {item.href ? (
+        <a href={item.href} class="link">{item.label}</a>
+      ) : (
+        <span class="current" aria-current="page">{item.label}</span>
+      )}
+    </>
+  ))}
+</nav>
+
+<style>
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+  }
+  .sep {
+    color: var(--color-gold-500);
+    opacity: 0.5;
+  }
+  .link {
+    color: var(--color-gold-500);
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .link:hover {
+    opacity: 1;
+  }
+  .current {
+    color: var(--color-parchment);
+  }
+</style>

@@ -1,47 +1,41 @@
 ---
-const pathname = Astro.url.pathname;
-const base = import.meta.env.BASE_URL;
+import { routes, SITE_NAME } from '../lib/site';
 
-function isActive(path: string) {
-  if (path === '/') {
-    return pathname === base || pathname === base + '/';
-  }
-  return pathname.startsWith(base + path);
-}
+const pathname = Astro.url.pathname;
+const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+const links = [
+  { href: routes.wiki, label: 'Wiki' },
+  { href: routes.croniques, label: 'Cròniques' },
+];
 ---
 
 <nav class="navbar">
-  <div class="nav-inner">
-    <a href={base} class="nav-brand">
-      <span class="brand-icon">⚔</span>
-      <span class="brand-text">La Mina Perduda del Phentanilo</span>
+  <div class="inner">
+    <a href={routes.home} class="brand">
+      <span class="brand-icon" aria-hidden="true">⚔</span>
+      <span>{SITE_NAME}</span>
     </a>
-    <div class="nav-links">
-      <a href={`${base}/wiki`} class:list={["nav-link", { active: isActive('/wiki') }]}>
-        Wiki
-      </a>
-      <a href={`${base}/croniques`} class:list={["nav-link", { active: isActive('/croniques') }]}>
-        Cròniques
-      </a>
-      <a href={`${base}/missions/`} class="nav-link">
-        Missions
-      </a>
-      <button type="button" class="nav-link nav-search-btn" data-search-open title="Cerca (Ctrl+K)">
-        🔍 Cerca
-      </button>
+    <div class="links">
+      {links.map(({ href, label }) => (
+        <a href={href} class:list={['link', { active: isActive(href) }]} aria-current={isActive(href) ? 'page' : undefined}>
+          {label}
+        </a>
+      ))}
+      <a href={routes.missions} class="link">Missions</a>
+      <button type="button" class="link search-btn" data-search-open title="Cerca (Ctrl+K)">🔍 Cerca</button>
     </div>
   </div>
 </nav>
 
 <style>
   .navbar {
-    background-color: #0a0c10;
-    border-bottom: 1px solid #252932;
+    background-color: var(--color-stone-950);
+    border-bottom: 1px solid var(--color-stone-700);
     position: sticky;
     top: 0;
     z-index: 100;
   }
-  .nav-inner {
+  .inner {
     max-width: 72rem;
     margin: 0 auto;
     padding: 0 1.5rem;
@@ -50,13 +44,13 @@ function isActive(path: string) {
     align-items: center;
     justify-content: space-between;
   }
-  .nav-brand {
+  .brand {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
-    color: #e8c56a;
-    font-family: 'Cinzel', serif;
+    color: var(--color-gold-400);
+    font-family: var(--font-display);
     font-size: 1.1rem;
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -64,29 +58,28 @@ function isActive(path: string) {
   .brand-icon {
     font-size: 1.25rem;
   }
-  .nav-links {
+  .links {
     display: flex;
     gap: 2rem;
   }
-  .nav-link {
+  .link {
     text-decoration: none;
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.7;
     font-size: 0.95rem;
     transition: color 0.2s, opacity 0.2s;
     letter-spacing: 0.05em;
   }
-  .nav-link:hover {
-    color: #e8c56a;
+  .link:hover,
+  .link.active {
+    color: var(--color-gold-400);
     opacity: 1;
   }
-  .nav-link.active {
-    color: #e8c56a;
-    opacity: 1;
-    border-bottom: 2px solid #c9a84c;
+  .link.active {
+    border-bottom: 2px solid var(--color-gold-500);
     padding-bottom: 2px;
   }
-  .nav-search-btn {
+  .search-btn {
     background: transparent;
     border: none;
     padding: 0;
@@ -95,29 +88,29 @@ function isActive(path: string) {
   }
 
   @media (max-width: 768px) {
-    .nav-inner {
+    .inner {
       padding: 0 1rem;
       gap: 1rem;
     }
-    .nav-brand {
+    .brand {
       font-size: 1rem;
       line-height: 1.2;
     }
-    .nav-links {
+    .links {
       gap: 1.25rem;
     }
   }
 
   @media (max-width: 480px) {
-    .nav-inner {
+    .inner {
       height: auto;
       padding: 0.65rem 1rem;
       flex-wrap: wrap;
     }
-    .nav-brand {
+    .brand {
       font-size: 0.95rem;
     }
-    .nav-links {
+    .links {
       width: 100%;
       gap: 1.5rem;
       justify-content: flex-start;

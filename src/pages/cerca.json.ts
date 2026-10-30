@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
-
-const base = import.meta.env.BASE_URL;
+import { CHARACTER_TYPE_LABEL, PLACE_TYPE_LABEL, routes, sessionTitle } from '../lib/site';
 
 // Converteix el Markdown del cos en text pla per indexar-lo.
-function stripMd(md: string): string {
+function stripMd(md = ''): string {
   return md
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
@@ -31,30 +30,30 @@ export const GET: APIRoute = async () => {
       title: c.data.name,
       description: c.data.description,
       section: 'Personatges',
-      url: `${base}/wiki/characters/${c.id}`,
+      url: routes.character(c.id),
       tags: c.data.tags,
-      extra: [c.data.role, c.data.player, c.data.race, c.data.pcClass]
+      extra: [c.data.role, c.data.player, c.data.race, c.data.pcClass, c.data.type && CHARACTER_TYPE_LABEL[c.data.type]]
         .filter(Boolean)
         .join(' '),
-      body: stripMd(c.body ?? ''),
+      body: stripMd(c.body),
     })),
     ...places.map((p) => ({
       title: p.data.name,
       description: p.data.description,
       section: 'Llocs',
-      url: `${base}/wiki/places/${p.id}`,
+      url: routes.place(p.id),
       tags: p.data.tags,
-      extra: p.data.type,
-      body: stripMd(p.body ?? ''),
+      extra: PLACE_TYPE_LABEL[p.data.type],
+      body: stripMd(p.body),
     })),
     ...croniques.map((s) => ({
-      title: `Sessió ${s.data.session}: ${s.data.title}`,
+      title: sessionTitle(s),
       description: s.data.summary,
       section: 'Cròniques',
-      url: `${base}/croniques/${s.id}`,
+      url: routes.cronica(s.id),
       tags: s.data.tags,
       extra: s.data.players.join(' '),
-      body: stripMd(s.body ?? ''),
+      body: stripMd(s.body),
     })),
   ];
 

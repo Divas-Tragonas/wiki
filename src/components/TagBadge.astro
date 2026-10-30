@@ -6,9 +6,7 @@ interface Props {
 const { tag } = Astro.props;
 ---
 
-<span class="tag-badge">
-  {tag}
-</span>
+<span class="tag-badge">{tag}</span>
 
 <style>
   .tag-badge {
@@ -17,9 +15,9 @@ const { tag } = Astro.props;
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 500;
-    background-color: rgba(201, 168, 76, 0.15);
-    color: #c9a84c;
-    border: 1px solid rgba(201, 168, 76, 0.3);
+    background-color: var(--gold-tint);
+    color: var(--color-gold-500);
+    border: 1px solid var(--gold-line);
     text-transform: lowercase;
     letter-spacing: 0.05em;
   }

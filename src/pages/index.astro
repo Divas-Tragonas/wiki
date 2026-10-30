@@ -1,110 +1,94 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Card from '../components/Card.astro';
+import SectionHeader from '../components/SectionHeader.astro';
 import { getCollection } from 'astro:content';
-import { execFileSync } from 'node:child_process';
+import { lastModified } from '../lib/git';
+import { formatDate, PLACE_TYPE_LABEL, routes, SITE_DESCRIPTION, SITE_NAME, sessionTitle } from '../lib/site';
 
-const croniques = await getCollection('croniques');
-const characters = await getCollection('characters');
-const places = await getCollection('places');
+const [croniques, characters, places] = await Promise.all([
+  getCollection('croniques'),
+  getCollection('characters'),
+  getCollection('places'),
+]);
 
-function getLastModified(filePath?: string): Date {
-  if (!filePath) return new Date(0);
-  try {
-    const output = execFileSync('git', ['log', '-1', '--format=%cI', '--', filePath], {
-      encoding: 'utf-8',
-    }).trim();
-    return output ? new Date(output) : new Date(0);
-  } catch {
-    return new Date(0);
-  }
+function latestBy<T>(entries: T[], keyOf: (entry: T) => number | Date): T {
+  return entries.reduce((latest, entry) => (keyOf(entry) > keyOf(latest) ? entry : latest));
 }
 
-function latestBy<T>(entries: T[], dateOf: (entry: T) => Date): T {
-  return entries.reduce((latest, entry) => (dateOf(entry) > dateOf(latest) ? entry : latest));
-}
+const latestSession = latestBy(croniques, (c) => c.data.session);
+const latestCharacter = latestBy(characters, (c) => lastModified(c.filePath));
+const latestPlace = latestBy(places, (p) => lastModified(p.filePath));
 
-const latestSession = croniques.reduce((latest, c) => (c.data.session > latest.data.session ? c : latest));
-const latestCharacter = latestBy(characters, (c) => getLastModified(c.filePath));
-const latestPlace = latestBy(places, (p) => getLastModified(p.filePath));
-
-const base = import.meta.env.BASE_URL;
+const stats = [
+  { value: characters.length, label: 'Personatges' },
+  { value: places.length, label: 'Llocs' },
+  { value: croniques.length, label: 'Sessions' },
+];
 ---
 
-<BaseLayout title="Inici" description="Wiki de la campanya D&D La Mina Perduda del Phentanilo">
-  <!-- Hero -->
+<BaseLayout title="Inici" description={SITE_DESCRIPTION}>
   <section class="hero">
     <div class="hero-inner">
       <p class="hero-eyebrow">Campanya de D&D 5e</p>
-      <h1 class="hero-title">La Mina Perduda del Phentanilo</h1>
+      <h1 class="hero-title">{SITE_NAME}</h1>
       <p class="hero-tagline">
         Seguiu les aventures d'un grup d'aventurers que es fan un lloc a Phentanil,
         enfrontant-se a la Vaina Roja i als perills que amaga la regió.
       </p>
       <div class="hero-buttons">
-        <a href={`${base}/wiki`} class="btn-primary">Explorar la Wiki</a>
-        <a href={`${base}/croniques`} class="btn-secondary">Llegir Cròniques</a>
-        <a href={`${base}/missions/`} class="btn-secondary">Tauler de missions</a>
+        <a href={routes.wiki} class="btn-primary">Explorar la Wiki</a>
+        <a href={routes.croniques} class="btn-secondary">Llegir Cròniques</a>
+        <a href={routes.missions} class="btn-secondary">Tauler de missions</a>
       </div>
     </div>
   </section>
 
-  <!-- Stats -->
   <section class="stats-section">
     <div class="stats-inner">
-      <div class="stat-item">
-        <span class="stat-number">{characters.length}</span>
-        <span class="stat-label">Personatges</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-number">{places.length}</span>
-        <span class="stat-label">Llocs</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-number">{croniques.length}</span>
-        <span class="stat-label">Sessions</span>
-      </div>
+      {stats.map((stat, i) => (
+        <>
+          {i > 0 && <div class="stat-divider" />}
+          <div class="stat-item">
+            <span class="stat-number">{stat.value}</span>
+            <span class="stat-label">{stat.label}</span>
+          </div>
+        </>
+      ))}
     </div>
   </section>
 
-  <!-- Latest changes -->
-  <section class="recent-section">
-    <div class="recent-inner">
-      <div class="section-header">
-        <h2 class="section-title">Últims Canvis</h2>
-      </div>
-      <div class="cards-grid">
-        <Card
-          title={`Sessió ${latestSession.data.session}: ${latestSession.data.title}`}
-          description={latestSession.data.summary}
-          href={`${base}/croniques/${latestSession.id}`}
-          tags={latestSession.data.tags.slice(0, 3)}
-          badge={new Date(latestSession.data.date).toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-        />
-        <Card
-          title={latestCharacter.data.name}
-          description={latestCharacter.data.description}
-          href={`${base}/wiki/characters/${latestCharacter.id}`}
-          tags={latestCharacter.data.tags}
-        />
-        <Card
-          title={latestPlace.data.name}
-          description={latestPlace.data.description}
-          href={`${base}/wiki/places/${latestPlace.id}`}
-          tags={latestPlace.data.tags}
-          badge={latestPlace.data.type}
-        />
-      </div>
+  <section class="page recent-section">
+    <SectionHeader title="Últims Canvis" />
+    <div class="cards-grid">
+      <Card
+        title={sessionTitle(latestSession)}
+        description={latestSession.data.summary}
+        href={routes.cronica(latestSession.id)}
+        tags={latestSession.data.tags.slice(0, 3)}
+        badge={formatDate(latestSession.data.date)}
+      />
+      <Card
+        title={latestCharacter.data.name}
+        description={latestCharacter.data.description}
+        href={routes.character(latestCharacter.id)}
+        tags={latestCharacter.data.tags}
+      />
+      <Card
+        title={latestPlace.data.name}
+        description={latestPlace.data.description}
+        href={routes.place(latestPlace.id)}
+        tags={latestPlace.data.tags}
+        badge={PLACE_TYPE_LABEL[latestPlace.data.type]}
+      />
     </div>
   </section>
 </BaseLayout>
 
 <style>
   .hero {
-    background: linear-gradient(180deg, #0a0c10 0%, #0f1117 100%);
-    border-bottom: 1px solid #252932;
+    background: linear-gradient(180deg, var(--color-stone-950) 0%, var(--color-stone-900) 100%);
+    border-bottom: 1px solid var(--color-stone-700);
     padding: 5rem 1.5rem 4rem;
     text-align: center;
     position: relative;
@@ -113,8 +97,8 @@ const base = import.meta.env.BASE_URL;
   .hero::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.06) 0%, transparent 70%);
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgb(201 168 76 / 0.06) 0%, transparent 70%);
     pointer-events: none;
   }
   .hero-inner {
@@ -126,21 +110,20 @@ const base = import.meta.env.BASE_URL;
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    color: #c9a84c;
+    color: var(--color-gold-500);
     margin: 0 0 1rem 0;
   }
   .hero-title {
-    font-family: 'Cinzel', serif;
     font-size: clamp(2.5rem, 6vw, 4rem);
     font-weight: 700;
-    color: #e8c56a;
+    color: var(--color-gold-400);
     margin: 0 0 1.25rem 0;
     line-height: 1.1;
-    text-shadow: 0 0 60px rgba(232, 197, 106, 0.2);
+    text-shadow: 0 0 60px rgb(232 197 106 / 0.2);
   }
   .hero-tagline {
     font-size: 1.05rem;
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.75;
     max-width: 36rem;
     margin: 0 auto 2rem;
@@ -152,39 +135,36 @@ const base = import.meta.env.BASE_URL;
     justify-content: center;
     flex-wrap: wrap;
   }
-  .btn-primary {
-    padding: 0.75rem 1.75rem;
-    background-color: #c9a84c;
-    color: #0a0c10;
-    border-radius: 0.375rem;
-    text-decoration: none;
-    font-weight: 600;
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-    transition: background-color 0.2s;
-  }
-  .btn-primary:hover { background-color: #e8c56a; }
+  .btn-primary,
   .btn-secondary {
     padding: 0.75rem 1.75rem;
-    background-color: transparent;
-    color: #c9a84c;
-    border: 1px solid #c9a84c;
+    border: 1px solid var(--color-gold-500);
     border-radius: 0.375rem;
     text-decoration: none;
     font-weight: 600;
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 0.9rem;
     letter-spacing: 0.05em;
     transition: background-color 0.2s, color 0.2s;
   }
+  .btn-primary {
+    background-color: var(--color-gold-500);
+    color: var(--color-stone-950);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-gold-400);
+  }
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-gold-500);
+  }
   .btn-secondary:hover {
-    background-color: rgba(201, 168, 76, 0.1);
-    color: #e8c56a;
+    background-color: var(--gold-hover);
+    color: var(--color-gold-400);
   }
   .stats-section {
-    background-color: #0a0c10;
-    border-bottom: 1px solid #252932;
+    background-color: var(--color-stone-950);
+    border-bottom: 1px solid var(--color-stone-700);
     padding: 1.5rem;
   }
   .stats-inner {
@@ -203,57 +183,24 @@ const base = import.meta.env.BASE_URL;
     gap: 0.125rem;
   }
   .stat-number {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 1.75rem;
-    color: #e8c56a;
+    color: var(--color-gold-400);
     font-weight: 700;
   }
   .stat-label {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.5;
   }
   .stat-divider {
     width: 1px;
     height: 2rem;
-    background-color: #252932;
+    background-color: var(--color-stone-700);
   }
   .recent-section {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-  }
-  .section-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-  }
-  .section-title {
-    font-family: 'Cinzel', serif;
-    font-size: 1.375rem;
-    color: #e8c56a;
-    margin: 0;
-  }
-  .section-link {
-    font-size: 0.875rem;
-    color: #c9a84c;
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-  .section-link:hover { opacity: 1; }
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  @media (max-width: 768px) {
-    .cards-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 480px) {
-    .cards-grid { grid-template-columns: 1fr; }
+    padding-block: 3rem;
   }
 </style>

@@ -1,0 +1,60 @@
+---
+interface Props {
+  title: string;
+  icon?: string;
+  count?: number;
+  link?: { href: string; label: string };
+}
+
+const { title, icon, count, link } = Astro.props;
+---
+
+<div class="section-header">
+  <div class="title-group">
+    {icon && <span class="icon" aria-hidden="true">{icon}</span>}
+    <h2 class="title">{title}</h2>
+    {count !== undefined && <span class="count">{count}</span>}
+  </div>
+  {link && <a href={link.href} class="link">{link.label}</a>}
+</div>
+
+<style>
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .icon {
+    font-size: 1.1rem;
+  }
+  .title {
+    font-size: 1.25rem;
+    color: var(--color-gold-400);
+    margin: 0;
+  }
+  .count {
+    background-color: var(--gold-tint);
+    color: var(--color-gold-500);
+    border: 1px solid var(--gold-line);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    font-weight: 600;
+  }
+  .link {
+    font-size: 0.875rem;
+    color: var(--color-gold-500);
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .link:hover {
+    opacity: 1;
+  }
+</style>

@@ -1,10 +1,11 @@
 ---
 import EntryLayout from '../../layouts/EntryLayout.astro';
 import { getCollection, render } from 'astro:content';
+import { formatDate, routes, sessionTitle } from '../../lib/site';
 
 export async function getStaticPaths() {
   const croniques = await getCollection('croniques');
-  return croniques.map(entry => ({
+  return croniques.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },
   }));
@@ -12,28 +13,22 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-const base = import.meta.env.BASE_URL;
-
-const dateStr = new Date(entry.data.date).toLocaleDateString('ca-ES', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
+const { session, date, summary, players, tags } = entry.data;
 ---
 
 <EntryLayout
-  title={`Sessió ${entry.data.session}: ${entry.data.title}`}
-  description={entry.data.summary}
+  title={sessionTitle(entry)}
+  description={summary}
   breadcrumbs={[
-    { label: 'Cròniques', href: '/croniques' },
-    { label: `Sessió ${entry.data.session}`, href: `/croniques/${entry.id}` },
+    { label: 'Cròniques', href: routes.croniques },
+    { label: `Sessió ${session}` },
   ]}
   metadata={[
-    { label: 'Sessió', value: String(entry.data.session) },
-    { label: 'Data', value: dateStr },
-    { label: 'Jugadors', value: entry.data.players.join(', ') },
+    { label: 'Sessió', value: String(session) },
+    { label: 'Data', value: formatDate(date) },
+    ...(players.length ? [{ label: 'Jugadors', value: players.join(', ') }] : []),
   ]}
-  tags={entry.data.tags}
+  tags={tags}
 >
   <Content />
 </EntryLayout>

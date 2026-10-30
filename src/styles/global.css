@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-@theme {
+/* static: els estils de cada component (<style> d'Astro) fan servir aquestes variables i Tailwind no els veu,
+   així que s'han d'emetre totes encara que cap utilitat de Tailwind les faci servir */
+@theme static {
   --color-stone-950: #0a0c10;
   --color-stone-900: #0f1117;
   --color-stone-800: #1a1d24;
@@ -13,8 +15,11 @@
   --font-body: 'Inter', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+:root {
+  /* tons translúcids de l'or per a etiquetes, comptadors i vores */
+  --gold-tint: rgb(201 168 76 / 0.15);
+  --gold-line: rgb(201 168 76 / 0.3);
+  --gold-hover: rgb(201 168 76 / 0.1);
 }
 
 body {
@@ -27,14 +32,35 @@ h1, h2, h3, h4 {
   font-family: var(--font-display);
 }
 
-/* Prose styles for markdown content */
+/* ---------- maquetació comuna de les pàgines ---------- */
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+.page.narrow {
+  max-width: 56rem;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 768px) {
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .cards-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- text en Markdown ---------- */
 .prose {
   color: var(--color-parchment);
   max-width: 65ch;
 }
 .prose h1, .prose h2, .prose h3, .prose h4 {
   color: var(--color-gold-400);
-  font-family: var(--font-display);
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
@@ -45,22 +71,36 @@ h1, h2, h3, h4 {
   margin-bottom: 1em;
   line-height: 1.75;
 }
-.prose strong {
+.prose strong,
+.prose em,
+.prose a {
   color: var(--color-gold-400);
 }
 .prose em {
-  color: var(--color-gold-400);
   font-style: italic;
 }
-.prose ul {
-  list-style: disc;
+.prose a {
+  text-decoration: underline;
+}
+.prose ul,
+.prose ol {
   padding-left: 1.5em;
   margin-bottom: 1em;
 }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
 .prose li {
   margin-bottom: 0.25em;
 }
-.prose a {
-  color: var(--color-gold-400);
-  text-decoration: underline;
+.prose blockquote {
+  border-left: 3px solid var(--color-gold-500);
+  padding-left: 1rem;
+  margin: 0 0 1em;
+  opacity: 0.85;
+  font-style: italic;
+}
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--color-stone-700);
+  margin: 2em 0;
 }

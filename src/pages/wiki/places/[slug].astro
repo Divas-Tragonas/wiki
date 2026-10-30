@@ -1,10 +1,11 @@
 ---
 import EntryLayout from '../../../layouts/EntryLayout.astro';
 import { getCollection, render } from 'astro:content';
+import { PLACE_TYPE_LABEL, routes } from '../../../lib/site';
 
 export async function getStaticPaths() {
   const places = await getCollection('places');
-  return places.map(entry => ({
+  return places.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },
   }));
@@ -12,20 +13,17 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-const base = import.meta.env.BASE_URL;
 ---
 
 <EntryLayout
   title={entry.data.name}
   description={entry.data.description}
   breadcrumbs={[
-    { label: 'Wiki', href: '/wiki' },
-    { label: 'Llocs', href: '/wiki/places' },
-    { label: entry.data.name, href: `/wiki/places/${entry.id}` },
+    { label: 'Wiki', href: routes.wiki },
+    { label: 'Llocs', href: routes.places },
+    { label: entry.data.name },
   ]}
-  metadata={[
-    { label: 'Tipus', value: entry.data.type },
-  ]}
+  metadata={[{ label: 'Tipus', value: PLACE_TYPE_LABEL[entry.data.type] }]}
   tags={entry.data.tags}
 >
   <Content />

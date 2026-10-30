@@ -41,63 +41,51 @@
   const statusEl = document.getElementById('search-status')!;
   const resultsEl = document.getElementById('search-results')!;
 
-  // Normalització sense accents perquè "canro" trobi "Kanrón".
-  const norm = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Minúscules i sense accents perquè "canro" trobi "Kanrón". Cada caràcter es normalitza per separat i conserva
+  // la llargada de l'original, així les posicions trobades al text normalitzat serveixen per marcar l'original.
+  const fold = (s: string) =>
+    s.replace(/[^]/gu, (ch) => {
+      const n = ch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return n.length === ch.length ? n : ch;
+    });
 
   const esc = (s: string) =>
-    s.replace(/[&<>"']/g, (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-    );
+    s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+  function countOf(haystack: string, needle: string, max: number): number {
+    let count = 0;
+    for (let i = haystack.indexOf(needle); i !== -1 && count < max; i = haystack.indexOf(needle, i + needle.length)) count++;
+    return count;
+  }
 
   // Marca les coincidències dins d'un text, ignorant accents i majúscules.
   function highlight(text: string, tokens: string[]): string {
-    const chars = [...text];
-    const nText = chars.map((ch) => norm(ch) || ch).join('');
+    const nText = fold(text);
     const ranges: [number, number][] = [];
     for (const t of tokens) {
-      let i = 0;
-      while ((i = nText.indexOf(t, i)) !== -1) {
-        ranges.push([i, i + t.length]);
-        i += t.length;
-      }
+      for (let i = nText.indexOf(t); i !== -1; i = nText.indexOf(t, i + t.length)) ranges.push([i, i + t.length]);
     }
     if (!ranges.length) return esc(text);
     ranges.sort((a, b) => a[0] - b[0]);
-    const merged: [number, number][] = [];
-    for (const r of ranges) {
-      const last = merged[merged.length - 1];
-      if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
-      else merged.push([r[0], r[1]]);
-    }
     let out = '';
     let pos = 0;
-    for (const [s, e] of merged) {
-      out +=
-        esc(chars.slice(pos, s).join('')) +
-        '<mark>' +
-        esc(chars.slice(s, e).join('')) +
-        '</mark>';
+    for (const [s, e] of ranges) {
+      if (e <= pos) continue;
+      const from = Math.max(s, pos);
+      out += esc(text.slice(pos, from)) + '<mark>' + esc(text.slice(from, e)) + '</mark>';
       pos = e;
     }
-    return out + esc(chars.slice(pos).join(''));
+    return out + esc(text.slice(pos));
   }
 
   // Fragment del cos al voltant de la primera coincidència.
   function snippet(item: Indexed, tokens: string[]): string {
-    let idx = -1;
-    for (const t of tokens) {
-      const i = item.nBody.indexOf(t);
-      if (i !== -1 && (idx === -1 || i < idx)) idx = i;
-    }
-    if (idx === -1) return highlight(item.description, tokens);
-    const chars = [...item.body];
+    const hits = tokens.map((t) => item.nBody.indexOf(t)).filter((i) => i !== -1);
+    if (!hits.length) return highlight(item.description, tokens);
+    const idx = Math.min(...hits);
     const start = Math.max(0, idx - 60);
-    const end = Math.min(chars.length, idx + 140);
-    const text =
-      (start > 0 ? '…' : '') +
-      chars.slice(start, end).join('').trim() +
-      (end < chars.length ? '…' : '');
+    const end = Math.min(item.body.length, idx + 140);
+    const text = (start > 0 ? '…' : '') + item.body.slice(start, end).trim() + (end < item.body.length ? '…' : '');
     return highlight(text, tokens);
   }
 
@@ -111,81 +99,92 @@
       if (item.nTags.includes(t)) s += 8;
       if (item.nExtra.includes(t)) s += 6;
       if (item.nDesc.includes(t)) s += 4;
-      if (item.nBody.includes(t)) {
-        let count = 0;
-        let i = 0;
-        while ((i = item.nBody.indexOf(t, i)) !== -1 && count < 5) {
-          count++;
-          i += t.length;
-        }
-        s += 1 + count;
-      }
+      const inBody = countOf(item.nBody, t, 5);
+      if (inBody) s += 1 + inBody;
       if (s === 0) return 0; // cada paraula ha d'aparèixer en algun camp
       total += s;
     }
     return total;
   }
 
-  let indexed: Indexed[] | null = null;
-  async function loadIndex(): Promise<Indexed[]> {
-    if (indexed) return indexed;
-    const res = await fetch(`${import.meta.env.BASE_URL}/cerca.json`);
-    const data: Item[] = await res.json();
-    indexed = data.map((it) => ({
-      ...it,
-      nTitle: norm(it.title),
-      nDesc: norm(it.description),
-      nTags: norm(it.tags.join(' ')),
-      nExtra: norm(it.extra),
-      nBody: norm(it.body),
-    }));
-    return indexed;
+  let index: Promise<Indexed[]> | null = null;
+  function loadIndex(): Promise<Indexed[]> {
+    index ??= fetch(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/cerca.json`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<Item[]>;
+      })
+      .then((data) =>
+        data.map((it) => ({
+          ...it,
+          nTitle: fold(it.title),
+          nDesc: fold(it.description),
+          nTags: fold(it.tags.join(' ')),
+          nExtra: fold(it.extra),
+          nBody: fold(it.body),
+        })),
+      )
+      .catch((err) => {
+        index = null; // es tornarà a provar a la propera cerca
+        throw err;
+      });
+    return index;
+  }
+
+  function renderResult(item: Indexed, tokens: string[]): string {
+    const tags = item.tags.length
+      ? `<div class="result-tags">${item.tags
+          .slice(0, 4)
+          .map((tag) => `<span class="result-tag">${highlight(tag, tokens)}</span>`)
+          .join('')}</div>`
+      : '';
+    return `
+      <a href="${esc(item.url)}" class="result-card">
+        <div class="result-top">
+          <span class="result-title">${highlight(item.title, tokens)}</span>
+          <span class="result-section">${esc(item.section)}</span>
+        </div>
+        <p class="result-snippet">${snippet(item, tokens)}</p>
+        ${tags}
+      </a>`;
   }
 
   async function search(query: string) {
-    const tokens = norm(query).split(/\s+/).filter((t) => t.length >= 2);
+    const tokens = fold(query).split(/\s+/).filter((t) => t.length >= 2);
     if (!tokens.length) {
       statusEl.textContent = '';
       resultsEl.innerHTML = '';
       return;
     }
-    const items = await loadIndex();
+    let items: Indexed[];
+    try {
+      items = await loadIndex();
+    } catch {
+      statusEl.textContent = "No s'ha pogut carregar l'índex de cerca. Torna-ho a provar.";
+      resultsEl.innerHTML = '';
+      return;
+    }
+    if (query !== input.value) return; // ja s'ha escrit una altra cosa
     const results = items
       .map((item) => ({ item, s: score(item, tokens) }))
       .filter((r) => r.s > 0)
       .sort((a, b) => b.s - a.s)
       .slice(0, 50);
 
+    const q = query.trim();
     statusEl.textContent = results.length
-      ? `${results.length} resultat${results.length === 1 ? '' : 's'} per a «${query.trim()}»`
-      : `Cap resultat per a «${query.trim()}»`;
-
-    resultsEl.innerHTML = results
-      .map(
-        ({ item }) => `
-        <a href="${esc(item.url)}" class="result-card">
-          <div class="result-top">
-            <span class="result-title">${highlight(item.title, tokens)}</span>
-            <span class="result-section">${esc(item.section)}</span>
-          </div>
-          <p class="result-snippet">${snippet(item, tokens)}</p>
-          ${
-            item.tags.length
-              ? `<div class="result-tags">${item.tags
-                  .slice(0, 4)
-                  .map((tag) => `<span class="result-tag">${highlight(tag, tokens)}</span>`)
-                  .join('')}</div>`
-              : ''
-          }
-        </a>`,
-      )
-      .join('');
+      ? `${results.length} resultat${results.length === 1 ? '' : 's'} per a «${q}»`
+      : `Cap resultat per a «${q}»`;
+    resultsEl.innerHTML = results.map(({ item }) => renderResult(item, tokens)).join('');
   }
 
+  let opener: Element | null = null;
+
   function openSearch() {
+    opener = document.activeElement;
     overlay.hidden = false;
     document.body.style.overflow = 'hidden';
-    loadIndex();
+    loadIndex().catch(() => {});
     input.focus();
     input.select();
   }
@@ -193,6 +192,7 @@
   function closeSearch() {
     overlay.hidden = true;
     document.body.style.overflow = '';
+    if (opener instanceof HTMLElement) opener.focus();
   }
 
   document.querySelectorAll('[data-search-open]').forEach((el) => {
@@ -210,7 +210,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !overlay.hidden) closeSearch();
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       if (overlay.hidden) openSearch();
       else closeSearch();
@@ -253,7 +253,7 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.85rem 1rem;
-    border-bottom: 1px solid #252932;
+    border-bottom: 1px solid var(--color-stone-700);
     flex-shrink: 0;
   }
   .search-icon {
@@ -266,16 +266,16 @@
     outline: none;
     color: #e8e2ce;
     font-size: 1rem;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
   }
   #search-input::placeholder {
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.35;
   }
   .search-close {
     background: transparent;
     border: none;
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.5;
     font-size: 0.9rem;
     cursor: pointer;
@@ -288,7 +288,7 @@
     background-color: rgba(212, 201, 168, 0.1);
   }
   .search-status {
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.6;
     font-size: 0.8rem;
     margin: 0;
@@ -311,14 +311,14 @@
   .search-results :global(.result-card) {
     display: block;
     background-color: #12151c;
-    border: 1px solid #252932;
+    border: 1px solid var(--color-stone-700);
     border-radius: 0.5rem;
     padding: 0.85rem 1rem;
     text-decoration: none;
     transition: border-color 0.2s, background-color 0.2s;
   }
   .search-results :global(.result-card:hover) {
-    border-color: #c9a84c;
+    border-color: var(--color-gold-500);
     background-color: #151923;
   }
   .search-results :global(.result-top) {
@@ -329,16 +329,16 @@
     margin-bottom: 0.3rem;
   }
   .search-results :global(.result-title) {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 600;
-    color: #e8c56a;
+    color: var(--color-gold-400);
   }
   .search-results :global(.result-section) {
     flex-shrink: 0;
-    background-color: rgba(201, 168, 76, 0.15);
-    color: #c9a84c;
-    border: 1px solid rgba(201, 168, 76, 0.3);
+    background-color: var(--gold-tint);
+    color: var(--color-gold-500);
+    border: 1px solid var(--gold-line);
     border-radius: 9999px;
     font-size: 0.7rem;
     padding: 0.1rem 0.55rem;
@@ -346,7 +346,7 @@
     letter-spacing: 0.03em;
   }
   .search-results :global(.result-snippet) {
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.75;
     font-size: 0.85rem;
     line-height: 1.5;
@@ -360,7 +360,7 @@
   }
   .search-results :global(.result-tag) {
     background-color: rgba(212, 201, 168, 0.08);
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.7;
     border-radius: 9999px;
     font-size: 0.7rem;

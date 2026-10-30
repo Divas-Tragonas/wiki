@@ -1,40 +1,29 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import TagBadge from '../components/TagBadge.astro';
+import { url } from '../lib/site';
 
 interface Props {
   title: string;
   description?: string;
-  breadcrumbs: { label: string; href: string }[];
+  breadcrumbs: { label: string; href?: string }[];
   metadata?: { label: string; value: string }[];
   tags?: string[];
+  /* mostra la imatge (o la inicial si no n'hi ha) a la columna lateral */
   showImage?: boolean;
   image?: string;
 }
 
 const { title, description, breadcrumbs, metadata = [], tags = [], showImage = false, image } = Astro.props;
-const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title={title} description={description}>
-  <div class="entry-container">
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-      {breadcrumbs.map((crumb, i) => (
-        <span class="crumb-item">
-          {i > 0 && <span class="crumb-sep">›</span>}
-          {i < breadcrumbs.length - 1 ? (
-            <a href={`${base}${crumb.href}`} class="crumb-link">{crumb.label}</a>
-          ) : (
-            <span class="crumb-current">{crumb.label}</span>
-          )}
-        </span>
-      ))}
-    </nav>
+  <div class="page">
+    <Breadcrumb items={breadcrumbs} />
 
     <div class="entry-layout">
-      <!-- Main content -->
-      <article class="entry-main">
+      <article>
         <h1 class="entry-title">{title}</h1>
         {description && <p class="entry-desc">{description}</p>}
         <div class="prose">
@@ -42,14 +31,13 @@ const base = import.meta.env.BASE_URL;
         </div>
       </article>
 
-      <!-- Sidebar -->
       <aside class="entry-sidebar">
         {showImage && (
           <div class="sidebar-card image-card">
             {image ? (
-              <img src={`${base}${image}`} alt={title} class="entry-image" />
+              <img src={url(image)} alt={title} class="entry-image" />
             ) : (
-              <div class="entry-image-placeholder">
+              <div class="entry-image-placeholder" aria-hidden="true">
                 <span class="placeholder-initial">{title.charAt(0)}</span>
               </div>
             )}
@@ -57,9 +45,9 @@ const base = import.meta.env.BASE_URL;
         )}
         {metadata.length > 0 && (
           <div class="sidebar-card">
-            <h4 class="sidebar-title">Informació</h4>
+            <h2 class="sidebar-title">Informació</h2>
             <dl class="meta-list">
-              {metadata.map(item => (
+              {metadata.map((item) => (
                 <>
                   <dt class="meta-label">{item.label}</dt>
                   <dd class="meta-value">{item.value}</dd>
@@ -70,9 +58,9 @@ const base = import.meta.env.BASE_URL;
         )}
         {tags.length > 0 && (
           <div class="sidebar-card">
-            <h4 class="sidebar-title">Etiquetes</h4>
+            <h2 class="sidebar-title">Etiquetes</h2>
             <div class="tags-list">
-              {tags.map(tag => <TagBadge tag={tag} />)}
+              {tags.map((tag) => <TagBadge tag={tag} />)}
             </div>
           </div>
         )}
@@ -82,78 +70,45 @@ const base = import.meta.env.BASE_URL;
 </BaseLayout>
 
 <style>
-  .entry-container {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  .breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-bottom: 2rem;
-    font-size: 0.875rem;
-  }
-  .crumb-item {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-  .crumb-sep {
-    color: #c9a84c;
-    opacity: 0.5;
-  }
-  .crumb-link {
-    color: #c9a84c;
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-  .crumb-link:hover { opacity: 1; }
-  .crumb-current {
-    color: #d4c9a8;
-  }
   .entry-layout {
     display: grid;
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 2rem;
     align-items: start;
   }
   @media (max-width: 768px) {
     .entry-layout {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .entry-sidebar {
       order: -1;
     }
   }
   .entry-title {
-    font-family: 'Cinzel', serif;
     font-size: 2rem;
-    color: #e8c56a;
+    color: var(--color-gold-400);
     margin: 0 0 0.75rem 0;
     line-height: 1.2;
   }
   .entry-desc {
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.7;
     font-size: 1.05rem;
     margin: 0 0 1.5rem 0;
     line-height: 1.6;
-    border-left: 3px solid #c9a84c;
+    border-left: 3px solid var(--color-gold-500);
     padding-left: 1rem;
   }
   .sidebar-card {
-    background-color: #1a1d24;
-    border: 1px solid #252932;
+    background-color: var(--color-stone-800);
+    border: 1px solid var(--color-stone-700);
     border-radius: 0.5rem;
     padding: 1.25rem;
     margin-bottom: 1rem;
   }
   .sidebar-title {
-    font-family: 'Cinzel', serif;
     font-size: 0.8rem;
-    color: #c9a84c;
+    color: var(--color-gold-500);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin: 0 0 0.75rem 0;
@@ -165,11 +120,11 @@ const base = import.meta.env.BASE_URL;
     font-size: 0.875rem;
   }
   .meta-label {
-    color: #d4c9a8;
+    color: var(--color-parchment);
     opacity: 0.6;
   }
   .meta-value {
-    color: #d4c9a8;
+    color: var(--color-parchment);
   }
   .tags-list {
     display: flex;
@@ -180,24 +135,25 @@ const base = import.meta.env.BASE_URL;
     padding: 0;
     overflow: hidden;
   }
-  .entry-image {
+  .entry-image,
+  .entry-image-placeholder {
     display: block;
     width: 100%;
     aspect-ratio: 1;
+  }
+  .entry-image {
     object-fit: cover;
   }
   .entry-image-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    aspect-ratio: 1;
     background-color: #14161c;
   }
   .placeholder-initial {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 3rem;
-    color: #c9a84c;
+    color: var(--color-gold-500);
     opacity: 0.35;
   }
 </style>

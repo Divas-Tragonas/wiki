@@ -1,150 +1,39 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 import Card from '../../../components/Card.astro';
+import PageHeader from '../../../components/PageHeader.astro';
+import SectionHeader from '../../../components/SectionHeader.astro';
 import { getCollection } from 'astro:content';
+import { byName, routes } from '../../../lib/site';
 
-const allCharacters = await getCollection('characters');
-const players = allCharacters.filter(c => c.data.pc);
-const characters = allCharacters.filter(c => !c.data.pc);
-const base = import.meta.env.BASE_URL;
+const all = (await getCollection('characters')).sort(byName);
+const sections = [
+  { title: 'Personatges jugadors', icon: '⚔️', entries: all.filter((c) => c.data.pc) },
+  { title: 'PNJs, enemics i faccions', icon: '🧑', entries: all.filter((c) => !c.data.pc) },
+].filter((s) => s.entries.length > 0);
 ---
 
 <BaseLayout title="Personatges" description="Els personatges jugadors, PNJs, enemics i faccions de La Mina Perduda del Phentanilo">
-  <div class="page-container">
-    <nav class="breadcrumb">
-      <a href={`${base}/wiki`} class="crumb-link">Wiki</a>
-      <span class="crumb-sep">›</span>
-      <span class="crumb-current">Personatges</span>
-    </nav>
+  <div class="page">
+    <Breadcrumb items={[{ label: 'Wiki', href: routes.wiki }, { label: 'Personatges' }]} />
+    <PageHeader title="Personatges" description="Els personatges jugadors, PNJs, enemics i faccions de la campanya." />
 
-    <div class="page-header">
-      <h1 class="page-title">Personatges</h1>
-      <p class="page-desc">Els personatges jugadors, PNJs, enemics i faccions de la campanya.</p>
-    </div>
-
-    {players.length > 0 && (
+    {sections.map((section) => (
       <section class="chars-section">
-        <div class="section-header">
-          <div class="section-title-group">
-            <span class="section-icon">⚔️</span>
-            <h2 class="section-title">Personatges jugadors</h2>
-            <span class="section-count">{players.length}</span>
-          </div>
-        </div>
+        <SectionHeader title={section.title} icon={section.icon} count={section.entries.length} />
         <div class="cards-grid">
-          {players.map(pc => (
-            <Card
-              title={pc.data.name}
-              description={pc.data.description}
-              href={`${base}/wiki/characters/${pc.id}`}
-              tags={pc.data.tags}
-            />
+          {section.entries.map((c) => (
+            <Card title={c.data.name} description={c.data.description} href={routes.character(c.id)} tags={c.data.tags} />
           ))}
         </div>
       </section>
-    )}
-
-    <section class="chars-section">
-      <div class="section-header">
-        <div class="section-title-group">
-          <span class="section-icon">🧑</span>
-          <h2 class="section-title">PNJs, enemics i faccions</h2>
-          <span class="section-count">{characters.length}</span>
-        </div>
-      </div>
-      <div class="cards-grid">
-        {characters.map(char => (
-          <Card
-            title={char.data.name}
-            description={char.data.description}
-            href={`${base}/wiki/characters/${char.id}`}
-            tags={char.data.tags}
-          />
-        ))}
-      </div>
-    </section>
+    ))}
   </div>
 </BaseLayout>
 
 <style>
-  .page-container {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  .breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 2rem;
-    font-size: 0.875rem;
-  }
-  .crumb-link {
-    color: #c9a84c;
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-  .crumb-link:hover { opacity: 1; }
-  .crumb-sep { color: #c9a84c; opacity: 0.4; }
-  .crumb-current { color: #d4c9a8; }
-  .page-header {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #252932;
-    padding-bottom: 1.25rem;
-  }
-  .page-title {
-    font-family: 'Cinzel', serif;
-    font-size: 2rem;
-    color: #e8c56a;
-    margin: 0 0 0.5rem 0;
-  }
-  .page-desc {
-    color: #d4c9a8;
-    opacity: 0.6;
-    margin: 0;
-  }
   .chars-section {
     margin-bottom: 2.5rem;
-  }
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-  }
-  .section-title-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .section-icon {
-    font-size: 1.1rem;
-  }
-  .section-title {
-    font-family: 'Cinzel', serif;
-    font-size: 1.25rem;
-    color: #e8c56a;
-    margin: 0;
-  }
-  .section-count {
-    background-color: rgba(201, 168, 76, 0.15);
-    color: #c9a84c;
-    border: 1px solid rgba(201, 168, 76, 0.3);
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    padding: 0.1rem 0.45rem;
-    font-weight: 600;
-  }
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  @media (max-width: 768px) {
-    .cards-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 480px) {
-    .cards-grid { grid-template-columns: 1fr; }
   }
 </style>

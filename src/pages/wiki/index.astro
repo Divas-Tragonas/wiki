@@ -1,119 +1,60 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Card from '../../components/Card.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import SectionHeader from '../../components/SectionHeader.astro';
 import { getCollection } from 'astro:content';
+import { byName, PLACE_TYPE_LABEL, routes } from '../../lib/site';
 
-const allCharacters = await getCollection('characters');
-const places = await getCollection('places');
+const all = (await getCollection('characters')).sort(byName);
+const players = all.filter((c) => c.data.pc);
+const characters = all.filter((c) => !c.data.pc);
+const places = (await getCollection('places')).sort(byName);
 
-const players = allCharacters.filter(c => c.data.pc);
-const characters = allCharacters.filter(c => !c.data.pc);
-
-const base = import.meta.env.BASE_URL;
-
+/* PNJs que es veuen d'entrada (ha de coincidir amb el :nth-child de l'estil); la resta surten amb «Mostra'ls tots» */
 const CHAR_BATCH = 6;
-const charsVisible = characters.slice(0, CHAR_BATCH);
-const charsHidden = characters.slice(CHAR_BATCH);
-const charsHasMore = charsHidden.length > 0;
+const PLACES_PREVIEW = 3;
 ---
 
 <BaseLayout title="Wiki" description="Personatges i llocs de La Mina Perduda del Phentanilo">
-  <div class="wiki-container">
-    <div class="wiki-header">
-      <h1 class="wiki-title">Wiki</h1>
-      <p class="wiki-desc">Tota la informació sobre el món de la campanya: personatges jugadors, PNJs i llocs.</p>
-    </div>
+  <div class="page">
+    <PageHeader title="Wiki" description="Tota la informació sobre el món de la campanya: personatges jugadors, PNJs i llocs." />
 
-    <!-- Players -->
     {players.length > 0 && (
       <section class="wiki-section">
-        <div class="section-header">
-          <div class="section-title-group">
-            <span class="section-icon">⚔️</span>
-            <h2 class="section-title">Personatges jugadors</h2>
-            <span class="section-count">{players.length}</span>
-          </div>
-        </div>
+        <SectionHeader title="Personatges jugadors" icon="⚔️" count={players.length} />
         <div class="cards-grid">
-          {players.map(pc => (
-            <Card
-              title={pc.data.name}
-              description={pc.data.description}
-              href={`${base}/wiki/characters/${pc.id}`}
-              tags={pc.data.tags.slice(0, 2)}
-            />
+          {players.map((pc) => (
+            <Card title={pc.data.name} description={pc.data.description} href={routes.character(pc.id)} tags={pc.data.tags.slice(0, 2)} />
           ))}
         </div>
       </section>
     )}
 
-    <!-- Characters -->
     <section class="wiki-section">
-      <div class="section-header">
-        <div class="section-title-group">
-          <span class="section-icon">🧑</span>
-          <h2 class="section-title">Personatges</h2>
-          <span class="section-count">{characters.length}</span>
-        </div>
-      </div>
-      <div class="cards-grid" id="chars-visible">
-        {charsVisible.map(char => (
-          <Card
-            title={char.data.name}
-            description={char.data.description}
-            href={`${base}/wiki/characters/${char.id}`}
-            tags={char.data.tags.slice(0, 2)}
-          />
+      <SectionHeader title="Personatges" icon="🧑" count={characters.length} link={{ href: routes.characters, label: 'Veure tots →' }} />
+      <div class="cards-grid chars" data-collapsed={characters.length > CHAR_BATCH ? '' : undefined}>
+        {characters.map((c) => (
+          <Card title={c.data.name} description={c.data.description} href={routes.character(c.id)} tags={c.data.tags.slice(0, 2)} />
         ))}
       </div>
-      {charsHasMore && (
-        <>
-          <div class="cards-grid chars-hidden" id="chars-hidden">
-            {charsHidden.map(char => (
-              <Card
-                title={char.data.name}
-                description={char.data.description}
-                href={`${base}/wiki/characters/${char.id}`}
-                tags={char.data.tags.slice(0, 2)}
-              />
-            ))}
-          </div>
-          <button type="button" class="load-more-btn" id="chars-load-more">
-            <span aria-hidden="true">+</span> Mostra'ls tots ({characters.length})
-          </button>
-        </>
+      {characters.length > CHAR_BATCH && (
+        <button type="button" class="load-more-btn" id="chars-load-more">
+          <span aria-hidden="true">+</span> Mostra'ls tots ({characters.length})
+        </button>
       )}
     </section>
 
-    <script>
-      const btn = document.getElementById('chars-load-more');
-      const hidden = document.getElementById('chars-hidden');
-      if (btn && hidden) {
-        btn.addEventListener('click', () => {
-          hidden.classList.add('is-revealed');
-          btn.style.display = 'none';
-        });
-      }
-    </script>
-
-    <!-- Places -->
     <section class="wiki-section">
-      <div class="section-header">
-        <div class="section-title-group">
-          <span class="section-icon">🗺</span>
-          <h2 class="section-title">Llocs</h2>
-          <span class="section-count">{places.length}</span>
-        </div>
-        <a href={`${base}/wiki/places`} class="section-link">Veure tots →</a>
-      </div>
+      <SectionHeader title="Llocs" icon="🗺" count={places.length} link={{ href: routes.places, label: 'Veure tots →' }} />
       <div class="cards-grid">
-        {places.slice(0, 3).map(place => (
+        {places.slice(0, PLACES_PREVIEW).map((place) => (
           <Card
             title={place.data.name}
             description={place.data.description}
-            href={`${base}/wiki/places/${place.id}`}
+            href={routes.place(place.id)}
             tags={place.data.tags.slice(0, 2)}
-            badge={place.data.type}
+            badge={PLACE_TYPE_LABEL[place.data.type]}
           />
         ))}
       </div>
@@ -121,86 +62,21 @@ const charsHasMore = charsHidden.length > 0;
   </div>
 </BaseLayout>
 
+<script>
+  const btn = document.getElementById('chars-load-more');
+  btn?.addEventListener('click', () => {
+    document.querySelector('.chars')?.removeAttribute('data-collapsed');
+    btn.remove();
+  });
+</script>
+
 <style>
-  .wiki-container {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-  }
-  .wiki-header {
-    margin-bottom: 3rem;
-    border-bottom: 1px solid #252932;
-    padding-bottom: 1.5rem;
-  }
-  .wiki-title {
-    font-family: 'Cinzel', serif;
-    font-size: 2.25rem;
-    color: #e8c56a;
-    margin: 0 0 0.5rem 0;
-  }
-  .wiki-desc {
-    color: #d4c9a8;
-    opacity: 0.6;
-    font-size: 1rem;
-    margin: 0;
-  }
   .wiki-section {
     margin-bottom: 3rem;
   }
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-  }
-  .section-title-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .section-icon {
-    font-size: 1.1rem;
-  }
-  .section-title {
-    font-family: 'Cinzel', serif;
-    font-size: 1.25rem;
-    color: #e8c56a;
-    margin: 0;
-  }
-  .section-count {
-    background-color: rgba(201, 168, 76, 0.15);
-    color: #c9a84c;
-    border: 1px solid rgba(201, 168, 76, 0.3);
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    padding: 0.1rem 0.45rem;
-    font-weight: 600;
-  }
-  .section-link {
-    font-size: 0.875rem;
-    color: #c9a84c;
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-  .section-link:hover { opacity: 1; }
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  @media (max-width: 768px) {
-    .cards-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 480px) {
-    .cards-grid { grid-template-columns: 1fr; }
-  }
-  .chars-hidden {
+  /* n + 7: a partir del PNJ CHAR_BATCH + 1, amagats fins que es despleguen */
+  .chars[data-collapsed] > :global(:nth-child(n + 7)) {
     display: none;
-    margin-top: 1rem;
-  }
-  .chars-hidden.is-revealed {
-    display: grid;
   }
   .load-more-btn {
     display: flex;
@@ -210,17 +86,17 @@ const charsHasMore = charsHidden.length > 0;
     margin: 1.25rem auto 0;
     padding: 0.6rem 1.75rem;
     background-color: transparent;
-    border: 1px solid #c9a84c;
+    border: 1px solid var(--color-gold-500);
     border-radius: 9999px;
-    color: #c9a84c;
-    font-family: 'Cinzel', serif;
+    color: var(--color-gold-500);
+    font-family: var(--font-display);
     font-size: 0.85rem;
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
   }
   .load-more-btn:hover {
-    background-color: rgba(201, 168, 76, 0.1);
-    color: #e8c56a;
+    background-color: var(--gold-hover);
+    color: var(--color-gold-400);
   }
 </style>

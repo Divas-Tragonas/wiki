@@ -1,10 +1,11 @@
 ---
 import EntryLayout from '../../../layouts/EntryLayout.astro';
 import { getCollection, render } from 'astro:content';
+import { CHARACTER_TYPE_LABEL, routes, STATUS_LABEL } from '../../../lib/site';
 
 export async function getStaticPaths() {
   const characters = await getCollection('characters');
-  return characters.map(entry => ({
+  return characters.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },
   }));
@@ -12,35 +13,33 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
+const d = entry.data;
 
-const statusLabel: Record<string, string> = {
-  ally: 'Aliat',
-  neutral: 'Neutral',
-  active: 'Actiu',
-  defeated: 'Derrotat',
-  unknown: 'Desconegut',
-};
-
-const base = import.meta.env.BASE_URL;
+/* dels PCs només es mostra la informació identificativa; la fitxa és del jugador */
+const metadata = [
+  d.role && { label: 'Rol', value: d.role },
+  d.pc && d.player && { label: 'Jugador', value: d.player },
+  d.pc && d.race && { label: 'Raça', value: d.race },
+  d.pc && d.pcClass && { label: 'Classe', value: d.pcClass },
+  d.pc && d.level !== undefined && { label: 'Nivell', value: String(d.level) },
+  d.type && { label: 'Tipus', value: CHARACTER_TYPE_LABEL[d.type] },
+  d.cr && { label: 'CR', value: d.cr },
+  { label: 'Estat', value: STATUS_LABEL[d.status] },
+].filter((item) => !!item);
 ---
 
 <EntryLayout
-  title={entry.data.name}
-  description={entry.data.description}
+  title={d.name}
+  description={d.description}
   breadcrumbs={[
-    { label: 'Wiki', href: '/wiki' },
-    { label: 'Personatges', href: '/wiki/characters' },
-    { label: entry.data.name, href: `/wiki/characters/${entry.id}` },
+    { label: 'Wiki', href: routes.wiki },
+    { label: 'Personatges', href: routes.characters },
+    { label: d.name },
   ]}
-  metadata={[
-    ...(entry.data.role ? [{ label: 'Rol', value: entry.data.role }] : []),
-    ...(entry.data.type ? [{ label: 'Tipus', value: entry.data.type }] : []),
-    ...(entry.data.cr ? [{ label: 'CR', value: entry.data.cr }] : []),
-    { label: 'Estat', value: statusLabel[entry.data.status] },
-  ]}
-  tags={entry.data.tags}
-  showImage={true}
-  image={entry.data.image}
+  metadata={metadata}
+  tags={d.tags}
+  showImage
+  image={d.image}
 >
   <Content />
 </EntryLayout>
