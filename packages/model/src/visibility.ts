@@ -1,7 +1,7 @@
 /* Què pot veure cada rol. El DM ho veu tot; els jugadors no veuen les missions ocultes, les notes del DM, els ecos
    per recuperar ni on són les peces de missions ocultes. L'API ho aplica a cada resposta i a cada esdeveniment. */
 import type { BoardView, CampaignData, Eco, PlayerQuest, Pose, Quest, Role } from './schema.ts';
-import { FIXED_PIECES } from './schema.ts';
+import { FIXED_PIECES } from './constants.ts';
 import type { TownId } from './towns.ts';
 
 export const isOnTown = (q: Pick<Quest, 'towns'>, town: TownId) => Object.prototype.hasOwnProperty.call(q.towns, town);

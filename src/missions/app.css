@@ -224,6 +224,25 @@ body.arr-drag, body.arr-drag * { cursor: grabbing !important; }
 .dmc-help { margin: 6px 0 0; font-size: 17px; line-height: 1.4; color: var(--ink-3); }
 .dmc-acts.dmc-end { margin: 14px 0 0; }
 
+/* ---------- historial del DM (canvis, còpies i dispositius) ---------- */
+.hist { position: absolute; left: 1230px; top: 96px; z-index: 117; width: 650px; max-height: 940px; padding: 40px 46px 34px; background: url(assets/paper-5.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 16px 20px rgba(20, 12, 6, .45)); color: var(--ink); opacity: 0; pointer-events: none; overflow: auto; }
+.hist.on { pointer-events: auto; }
+.hs-k { font-family: var(--fw); font-size: 30px; color: var(--red-d); }
+.hist h3 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--ink-3); font-family: var(--fd); font-weight: 400; font-size: 24px; letter-spacing: .05em; text-transform: uppercase; }
+.hist h3 .btn { font-size: 15px; padding: 6px 12px 3px; }
+.hs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.hs-list li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 6px 4px; border-bottom: 1px dashed rgba(85, 69, 58, .3); font-size: 19px; line-height: 1.25; }
+.hs-list li em { color: var(--ink-3); font-size: 16px; }
+.hs-t { min-width: 0; overflow-wrap: anywhere; }
+.hs-w { font-family: var(--fw); font-size: 18px; color: var(--ink-3); white-space: nowrap; }
+.hs-list .btn { font-size: 14px; padding: 5px 10px 2px; }
+.hs-x { margin: 10px 0; font-size: 18px; color: var(--ink-3); }
+.hs-close { position: absolute; right: 26px; top: 22px; width: 36px; height: 36px; border-radius: 50%; font-size: 30px; line-height: 32px; color: var(--ink-3); }
+.hs-close:hover { color: var(--red); background: rgba(168, 53, 43, .12); }
+
+/* ---------- avís de connexió ---------- */
+.net { position: absolute; left: 22px; top: 18px; z-index: 136; padding: 9px 18px 8px; border-radius: 999px; background: rgba(125, 34, 25, .88); color: #f6e7cf; font-size: 19px; }
+
 /* ---------- barra del DM ---------- */
 .dmbar { position: absolute; left: 50%; top: 12px; z-index: 130; display: flex; align-items: center; gap: 14px; padding: 14px 30px 11px; transform: translateX(-50%) rotate(-.4deg); background: url(assets/paper-1r.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 8px 10px rgba(20, 12, 6, .45)); color: var(--ink); white-space: nowrap; }
 .dmbar .k { font-family: var(--fd); font-size: 24px; letter-spacing: .06em; color: var(--red); text-transform: uppercase; }

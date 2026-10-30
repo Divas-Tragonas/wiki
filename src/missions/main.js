@@ -1,15 +1,17 @@
 /* Tauler de missions · La Mina Perduda del Phentanilo
-   - Les dades viuen a public/missions/data.json, xifrades: una part per al grup (contrasenya del grup) i una altra
-     amb tot (missions ocultes, notes) per al DM (contrasenya del DM). La pàgina és src/pages/missions/index.astro.
+   - Les missions són a l'API de la Mac mini (api/ al repositori): el tauler entra amb la contrasenya del grup, carrega
+     el tauler del seu poble i rep els canvis en directe. La pàgina és src/pages/missions/index.astro.
    - Cada paper del tauler és el document sencer a escala; en clicar-lo s'acosta el mateix paper.
-   - El mode DM edita els mateixos papers i publica al repositori del wiki amb l'API de GitHub. */
+   - El mode DM edita els mateixos papers: cada canvi es veu de seguida i s'envia a l'API (remote.js). */
 import { gsap } from 'gsap';
-import { $, $$, D, clamp, clone, closestIn, esc, gp, hashOf, local, nearestInDirection, num, placeCaret, plainText, rad, session, titleKey, wait, wheelPixels } from './util.js';
-import { deriveKey, exportKey, importKey, seal, unseal } from './crypto.js';
-import { CATS, catOf, giverLine, isDone, normState, publicView } from './data.js';
+import { newId } from '@mina/model/ids';
+import { $, $$, D, clamp, clone, closestIn, esc, gp, hashOf, local, nearestInDirection, num, placeCaret, plainText, rad, session, wait, wheelPixels } from './util.js';
+import * as api from './api.js';
+import * as remote from './remote.js';
+import { CATS, catOf, giverLine, isDone } from './data.js';
 import { TOWNS } from './towns.js';
 import { PLACES, TOWN, TOWN_ID } from './current-town.js';
-import { routes, SITE_NAME, url } from '../lib/site';
+import { routes, SITE_NAME } from '../lib/site';
 import {
   FOCUS_ROT, FOCUS_SCALE, FOCUS_SCALE_MAP, MAP_HOME, MAP_ZOOM, PAPER, PILE_HOME, STAGE_H, STAGE_W, VIEW_ZOOM_MAX,
   homeOf, layoutBoard, paperUrl, pileGeom, scatterRot, scatterX, shadowUrl, texFor
@@ -18,25 +20,22 @@ import { cycleFx, initFx, liftTo, setHoleSource } from './light.js';
 import { fatal, fit, stage, toStage, toast } from './ui.js';
 import { askGate, gateOpen } from './gate.js';
 import { askViewer, pixelOn, toBoard, toPixel } from './pixel.js';
-import { checkToken, putData } from './github.js';
 
 /* =================================================================== elements */
 const E = {
   shell: $('#shell'), docs: $('#docs'), map: $('#bmap'), mapImg: $('#mapImg'), labels: $('#labels'),
   pile: $('#pile'), pileN: $('#pileN'), dim: $('#dim'), pcard: $('#pcard'), dmcard: $('#dmcard'), dmbar: $('#dmbar'),
   zp: $('#zp'), hint: $('#hint'), chrome: $('#chrome'), rhandle: $('#rhandle'), impFile: $('#impFile'),
-  dmBtn: $('#dmBtn'), fsBtn: $('#fsBtn'), fxBtn: $('#fxBtn')
+  dmBtn: $('#dmBtn'), fsBtn: $('#fsBtn'), fxBtn: $('#fxBtn'), net: $('#net'), hist: $('#hist')
 };
-/* claus del navegador: clau del grup, clau del DM (només la sessió), canvis sense publicar i clau de GitHub */
-const KEYS = { groupKey: 'phx.kp', dmKey: 'phx.kd', work: 'phx.work', token: 'phx.gh' };
 
 /* =================================================================== estat */
-/* remote: data.json tal com s'ha baixat · pub/full: el que han desxifrat les claus del grup i del DM ·
-   work: la feina del DM en aquest navegador ({ baseRev, dirty, state }) */
-const sync = { remote: null, groupKey: null, dmKey: null, pub: null, full: null, work: null };
-let state = null;   // missions que es mostren (normState)
-let board = null;   // repartiment actual del tauler (layoutBoard)
-let dmOn = false;
+/* el tauler d'aquest poble: { rev, quests, ecos, tracked, party, boards: { [poble]: { layout, places } } } */
+let state = null;
+let board = null;    // repartiment actual del tauler (layoutBoard)
+let role = 'player'; // rol de la sessió: qui és DM pot tenir el mode DM tancat
+let dmOn = false;    // mode DM obert en aquesta pantalla
+let readOnly = false; // tauler de la còpia local: el servidor no respon
 /* focus: peça triada (id, 'map' o 'pile') · zoom: el que està ampliat · zEl: el seu element ·
    place/card: lloc marcat i fitxa oberta sobre el mapa */
 const view = { focus: null, zoom: null, zEl: null, place: null, card: null };
@@ -49,7 +48,7 @@ const PILE = Object.assign({}, PILE_HOME);
 
 const boardData = () => state.boards[TOWN_ID] || (state.boards[TOWN_ID] = { layout: {}, places: {} });
 const qById = (id) => state.quests.find((q) => q.id === id);
-const onBoard = (q) => q.towns.includes(TOWN_ID);
+const onBoard = (q) => Object.prototype.hasOwnProperty.call(q.towns, TOWN_ID);
 const canSee = (q) => onBoard(q) && (dmOn || !q.hidden);
 const isPiece = (key) => key === 'map' || key === 'pile';
 
@@ -59,62 +58,183 @@ async function fontsReady() {
   const loads = ['60px Antiquarian', '30px "Antiquarian Scribe"', '27px Alegreya', 'italic 27px Alegreya'].map((f) => document.fonts.load(f).catch(() => null));
   await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 3500))]);
 }
-async function fetchData() {
-  /* data.json és a public/ (el mode DM el desa allà amb l'API de GitHub): no passa pel build i sempre es baixa nou */
-  const r = await fetch(url('missions/data.json') + '?t=' + Date.now(), { cache: 'no-store' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+const fromView = (v) => ({ rev: v.rev, quests: v.quests, ecos: v.ecos, tracked: v.tracked, party: v.party, boards: { [TOWN_ID]: { layout: v.layout, places: v.places } } });
+const toView = () => ({ rev: state.rev, role, town: TOWN_ID, tracked: state.tracked, party: state.party, quests: state.quests, ecos: state.ecos, places: boardData().places, layout: boardData().layout });
+
+async function fetchBoard() {
+  const v = await api.request('GET', `/v1/boards/${TOWN_ID}`);
+  role = v.role;
+  remote.saveCache(v);
+  return v;
 }
-/* amb la clau del DM, la feina sense publicar d'aquest navegador té preferència si és d'una versió igual o més nova */
-function pickState() {
-  if (!sync.full) return normState(clone(sync.pub));
-  const w = local.get(KEYS.work), rev = sync.remote.rev || 0;
-  if (w && w.state && (w.baseRev || 0) >= rev) { sync.work = w; return normState(clone(w.state)); }
-  if (w && w.dirty) local.set(KEYS.work + '.old', w);
-  sync.work = { baseRev: rev, dirty: false };
-  return normState(clone(sync.full));
-}
+const loginError = (e) => (e instanceof api.ApiError && e.status && e.status < 500 ? e.message : api.isOffline(e) ? 'No hi ha connexió amb el servidor de missions' : e.message);
+
 async function start() {
   fit();
   addEventListener('resize', fit);
   initFx();
-  if (!window.crypto || !crypto.subtle) { fatal('Aquest navegador no pot obrir el tauler (cal una connexió segura).'); return; }
-  try { sync.remote = await fetchData(); } catch (e) { fatal("No s'ha pogut carregar el tauler de missions."); return; }
-  const { kdf } = sync.remote;
-  const savedGroup = local.get(KEYS.groupKey);
-  if (savedGroup) {
-    sync.groupKey = await importKey(savedGroup);
-    if (sync.groupKey) sync.pub = await unseal(sync.groupKey, sync.remote.pub);
+  /* restes del tauler d'abans de l'API: claus de data.json i la clau de GitHub (la feina sense publicar, phx.work, es
+     deixa: si n'hi havia, encara es pot recuperar des de les eines del navegador) */
+  ['phx.kp', 'phx.gh'].forEach((k) => local.del(k));
+  session.del('phx.kd');
+  if (!api.apiConfigured()) { fatal('El tauler no sap on és el servidor de missions (falta PUBLIC_MISSIONS_API_URL en fer el build).'); return; }
+  let v;
+  try {
+    if (!(await api.getSession())) {
+      await askGate({
+        kicker: 'Diari de ' + TOWN.name, title: 'Tauler de missions', text: 'Escriu la contrasenya del grup per entrar.', ph: 'Contrasenya', btn: 'Entrar', back: true,
+        check: async (pw) => {
+          try { await api.login('player', pw); return null; } catch (e) { return loginError(e); }
+        }
+      });
+    }
+    v = await fetchBoard();
+  } catch (e) {
+    const cached = api.isOffline(e) && remote.loadCache(TOWN_ID);
+    if (!cached) {
+      fatal(api.isOffline(e) ? 'No hi ha connexió amb el servidor de missions. Es tornarà a provar en uns segons…' : 'No s’ha pogut carregar el tauler: ' + e.message);
+      if (api.isOffline(e)) setTimeout(() => location.reload(), 10_000);
+      return;
+    }
+    v = cached.view;
+    readOnly = true;
   }
-  if (!sync.pub) {
-    sync.groupKey = null;
-    await askGate({
-      kicker: 'Diari de ' + TOWN.name, title: 'Tauler de missions', text: 'Escriu la contrasenya del grup per entrar.', ph: 'Contrasenya', btn: 'Entrar', back: true,
-      check: async (v) => {
-        const k = await deriveKey(v, kdf.sp, kdf.iter), p = await unseal(k, sync.remote.pub);
-        if (!p) return 'Contrasenya incorrecta';
-        sync.groupKey = k;
-        sync.pub = p;
-        local.set(KEYS.groupKey, await exportKey(k));
-        return null;
-      }
-    });
-  }
-  const savedDm = session.get(KEYS.dmKey);
-  if (savedDm) {
-    sync.dmKey = await importKey(savedDm);
-    sync.full = sync.dmKey ? await unseal(sync.dmKey, sync.remote.dm) : null;
-    if (!sync.full) { sync.dmKey = null; session.del(KEYS.dmKey); }
-  }
-  state = pickState();
+  state = fromView(v);
+  remote.configure({ onStatus: updateStat, onRejected: writeRejected, onAuthLost: authLost });
   await fontsReady();
   initBoard();
+  connect();
+  if (readOnly) setNet('offline');
+}
+
+/* =================================================================== en directe */
+let unsubscribe = null, netT = null, cacheT = null;
+function connect() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = api.subscribe(TOWN_ID, {
+    since: () => state.rev,
+    onChange: applyChange,
+    onState: (s) => {
+      setNet(s);
+      /* tornava de la còpia local: ara que hi ha servidor, el tauler de veritat (i del rol que toca) */
+      if (s === 'live' && readOnly) reloadBoard();
+    },
+    onAuth: authLost
+  });
+}
+/* avís discret de connexió: només si fa uns segons que no n'hi ha */
+function setNet(s) {
+  clearTimeout(netT);
+  if (s === 'live') { E.net.hidden = true; return; }
+  netT = setTimeout(() => {
+    E.net.textContent = readOnly ? 'Sense connexió amb el servidor · tauler guardat, només per mirar' : 'Sense connexió amb el servidor · es torna a provar';
+    E.net.hidden = false;
+  }, readOnly ? 0 : 3000);
+}
+function saveCacheSoon() {
+  clearTimeout(cacheT);
+  cacheT = setTimeout(() => remote.saveCache(toView()), 1000);
+}
+async function reloadBoard() {
+  await remote.whenIdle();
+  let v;
+  try { v = await fetchBoard(); } catch (e) {
+    if (!api.isOffline(e)) toast('No s’ha pogut tornar a carregar el tauler: ' + e.message, 4200);
+    return;
+  }
+  readOnly = false;
+  state = fromView(v);
+  setNet('live');
+  afterStateChange();
+}
+/* després d'un canvi gran (recàrrega, canvi de rol): el tauler, el paper obert i les fitxes al dia */
+function afterStateChange() {
+  if (view.zoom && view.zoom !== 'map') {
+    const q = qById(view.zoom);
+    if (!q || !canSee(q)) closeDoc();
+  }
+  renderBoard(true);
+  if (view.zEl) { const q = qById(view.zEl.dataset.id); if (q) applyDoc(view.zEl, q, view.zEl._g); renderDmCard(); }
+  if (view.card) openCard(view.card);
+  renderDmBar();
+}
+
+/* un canvi de l'API: el que el tauler encara té per enviar (remote.busy) no es toca, és més nou */
+function applyChange(rev, events) {
+  if (rev <= state.rev) return;
+  state.rev = rev;
+  let render = false;
+  const touched = new Set();
+  for (const ev of events) {
+    switch (ev.type) {
+      case 'quest.upserted': {
+        const q = ev.quest, cur = qById(q.id);
+        if (remote.busy('quest:' + q.id) || (cur && cur.version >= q.version)) break;
+        if (cur) Object.keys(cur).forEach((k) => { if (!(k in q)) delete cur[k]; });
+        if (cur) Object.assign(cur, q); else state.quests.push(q);
+        state.quests.sort((a, b) => a.position - b.position);
+        touched.add(q.id);
+        render = true;
+        break;
+      }
+      case 'quest.removed':
+        if (remote.busy('quest:' + ev.id) || !qById(ev.id)) break;
+        state.quests = state.quests.filter((q) => q.id !== ev.id);
+        if (view.zoom === ev.id) closeDoc();
+        render = true;
+        break;
+      case 'eco.changed': {
+        if (remote.busy('eco:' + ev.eco.id)) break;
+        const i = state.ecos.findIndex((e) => e.id === ev.eco.id);
+        if (i >= 0) state.ecos[i] = ev.eco; else state.ecos.push(ev.eco);
+        state.ecos.sort((a, b) => a.position - b.position);
+        render = true;
+        break;
+      }
+      case 'eco.removed':
+        state.ecos = state.ecos.filter((e) => e.id !== ev.id);
+        render = true;
+        break;
+      case 'place.changed':
+        if (remote.busy('place:' + ev.place)) break;
+        if (ev.text === null) delete boardData().places[ev.place]; else boardData().places[ev.place] = ev.text;
+        if (view.card === ev.place && !E.pcard.contains(document.activeElement)) openCard(ev.place);
+        break;
+      case 'layout.changed':
+        for (const [piece, pose] of Object.entries(ev.pieces)) {
+          if (remote.busy('layout:' + piece)) continue;
+          if (pose === null) delete boardData().layout[piece]; else boardData().layout[piece] = pose;
+        }
+        render = true;
+        break;
+      case 'tracked.changed':
+        if (!remote.busy('tracked')) { state.tracked = ev.tracked; render = true; }
+        break;
+      case 'party.changed':
+        state.party = ev.party;
+        break;
+      case 'board.reload':
+        reloadBoard();
+        return;
+    }
+  }
+  if (render && !arrange.drag) {
+    renderBoard(true);
+    if (view.zEl && touched.has(view.zEl.dataset.id)) {
+      const q = qById(view.zEl.dataset.id);
+      applyDoc(view.zEl, q, view.zEl._g);
+      gsap.to(view.zEl, Object.assign({ duration: 0.4 * D, overwrite: 'auto' }, zoomTarget(view.zEl._g)));
+      renderDmCard();
+    }
+    if (view.card) openCard(view.card);
+  }
+  saveCacheSoon();
 }
 
 /* =================================================================== papers */
 /* contingut del document (igual al tauler i ampliat); data-f marca els camps que el DM escriu sobre el paper */
 function docHTML(q, edit) {
-  const c = catOf(q), steps = q.steps || [], nd = steps.filter((s) => s.d).length, cur = isDone(q) ? -1 : steps.findIndex((s) => !s.d);
+  const c = catOf(q), steps = q.steps || [], nd = steps.filter((s) => s.done).length, cur = isDone(q) ? -1 : steps.findIndex((s) => !s.done);
   const h = [];
   if (c === 'personal') h.push(`<div class="d-to">Per a ${esc(q.who || '…')}</div>`);
   else if (c === 'principal') h.push(`<div class="d-k"><i class="st"></i><span>${CATS.principal.label}</span><i class="st"></i></div>`);
@@ -129,7 +249,7 @@ function docHTML(q, edit) {
   if (q.text || edit) h.push(`<div class="d-x" data-f="text" data-ph="Text del cartell…">${esc(q.text || '')}</div>`);
   if (q.special === 'ecos') h.push(`<ul class="d-e">${state.ecos.map((e) => ecoHTML(e, edit)).join('')}</ul>`);
   if (steps.length || edit) {
-    const items = steps.map((s, i) => `<li class="${s.d ? 'd' : ''}${i === cur ? ' cur' : ''}" data-i="${i}"><span class="bx"></span><span class="tx" data-f="step" data-ph="Objectiu">${esc(s.t)}</span><button type="button" class="del" data-act="delstep" tabindex="-1" title="Treure">×</button></li>`);
+    const items = steps.map((s, i) => `<li class="${s.done ? 'd' : ''}${i === cur ? ' cur' : ''}" data-i="${i}" data-step="${esc(s.id)}"><span class="bx"></span><span class="tx" data-f="step" data-ph="Objectiu">${esc(s.text)}</span><button type="button" class="del" data-act="delstep" tabindex="-1" title="Treure">×</button></li>`);
     h.push(`<div class="d-o"><h3><span>Objectius</span><i></i><b>${nd}/${steps.length}</b></h3><ul>${items.join('')}</ul>${edit ? '<button type="button" class="add" data-act="addstep">+ Afegir objectiu</button>' : ''}</div>`);
   }
   if (c === 'secundaria' && q.giver) h.push(`<div class="d-f">${esc(giverLine(q.giver))}</div>`);
@@ -419,7 +539,7 @@ function renderLabels() {
   E.labels.innerHTML = html.join('');
 }
 const plcEl = (id) => $(`.plc[data-p="${id}"]`, E.labels);
-const questsAt = (id) => state.quests.filter((q) => canSee(q) && !isDone(q) && q.at[TOWN_ID] === id);
+const questsAt = (id) => state.quests.filter((q) => canSee(q) && !isDone(q) && q.towns[TOWN_ID] === id);
 /* el lloc del mapa marcat (hover, fletxes) */
 function setPlace(id) {
   if (view.place === id) return;
@@ -445,7 +565,7 @@ function placeNav(dx, dy) {
 /* el text del lloc que ha escrit el DM, o el de sempre */
 function placeText(id) {
   const o = boardData().places[id];
-  return o && typeof o.text === 'string' ? o.text : (TOWN.info[id] || {}).text || '';
+  return typeof o === 'string' ? o : (TOWN.info[id] || {}).text || '';
 }
 /* caixa del nom (i la fletxa) d'un lloc a l'escenari, per posar-hi la fitxa al costat */
 function placeBox(id) {
@@ -576,7 +696,7 @@ function setPose(v, o, dur) {
   if (dur) gsap.to(el, { x: o.x, y: o.y, scale: o.s, duration: dur * D, ease: 'power2.out', onComplete: end, onInterrupt: end });
   else { gsap.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
 }
-const PANELS = '#dmcard, #dmbar, #chrome';
+const PANELS = '#dmcard, #dmbar, #chrome, #hist';
 function onWheel(e) {
   if (pixelOn()) return;
   if (arrange.on) { arrWheel(e); return; }
@@ -672,7 +792,8 @@ function arrPose(it, cx, cy, r, up, dur) {
   gsap.to(it.el, Object.assign({ duration: dur * D, ease: 'power3.out', overwrite: 'auto' }, o));
   it.el.classList.toggle('arr-up', !!up);
 }
-function arrCommit(it, cx, cy, r, z) {
+/* prev: com era el layout abans d'agafar la peça (si en agafar-la s'han renumerat les altres, també s'envien) */
+function arrCommit(it, cx, cy, r, z, prev = clone(boardData().layout)) {
   cx = Math.round(cx);
   cy = Math.round(cy);
   r = Math.round(((r + 540) % 360 - 180) * 10) / 10;
@@ -681,13 +802,14 @@ function arrCommit(it, cx, cy, r, z) {
   else if (it.key === 'pile') layout.pile = { x: cx - PILE.w / 2, y: cy - PILE.h / 2, r };
   else layout[it.key] = { cx, cy, r, w: it.g.w, h: it.g.h, z: z || it.g.z };
   it.el.classList.remove('arr-up');
-  markDirty();
+  saveLayout(prev);
   renderBoard(true);
 }
 function arrReset(key) {
   if (!boardData().layout[key]) return;
+  const prev = clone(boardData().layout);
   delete boardData().layout[key];
-  markDirty();
+  saveLayout(prev);
   renderBoard(true);
   setTimeout(() => arrHover(key), 500 * D);
 }
@@ -733,8 +855,8 @@ function arrDown(e) {
   const key = onHandle ? arrange.hover : arrKeyAt(e.target), it = key && arrGet(key);
   if (!it) return;
   e.preventDefault();
-  const p = toStage(e);
-  arrange.drag = { it, rot: onHandle, p0: p, cx: it.cx, cy: it.cy, r: it.r, a0: Math.atan2(p.y - it.cy, p.x - it.cx), z: it.g ? topZ() : 0, moved: false };
+  const p = toStage(e), prev = clone(boardData().layout);
+  arrange.drag = { it, rot: onHandle, p0: p, cx: it.cx, cy: it.cy, r: it.r, a0: Math.atan2(p.y - it.cy, p.x - it.cx), z: it.g ? topZ() : 0, moved: false, prev };
   it.el.style.zIndex = it.key === 'map' ? 60 : 95;
   document.body.classList.add('arr-drag');
   arrPose(it, it.cx, it.cy, it.r, true, 0.2);
@@ -761,10 +883,11 @@ function arrUp() {
   document.body.classList.remove('arr-drag');
   const it = d.it;
   if (isPiece(it.key)) it.el.style.zIndex = '';
-  if (d.moved) arrCommit(it, d.cx, d.cy, d.r, d.z);
+  if (d.moved) arrCommit(it, d.cx, d.cy, d.r, d.z, d.prev);
   else {
     arrPose(it, it.cx, it.cy, it.r, false, 0.25);
     if (it.g) it.el.style.zIndex = it.g.z;
+    saveLayout(d.prev);
   }
   arrHover(it.key);
 }
@@ -809,53 +932,55 @@ function renderPrompts() {
 }
 
 /* =================================================================== mode DM */
-let saveT = null, statOverride = '', armedForce = false;
-/* hi ha canvis: es guarden en aquest navegador (per si es tanca) fins que es publiquen */
-function markDirty() {
-  if (!sync.full) return;
-  sync.work = Object.assign({}, sync.work, { dirty: true, state, t: Date.now() });
-  clearTimeout(saveT);
-  saveT = setTimeout(() => local.set(KEYS.work, sync.work), 250);
-  if (statOverride !== 'Publicant…') statOverride = '';
-  updateStat();
-}
-const isDirty = () => !!(sync.work && sync.work.dirty);
-function statText() {
-  if (statOverride) return statOverride;
-  return isDirty() ? 'Canvis sense publicar' : 'Tot publicat';
-}
-function setStat(s) {
-  statOverride = s;
-  updateStat();
-}
+const STATUS_TEXT = { saved: 'Tot desat', saving: 'Desant…', offline: 'Sense connexió · es tornarà a provar' };
 function updateStat() {
   if (!dmOn || !E.dmbar.firstChild) return;
-  const st = statText(), s = $('.stat', E.dmbar), pb = $('[data-dm="publish"]', E.dmbar);
-  if (s) { s.textContent = st; s.title = st; s.classList.toggle('dirty', isDirty()); }
-  if (pb) pb.disabled = !isDirty() && !armedForce;
+  const st = remote.currentStatus(), s = $('.stat', E.dmbar);
+  if (!s) return;
+  s.textContent = STATUS_TEXT[st];
+  s.title = STATUS_TEXT[st];
+  s.classList.toggle('dirty', st !== 'saved');
 }
+/* el servidor ha rebutjat un canvi: es diu i el tauler torna a ser el del servidor */
+function writeRejected(e) {
+  if (e instanceof api.ApiError && e.status === 403) {
+    toast('Ja no tens el permís de DM (fa massa que no el fas servir): torna-hi a entrar.', 5200);
+    role = 'player';
+    setDm(false);
+    return;
+  }
+  toast('No s’ha pogut desar: ' + e.message, 5200);
+  reloadBoard();
+}
+function authLost() {
+  toast('La sessió s’ha tancat. Torna a entrar amb la contrasenya del grup.', 4200);
+  api.forgetSession();
+  setTimeout(() => location.reload(), 1600);
+}
+
 async function unlockDm() {
-  if (sync.full) return true;
-  const { kdf } = sync.remote;
+  if (role === 'dm') return true;
   const ok = await askGate({
     kicker: 'Mode DM', title: 'Només per al DM', text: 'Escriu la contrasenya del DM per veure les missions ocultes i editar el tauler.', ph: 'Contrasenya del DM', btn: 'Entrar', cancel: 'Cancel·lar',
-    check: async (v) => {
-      const k = await deriveKey(v, kdf.sd, kdf.iter), full = await unseal(k, sync.remote.dm);
-      if (!full) return 'Contrasenya incorrecta';
-      sync.dmKey = k;
-      sync.full = full;
-      session.set(KEYS.dmKey, await exportKey(k));
-      return null;
+    check: async (pw) => {
+      try {
+        role = (await api.login('dm', pw)).role;
+        return null;
+      } catch (e) {
+        return loginError(e);
+      }
     }
   });
   if (!ok) return false;
-  state = pickState();
-  return true;
+  /* el tauler del DM té les missions ocultes, les notes i els ecos per recuperar */
+  await reloadBoard();
+  return role === 'dm';
 }
 async function setDm(on) {
+  if (on && readOnly) { toast('Sense connexió amb el servidor: el mode DM no hi és fins que torni.'); return; }
   if (on && !(await unlockDm())) return;
   if (dmOn === on) return;
-  if (!on) setArrange(false);
+  if (!on) { setArrange(false); closeHistory(); }
   /* una missió oculta no es pot quedar oberta davant dels jugadors */
   if (!on && view.zoom && view.zoom !== 'map') { const q = qById(view.zoom); if (q && q.hidden) await closeDoc(); }
   dmOn = on;
@@ -871,22 +996,24 @@ async function setDm(on) {
   }
   if (view.card) openCard(view.card);
   renderPrompts();
-  if (!on && isDirty()) {
-    if (local.get(KEYS.token)) publish(false, true);
-    else toast('Tens canvis sense publicar al wiki (es queden guardats en aquest ordinador).', 4200);
+  if (!on) {
+    /* la sessió deixa de ser de DM (en aquesta pantalla cal la contrasenya per tornar-hi) i el tauler, de tenir-ne res */
+    await remote.whenIdle();
+    try { await api.leaveDm(); role = 'player'; } catch (e) { /* sense connexió: ja caducarà */ }
+    await reloadBoard();
   }
 }
 function renderDmBar() {
   if (!dmOn) return;
-  const st = esc(statText());
   E.dmbar.innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
     <button class="btn" type="button" data-dm="new">+ Nova missió</button>
     <button class="btn${arrange.on ? ' on' : ''}" type="button" data-dm="arrange">${arrange.on ? 'Fet' : 'Moure papers'}</button>
     ${TOWN.pixel ? '<button class="btn" type="button" data-dm="pixel" title="Transforma el mapa en el de l\'RPG Map Viewer (tecla P)">Mapa en píxel</button><button class="btn" type="button" data-dm="viewer" title="Adreça de l\'RPG Map Viewer">Visor</button>' : ''}
-    <span class="sep"></span><span class="stat${isDirty() ? ' dirty' : ''}" title="${st}">${st}</span>
-    <button class="btn pri" type="button" data-dm="publish"${isDirty() || armedForce ? '' : ' disabled'}>Publicar al wiki</button>
-    <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button><button class="btn" type="button" data-dm="token">Clau</button>
+    <span class="sep"></span><span class="stat"></span>
+    <button class="btn${E.hist.classList.contains('on') ? ' on' : ''}" type="button" data-dm="history">Historial</button>
+    <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button>
     <button class="btn" type="button" data-dm="exit">Sortir</button>`;
+  updateStat();
 }
 
 /* fitxa del DM al costat del paper ampliat */
@@ -918,9 +1045,9 @@ function renderDmCard() {
   const q = view.zEl && qById(view.zEl.dataset.id), c = E.dmcard;
   if (!dmOn || !q) { hideDmCard(); return; }
   const cat = catOf(q), tracked = state.tracked === q.id;
-  const placeOpts = TOWN.geom.filter((p) => p.id !== 'tauler').map((p) => `<option value="${p.id}"${q.at[TOWN_ID] === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  const placeOpts = TOWN.geom.filter((p) => p.id !== 'tauler').map((p) => `<option value="${p.id}"${q.towns[TOWN_ID] === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
   const tags = [isDone(q) ? 'Completada' : 'En curs', q.hidden ? 'Oculta als jugadors' : 'Visible', tracked && 'Seguida']
-    .concat(q.towns.filter((t) => t !== TOWN_ID).map((t) => 'També a ' + (TOWNS[t] ? TOWNS[t].name : t)))
+    .concat(Object.keys(q.towns).filter((t) => t !== TOWN_ID).map((t) => 'També a ' + (TOWNS[t] ? TOWNS[t].name : t)))
     .filter(Boolean);
   const acts = [
     isDone(q) ? '<button class="btn" type="button" data-q="reopen">Reobrir</button>' : '<button class="btn pri" type="button" data-q="complete">Completar</button>',
@@ -936,7 +1063,7 @@ function renderDmCard() {
     <div class="dmc-st">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>
     <div class="dmc-acts">${acts.join('')}</div>
     <div class="fl"><span>Tipus</span>${seg(Object.keys(CATS), 'cat', (k) => cat === k, (k) => CATS[k].short)}</div>
-    <div class="fl"><span>Taulers <small>(la mateixa missió a tots)</small></span>${seg(Object.keys(TOWNS), 'town', (k) => q.towns.includes(k), (k) => TOWNS[k].name)}</div>
+    <div class="fl"><span>Taulers <small>(la mateixa missió a tots)</small></span>${seg(Object.keys(TOWNS), 'town', (k) => k in q.towns, (k) => TOWNS[k].name)}</div>
     <div class="two">
       ${field(`Per a ${cat === 'personal' ? '' : '<small>(personals)</small>'}`, 'who', cat === 'personal' ? '' : ' disabled')}
       ${field('Encàrrec de', 'giver')}
@@ -959,11 +1086,46 @@ function renderDmCard() {
     gsap.fromTo(c, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4 * D, delay: 0.25 * D, ease: 'power3.out', overwrite: 'auto' });
   }
 }
+/* ---------- desar a l'API ---------- */
+/* Cada canvi ja s'ha fet al tauler; aquí s'envia. Les missions porten la versió que té el tauler: si una altra pantalla
+   l'ha canviada mentrestant, el servidor diu que no (409) i el tauler es queda amb la del servidor. */
+const qKey = (id) => 'quest:' + id;
+/* la resposta del servidor: la versió nova i, si ja no queda res per enviar d'aquesta missió, la missió sencera */
+function questSaved(res) {
+  const q = res && res.quest, cur = q && qById(q.id);
+  if (!cur) return;
+  if (remote.busy(qKey(q.id))) { cur.version = Math.max(cur.version, q.version); return; }
+  Object.assign(cur, q);
+}
+function questConflict(e) {
+  const fresh = e instanceof api.ApiError && e.code === 'version_mismatch' && e.details && e.details.quest;
+  if (!fresh) { writeRejected(e); return; }
+  const cur = qById(fresh.id);
+  if (cur) Object.assign(cur, fresh);
+  toast(`Una altra pantalla havia canviat «${fresh.title || 'aquesta missió'}»: ara la tens com ha quedat.`, 5200);
+  afterStateChange();
+}
+const questWrite = (id, run) => remote.write([qKey(id)], run, { onDone: questSaved, onError: questConflict });
+const patchQuest = (id, fields) => questWrite(id, () => api.request('PATCH', `/v1/quests/${encodeURIComponent(id)}`, { body: fields, ifMatch: qById(id) ? qById(id).version : undefined }));
+const stepPath = (id, stepId) => `/v1/quests/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}`;
+function saveLayout(prev) {
+  const now = boardData().layout, pieces = {};
+  for (const k of new Set([...Object.keys(prev), ...Object.keys(now)])) {
+    if (JSON.stringify(prev[k] || null) !== JSON.stringify(now[k] || null)) pieces[k] = now[k] || null;
+  }
+  const keys = Object.keys(pieces);
+  if (keys.length) remote.write(keys.map((k) => 'layout:' + k), () => api.request('PATCH', `/v1/boards/${TOWN_ID}/layout`, { body: { pieces } }));
+}
+const savePlace = (place, text) =>
+  remote.write(['place:' + place], () => api.request('PUT', `/v1/boards/${TOWN_ID}/places/${encodeURIComponent(place)}`, { body: { text } }));
+
+/* ---------- accions sobre la missió ampliada ---------- */
 /* eliminar demana un segon clic en pocs segons */
 let armedDel = null, armedDelT = null;
 function questAction(act) {
   const el = view.zEl, q = el && qById(el.dataset.id);
   if (!q) return;
+  const untrack = () => { if (state.tracked === q.id) state.tracked = null; };
   if (act === 'delete') {
     if (armedDel !== q.id) {
       armedDel = q.id;
@@ -974,24 +1136,26 @@ function questAction(act) {
     }
     armedDel = null;
     state.quests = state.quests.filter((x) => x !== q);
-    if (state.tracked === q.id) state.tracked = null;
-    markDirty();
+    untrack();
+    for (const k of Object.keys(boardData().layout)) if (k === q.id) delete boardData().layout[k];
+    remote.write([qKey(q.id), 'tracked', 'layout:' + q.id], () => api.request('DELETE', `/v1/quests/${encodeURIComponent(q.id)}`));
     closeDoc().then(() => renderBoard(true));
     return;
   }
   if (act === 'complete') {
     q.status = 'done';
     q.doneAt = Date.now();
-    if (state.tracked === q.id) state.tracked = null;
+    untrack();
   } else if (act === 'reopen') {
     q.status = 'active';
-    delete q.doneAt;
+    q.doneAt = null;
   } else if (act === 'reveal') q.hidden = false;
   else if (act === 'hide') {
     q.hidden = true;
-    if (state.tracked === q.id) state.tracked = null;
+    untrack();
   } else if (act === 'track') state.tracked = state.tracked === q.id ? null : q.id;
-  markDirty();
+  if (act === 'track') remote.write(['tracked'], () => api.request('PUT', '/v1/tracked', { body: { questId: state.tracked } }));
+  else remote.write([qKey(q.id), 'tracked'], () => api.request('POST', `/v1/quests/${encodeURIComponent(q.id)}/${act}`), { onDone: questSaved, onError: questConflict });
   renderBoard(true);
   if (act === 'complete' || act === 'reopen') applyDoc(el, q, el._g, true);
   if (act === 'complete') {
@@ -1003,88 +1167,79 @@ function questAction(act) {
   renderDmCard();
 }
 function newQuest() {
-  const id = 'q' + Date.now().toString(36);
-  state.quests.push({ id, cat: 'secundaria', title: 'Nova missió', who: '', giver: '', where: '', reward: '', text: '', steps: [], status: 'active', hidden: true, note: '', towns: [TOWN_ID], at: {} });
-  markDirty();
+  const id = newId('q');
+  const q = {
+    id, version: 0, position: Math.max(-1, ...state.quests.map((x) => x.position)) + 1, cat: 'secundaria', title: 'Nova missió', text: '', reward: '',
+    who: '', giver: '', where: '', special: null, status: 'active', doneAt: null, hidden: true, note: '', towns: { [TOWN_ID]: null }, steps: []
+  };
+  state.quests.push(q);
+  questWrite(id, () => api.request('POST', '/v1/quests', { body: { id, cat: q.cat, title: q.title, hidden: true, towns: q.towns } }));
   renderBoard(true);
   setTimeout(() => openDoc(id).then(() => {
     const t = view.zEl && $('.d-t', view.zEl);
     if (t) placeCaret(t, true);
   }), 120);
 }
-/* importar un fitxer d'un sol tauler: les missions que ja existeixen (mateix id o mateix títol) s'enllacen
-   amb aquest tauler i la resta s'hi afegeixen */
-function mergeBoard(d) {
-  const n = { add: 0, link: 0 }, ids = {};
-  d.quests.forEach((src) => {
-    const at = (src.at && src.at[TOWN_ID]) || src.place || '';
-    let q = qById(src.id) || state.quests.find((x) => titleKey(x.title) === titleKey(src.title));
-    if (q) {
-      if (!onBoard(q)) q.towns.push(TOWN_ID);
-      if (at && !q.at[TOWN_ID]) q.at[TOWN_ID] = at;
-      if (src.note && !(q.note || '').includes(src.note)) q.note = q.note ? q.note + '\n\n' + src.note : src.note;
-      n.link++;
-    } else {
-      q = normState({ quests: [clone(src)] }).quests[0];
-      q.towns = [TOWN_ID];
-      q.at = at ? { [TOWN_ID]: at } : {};
-      state.quests.push(q);
-      n.add++;
-    }
-    ids[src.id] = q.id;
-  });
-  Object.assign(boardData().places, d.places || {});
-  if (!state.tracked && ids[d.tracked]) state.tracked = ids[d.tracked];
-  return n;
-}
+/* Una còpia sencera (amb `boards`) ho substitueix tot; un fitxer d'un sol tauler (com les missions d'un poble nou)
+   s'hi afegeix: les que ja existeixen (mateix id o títol) s'enllacen amb aquest tauler. Ho fa el servidor. */
 function importFile(file) {
-  file.text().then((txt) => {
+  file.text().then(async (txt) => {
     const d = JSON.parse(txt);
     if (!d || !Array.isArray(d.quests)) throw new Error('format');
     if (d.board && d.board !== TOWN_ID) { toast(`Aquest fitxer és del tauler de ${TOWNS[d.board] ? TOWNS[d.board].name : d.board}: importa'l allà.`, 4200); return; }
-    /* una còpia sencera ho substitueix tot; un fitxer d'un sol tauler (com les missions d'un poble nou) s'hi afegeix */
-    const whole = d.boards || (!d.board && TOWN_ID === 'phentanil');
-    const go = () => {
-      if (whole) {
-        state = normState(d);
-        markDirty();
-        renderBoard(true);
-        toast('Missions importades. Revisa-les i publica-les quan vulguis.');
-        return;
-      }
-      const n = mergeBoard(d);
-      markDirty();
-      renderBoard(true);
-      toast(`${n.add} missions noves i ${n.link} enllaçades amb les que ja hi havia. Revisa-les i publica-les quan vulguis.`, 5200);
-    };
-    if (view.zoom) closeAny().then(go); else go();
+    const whole = !!d.boards || (!d.board && TOWN_ID === 'phentanil');
+    if (view.zoom) await closeAny();
+    await remote.whenIdle();
+    try {
+      const r = await api.request('POST', whole ? '/v1/import?mode=replace' : `/v1/import?mode=merge&town=${TOWN_ID}`, { body: d });
+      toast(whole ? `Importades ${r.quests} missions. Hi ha una còpia de l’estat d’abans a l’historial.` : `${r.added} missions noves i ${r.linked} enllaçades amb les que ja hi havia.`, 5200);
+      await reloadBoard();
+    } catch (e) {
+      toast('No s’ha pogut importar: ' + e.message, 5200);
+    }
   }).catch(() => toast('Aquest fitxer no és un tauler de missions vàlid.'));
 }
-function exportFile() {
-  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'missions-' + new Date().toISOString().slice(0, 10) + '.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+async function exportFile() {
+  try {
+    const data = await api.request('GET', '/v1/export');
+    const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'missions-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) {
+    toast('No s’ha pogut exportar: ' + e.message, 4200);
+  }
 }
 
-/* edició sobre el paper */
-let editT = null, cardT = null;
+/* ---------- edició sobre el paper ---------- */
+let editT = null;
+const cardT = {};
 const oneLine = (s) => s.replace(/\s*\n\s*/g, ' ').trim();
+/* el que s'ha escrit en un camp del paper passa a la missió i s'envia (si ha canviat) */
 function readField(el, f) {
   const q = qById(el.dataset.id);
   if (!q) return;
   const kind = f.dataset.f, val = plainText(f);
-  if (kind === 'title') q.title = oneLine(val);
-  else if (kind === 'text') q.text = val.replace(/\n{3,}/g, '\n\n').trim();
-  else if (kind === 'reward') q.reward = oneLine(val);
-  else if (kind === 'step') { const s = q.steps[+f.closest('li').dataset.i]; if (s) s.t = oneLine(val); }
+  if (kind === 'step') {
+    const s = q.steps.find((x) => x.id === f.closest('li').dataset.step), t = oneLine(val);
+    if (s && s.text !== t) {
+      s.text = t;
+      questWrite(q.id, () => api.request('PATCH', stepPath(q.id, s.id), { body: { text: t } }));
+    }
+  } else {
+    const v = kind === 'text' ? val.replace(/\n{3,}/g, '\n\n').trim() : oneLine(val);
+    if (q[kind] !== v) {
+      q[kind] = v;
+      patchQuest(q.id, { [kind]: v });
+    }
+  }
+  remote.setEditing(qKey(q.id), false);
   /* el paper ja mostra el que s'ha escrit: no cal tornar-lo a pintar (perdria el cursor) */
   el._sig = docSig(q, el._g, texFor(q, el._g), true);
-  markDirty();
 }
 function refreshEditing(el, focusSel) {
   const q = qById(el.dataset.id);
@@ -1100,8 +1255,21 @@ function editingDoc(e) {
 function onDocInput(e) {
   const ed = editingDoc(e);
   if (!ed) return;
+  remote.setEditing(qKey(ed.el.dataset.id), true);
   clearTimeout(editT);
-  editT = setTimeout(() => readField(ed.el, ed.f), 200);
+  editT = setTimeout(() => readField(ed.el, ed.f), 400);
+}
+function addStepAt(el, q, index) {
+  const step = { id: newId('s'), text: '', done: false };
+  const after = index > 0 ? q.steps[index - 1].id : null;
+  q.steps.splice(index, 0, step);
+  questWrite(q.id, () => api.request('POST', `/v1/quests/${encodeURIComponent(q.id)}/steps`, { body: { id: step.id, text: '', after } }));
+  refreshEditing(el, `li[data-step="${step.id}"] .tx`);
+}
+function removeStep(el, q, stepId, focusSel) {
+  q.steps = q.steps.filter((s) => s.id !== stepId);
+  questWrite(q.id, () => api.request('DELETE', stepPath(q.id, stepId)));
+  refreshEditing(el, focusSel);
 }
 function onDocKey(e) {
   const ed = editingDoc(e);
@@ -1115,15 +1283,13 @@ function onDocKey(e) {
   const i = +f.closest('li').dataset.i;
   if (e.key === 'Enter') {
     e.preventDefault();
+    clearTimeout(editT);
     readField(el, f);
-    q.steps.splice(i + 1, 0, { t: '', d: false });
-    markDirty();
-    refreshEditing(el, `li[data-i="${i + 1}"] .tx`);
+    addStepAt(el, q, i + 1);
   } else if (e.key === 'Backspace' && !f.innerText.trim()) {
     e.preventDefault();
-    q.steps.splice(i, 1);
-    markDirty();
-    refreshEditing(el, i > 0 ? `li[data-i="${i - 1}"] .tx` : null);
+    clearTimeout(editT);
+    removeStep(el, q, q.steps[i].id, i > 0 ? `li[data-i="${i - 1}"] .tx` : null);
   }
 }
 function onDocBlur(e) {
@@ -1145,36 +1311,49 @@ function onDocClick(e) {
   const q = qById(el.dataset.id);
   if (!q) return;
   const act = closestIn(e.target, '[data-act]'), box = closestIn(e.target, '.bx'), eco = closestIn(e.target, '[data-eco]');
-  if (act && act.dataset.act === 'addstep') {
-    q.steps.push({ t: '', d: false });
-    markDirty();
-    refreshEditing(el, `li[data-i="${q.steps.length - 1}"] .tx`);
-  } else if (act && act.dataset.act === 'delstep') {
-    q.steps.splice(+act.closest('li').dataset.i, 1);
-    markDirty();
+  if (act && act.dataset.act === 'addstep') addStepAt(el, q, q.steps.length);
+  else if (act && act.dataset.act === 'delstep') removeStep(el, q, act.closest('li').dataset.step);
+  else if (box) {
+    const s = q.steps.find((x) => x.id === box.closest('li').dataset.step);
+    if (!s) return;
+    s.done = !s.done;
+    questWrite(q.id, () => api.request('PATCH', stepPath(q.id, s.id), { body: { done: s.done } }));
     refreshEditing(el);
-  } else if (box) {
-    const s = q.steps[+box.closest('li').dataset.i];
-    if (s) { s.d = !s.d; markDirty(); refreshEditing(el); }
   } else if (eco) {
     const ec = state.ecos.find((x) => x.id === eco.dataset.eco);
-    if (ec) { ec.unlocked = !ec.unlocked; markDirty(); refreshEditing(el); }
+    if (!ec) return;
+    ec.unlocked = !ec.unlocked;
+    remote.write(['eco:' + ec.id], () => api.request('PATCH', `/v1/ecos/${encodeURIComponent(ec.id)}`, { body: { unlocked: ec.unlocked } }));
+    refreshEditing(el);
   }
 }
 function onCardInput(e) {
   const t = e.target, k = t.dataset.k, el = view.zEl, q = el && qById(el.dataset.id);
-  if (!q || !k) return;
-  if (k === 'place') q.at[TOWN_ID] = t.value; else q[k] = t.value;
-  markDirty();
-  clearTimeout(cardT);
-  cardT = setTimeout(() => applyDoc(el, q, el._g), k === 'note' ? 0 : 160);
+  if (!q || !k || !t.isConnected) return;
+  /* els camps de text ja s'han llegit amb «input»; un «change» tardà (p. ex. quan la fitxa es torna a pintar) no compta */
+  if (e.type === 'change' && t.tagName !== 'SELECT') return;
+  if (e.type === 'input' && t.tagName === 'SELECT') return;
+  if (k === 'place') {
+    q.towns = { ...q.towns, [TOWN_ID]: t.value || null };
+    questWrite(q.id, () => api.request('PUT', `/v1/quests/${encodeURIComponent(q.id)}/towns/${TOWN_ID}`, { body: { place: q.towns[TOWN_ID] } }));
+    return;
+  }
+  q[k] = t.value;
+  applyDoc(el, q, el._g);
+  /* s'envia quan es para d'escriure */
+  remote.setEditing(qKey(q.id), true);
+  clearTimeout(cardT[k]);
+  cardT[k] = setTimeout(() => {
+    patchQuest(q.id, { [k]: q[k] });
+    remote.setEditing(qKey(q.id), false);
+  }, 400);
 }
 function onCardClick(e) {
   const b = closestIn(e.target, 'button'), el = view.zEl, q = b && el && qById(el.dataset.id);
   if (!q) return;
   if (b.dataset.cat) {
     q.cat = b.dataset.cat;
-    markDirty();
+    patchQuest(q.id, { cat: q.cat });
     renderBoard(true);
     const g = board.slots[q.id];
     if (g && !el._temp) el._g = g;
@@ -1182,10 +1361,13 @@ function onCardClick(e) {
     gsap.to(el, Object.assign({ duration: 0.4 * D }, zoomTarget(el._g)));
     renderDmCard();
   } else if (b.dataset.town) {
-    const k = b.dataset.town, on = q.towns.includes(k);
-    if (on && q.towns.length === 1) { toast('La missió ha de sortir com a mínim en un tauler.'); return; }
-    q.towns = on ? q.towns.filter((t) => t !== k) : q.towns.concat(k);
-    markDirty();
+    const k = b.dataset.town, on = k in q.towns;
+    if (on && Object.keys(q.towns).length === 1) { toast('La missió ha de sortir com a mínim en un tauler.'); return; }
+    const towns = { ...q.towns };
+    if (on) delete towns[k]; else towns[k] = null;
+    q.towns = towns;
+    const path = `/v1/quests/${encodeURIComponent(q.id)}/towns/${k}`;
+    questWrite(q.id, () => (on ? api.request('DELETE', path) : api.request('PUT', path, { body: { place: null } })));
     if (!onBoard(q)) { toast('La missió ja no surt en aquest tauler.'); closeDoc().then(() => renderBoard(true)); return; }
     renderDmCard();
   } else if (b.dataset.q) questAction(b.dataset.q);
@@ -1194,60 +1376,86 @@ function onBarClick(e) {
   const b = closestIn(e.target, '[data-dm]');
   if (!b) return;
   const a = b.dataset.dm;
-  if (arrange.on && (a === 'new' || a === 'import' || a === 'exit')) setArrange(false);
+  if (arrange.on && (a === 'new' || a === 'import' || a === 'exit' || a === 'history')) setArrange(false);
   if (a === 'arrange') setArrange(!arrange.on);
   else if (a === 'pixel') startPixel();
   else if (a === 'viewer') askViewer();
   else if (a === 'new') newQuest();
-  else if (a === 'publish') publish(armedForce);
+  else if (a === 'history') toggleHistory();
   else if (a === 'exit') setDm(false);
-  else if (a === 'token') askToken(true);
   else if (a === 'export') exportFile();
   else if (a === 'import') E.impFile.click();
 }
 
-/* publicar al wiki: data.json xifrat, amb l'API de GitHub */
-async function askToken(change) {
-  const ok = await askGate({
-    kicker: 'Mode DM', title: 'Clau de GitHub', wide: true, type: 'password', ph: 'github_pat_… o ghp_…', btn: 'Desar', cancel: 'Cancel·lar',
-    text: `${change ? 'Canvia la clau d’accés.' : 'Per publicar els canvis al wiki cal una clau d’accés de GitHub. Només cal fer-ho una vegada en aquest ordinador.'}<br>Crea-la a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained tokens</a>: propietari <b>divas-tragonas</b>, només el repositori <b>wiki</b> i permís <b>Contents: Read and write</b>. També serveix una clau clàssica amb permís <b>repo</b>.`,
-    check: async (v) => {
-      const tok = v.trim(), msg = await checkToken(tok);
-      if (!msg) local.set(KEYS.token, tok);
-      return msg;
-    }
-  });
-  return ok ? local.get(KEYS.token) : null;
-}
-const PUBLISH_ERRORS = {
-  conflict: 'Hi ha una versió més nova al wiki: torna a publicar per sobreescriure-la',
-  auth: 'La clau de GitHub no és vàlida',
-  perm: 'La clau no té permís per escriure al wiki'
+/* ---------- historial, còpies i dispositius ---------- */
+let histOpen = false, armedRestore = null;
+const ago = (iso) => {
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'ara mateix';
+  if (s < 3600) return `fa ${Math.round(s / 60)} min`;
+  if (s < 86400) return `fa ${Math.round(s / 3600)} h`;
+  return new Date(iso).toLocaleDateString('ca-ES', { day: 'numeric', month: 'short' });
 };
-async function publish(force, quiet) {
-  if (!sync.full || !sync.groupKey || !sync.dmKey) return;
-  let tok = local.get(KEYS.token);
-  if (!tok) { tok = await askToken(false); if (!tok) return; }
-  setStat('Publicant…');
+const REASONS = { manual: 'Feta pel DM', nightly: 'De cada nit', 'pre-import': 'Abans d’importar', 'pre-restore': 'Abans de restaurar' };
+async function renderHistory() {
+  const h = E.hist;
+  h.innerHTML = '<div class="hs-k">Historial</div><p class="hs-x">Carregant…</p>';
   try {
-    const rev = Math.max(sync.remote.rev || 0, sync.work.baseRev || 0) + 1;
-    const data = { v: 1, rev, savedAt: new Date().toISOString(), kdf: sync.remote.kdf, pub: await seal(sync.groupKey, publicView(state)), dm: await seal(sync.dmKey, state) };
-    await putData(tok, JSON.stringify(data), `Missions: canvis des del mode DM (rev ${rev})`, { force, baseRev: sync.work.baseRev });
-    sync.remote = data;
-    sync.full = clone(state);
-    sync.work = { baseRev: rev, dirty: false, state: clone(state) };
-    local.set(KEYS.work, sync.work);
-    armedForce = false;
-    setStat('Publicat. El wiki s’actualitza en un o dos minuts.');
-    if (quiet || !dmOn) toast('Canvis publicats al wiki.');
-    setTimeout(() => { if (statOverride.startsWith('Publicat')) setStat(''); }, 8000);
+    const [c, sn, se] = await Promise.all([
+      api.request('GET', '/v1/history?limit=40'),
+      api.request('GET', '/v1/snapshots'),
+      api.request('GET', '/v1/sessions')
+    ]);
+    if (!histOpen) return;
+    h.innerHTML = `<button type="button" class="hs-close" data-h="close" title="Tancar">×</button>
+      <div class="hs-k">Historial</div>
+      <h3>Canvis</h3>
+      <ul class="hs-list">${c.changes.map((x) => `<li><span class="hs-t">${esc(x.summary)}</span><span class="hs-w">${ago(x.at)}</span>${x.undoable ? `<button type="button" class="btn" data-h="undo" data-rev="${x.rev}">Desfer</button>` : x.undoneBy ? '<em>desfet</em>' : ''}</li>`).join('') || '<li class="hs-x">Encara no hi ha cap canvi.</li>'}</ul>
+      <h3>Còpies <button type="button" class="btn" data-h="snap">Fer-ne una ara</button></h3>
+      <ul class="hs-list">${sn.snapshots.slice(0, 15).map((x) => `<li><span class="hs-t">${esc(x.label || REASONS[x.reason] || x.reason)}</span><span class="hs-w">${ago(x.at)}</span><button type="button" class="btn${armedRestore === x.id ? ' warn' : ''}" data-h="restore" data-id="${x.id}">${armedRestore === x.id ? 'Segur?' : 'Restaurar'}</button></li>`).join('') || '<li class="hs-x">Encara no n’hi ha cap.</li>'}</ul>
+      <h3>Dispositius</h3>
+      <ul class="hs-list">${se.sessions.map((x) => `<li><span class="hs-t">${esc(x.label || 'Dispositiu')}${x.current ? ' <em>(aquest)</em>' : ''}</span><span class="hs-w">${x.role === 'dm' ? 'DM · ' : ''}${ago(x.lastSeenAt)}</span>${x.current ? '' : `<button type="button" class="btn" data-h="revoke" data-id="${esc(x.id)}">Treure</button>`}</li>`).join('')}</ul>`;
   } catch (e) {
-    /* conflicte: el següent clic a «Publicar» sobreescriu la versió del wiki */
-    if (e.code === 'conflict') armedForce = true;
-    if (e.code === 'auth') local.del(KEYS.token);
-    setStat(PUBLISH_ERRORS[e.code] || 'No s’ha pogut publicar (' + e.message + ')');
-    if (quiet || !dmOn) toast('No s’ha pogut publicar al wiki: ' + statOverride, 5000);
+    h.innerHTML = `<button type="button" class="hs-close" data-h="close">×</button><div class="hs-k">Historial</div><p class="hs-x">No s’ha pogut carregar: ${esc(e.message)}</p>`;
   }
+}
+function toggleHistory() {
+  if (histOpen) { closeHistory(); return; }
+  if (view.zoom) closeAny();
+  histOpen = true;
+  E.hist.classList.add('on');
+  gsap.fromTo(E.hist, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.35 * D, ease: 'power3.out', overwrite: 'auto' });
+  renderDmBar();
+  renderHistory();
+}
+function closeHistory() {
+  if (!histOpen) return;
+  histOpen = false;
+  armedRestore = null;
+  E.hist.classList.remove('on');
+  gsap.to(E.hist, { opacity: 0, x: 40, duration: 0.25 * D, overwrite: 'auto' });
+  renderDmBar();
+}
+async function onHistClick(e) {
+  const b = closestIn(e.target, '[data-h]');
+  if (!b) return;
+  const a = b.dataset.h;
+  try {
+    if (a === 'close') { closeHistory(); return; }
+    await remote.whenIdle();
+    if (a === 'undo') { await api.request('POST', `/v1/history/${b.dataset.rev}/undo`); toast('Canvi desfet.'); }
+    else if (a === 'snap') { await api.request('POST', '/v1/snapshots', { body: {} }); toast('Còpia feta.'); }
+    else if (a === 'restore') {
+      const id = Number(b.dataset.id);
+      if (armedRestore !== id) { armedRestore = id; renderHistory(); return; }
+      armedRestore = null;
+      await api.request('POST', `/v1/snapshots/${id}/restore`);
+      toast('Còpia restaurada. N’hi ha una de l’estat d’abans per si de cas.', 4200);
+    } else if (a === 'revoke') { await api.request('DELETE', `/v1/sessions/${encodeURIComponent(b.dataset.id)}`); toast('Dispositiu tret: haurà de tornar a entrar.'); }
+  } catch (err) {
+    toast(err.message, 4200);
+  }
+  if (histOpen) renderHistory();
 }
 
 /* =================================================================== entrada */
@@ -1302,6 +1510,7 @@ function onKey(e) {
   firstInput();
   setInput('kb');
   if (arrange.on && e.key === 'Escape') { e.preventDefault(); setArrange(false); return; }
+  if (histOpen && e.key === 'Escape') { e.preventDefault(); closeHistory(); return; }
   const k = e.key.toLowerCase();
   if (KEY_ACTS[e.key]) { e.preventDefault(); act(KEY_ACTS[e.key]); }
   else if (k === 'f') fullscreen();
@@ -1313,7 +1522,7 @@ function onClick(e) {
   if (gateOpen() || pixelOn()) return;
   firstInput();
   const t = e.target, path = e.composedPath ? e.composedPath() : [];
-  if (path.some((n) => n && ['dmbar', 'dmcard', 'chrome', 'gate'].includes(n.id))) return;
+  if (path.some((n) => n && ['dmbar', 'dmcard', 'chrome', 'gate', 'hist'].includes(n.id))) return;
   if (arrange.on) return;
   if (view.zoom === 'map') {
     const qb = t.closest('#pcard [data-q]');
@@ -1421,12 +1630,21 @@ function bindInput() {
   E.dmcard.addEventListener('change', onCardInput);
   E.dmcard.addEventListener('click', onCardClick);
   E.dmbar.addEventListener('click', onBarClick);
+  /* el text d'un lloc s'envia quan es para d'escriure */
+  let placeT = null;
   E.pcard.addEventListener('input', (e) => {
     const f = closestIn(e.target, '[data-place]');
     if (!f || !dmOn) return;
-    boardData().places[f.dataset.place] = { text: plainText(f).trim() };
-    markDirty();
+    const place = f.dataset.place, text = plainText(f).trim();
+    boardData().places[place] = text;
+    remote.setEditing('place:' + place, true);
+    clearTimeout(placeT);
+    placeT = setTimeout(() => {
+      savePlace(place, text);
+      remote.setEditing('place:' + place, false);
+    }, 400);
   });
+  E.hist.addEventListener('click', onHistClick);
   E.impFile.addEventListener('change', (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) importFile(f);

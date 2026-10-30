@@ -2,14 +2,9 @@
 import { z } from 'zod';
 import { TOWN_IDS, type TownId } from './towns.ts';
 
-export const ROLES = ['player', 'dm'] as const;
-export type Role = (typeof ROLES)[number];
-
-export const CATEGORIES = ['principal', 'secundaria', 'personal'] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-/* peces del tauler que no són missions: el mapa i la pila de completades */
-export const FIXED_PIECES = ['map', 'pile'] as const;
+import { CATEGORIES, FIXED_PIECES, ROLES, type Role } from './constants.ts';
+export { CATEGORIES, FIXED_PIECES, ROLES, type Category } from './constants.ts';
+export type { Role };
 
 /* identificadors: els genera qui crea l'element (el tauler, per poder-lo fer servir abans de la resposta) o l'API */
 export const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/, 'Identificador no vàlid');

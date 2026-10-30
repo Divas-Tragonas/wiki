@@ -1,4 +1,4 @@
-/* El tauler que s'està mirant (?lloc=…). Les missions són les mateixes per a tots els taulers (data.json) i cada
+/* El tauler que s'està mirant (?lloc=…). Les missions són les mateixes per a tots els taulers i cada
    una diu a quins surt. */
 import { TOWNS } from './towns.js';
 

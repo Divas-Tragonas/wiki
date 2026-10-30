@@ -1,6 +1,6 @@
 ---
-/* Tauler de missions: una pàgina a pantalla completa, sense el layout del wiki. El codi és a src/missions/;
-   les dades (data.json, xifrades) són a public/missions/ perquè el mode DM les hi desa amb l'API de GitHub. */
+/* Tauler de missions: una pàgina a pantalla completa, sense el layout del wiki. El codi és a src/missions/ i les
+   dades a l'API de la Mac mini (PUBLIC_MISSIONS_API_URL en fer el build). */
 import { getEntry } from 'astro:content';
 import { TOWNS } from '../../missions/towns.js';
 import { routes, SITE_NAME, url } from '../../lib/site';
@@ -69,6 +69,8 @@ for (const town of Object.values(TOWNS)) {
           <button class="pill" id="fsBtn" type="button">Pantalla completa</button>
           <button class="pill" id="dmBtn" type="button">Mode DM</button>
         </nav>
+        <aside class="hist" id="hist" aria-label="Historial"></aside>
+        <div class="net" id="net" hidden></div>
         <div class="toast" id="toast"></div>
         <div class="gate" id="gate" hidden></div>
       </div>
