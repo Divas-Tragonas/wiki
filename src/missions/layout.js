@@ -2,7 +2,7 @@
    Cada paper és el document sencer (W×H) vist a escala s al seu lloc (w×h) del tauler. */
 import { hashOf } from './util.js';
 import { catOf, isDone } from './data.js';
-import { TOWN } from './towns.js';
+import { TOWN } from './current-town.js';
 
 export const STAGE_W = 1920, STAGE_H = 1080;
 
@@ -17,6 +17,10 @@ export const PAPER = {
   6: { ar: 0.687, i: [0.033, 0.033, 0.023, 0.033] }, '6r': { ar: 1.455, i: [0.033, 0.033, 0.033, 0.023] },
   7: { ar: 0.509, i: [0.019, 0.033, 0.024, 0.037] }
 };
+/* cada textura amb la seva ombra ja desenfocada (assets/sh-*.webp): si se n'afegeix una, cal generar-ne l'ombra */
+const TEX_URLS = import.meta.glob('./assets/{paper,sh}-*.webp', { eager: true, query: '?no-inline&url', import: 'default' });
+export const paperUrl = (tex) => TEX_URLS[`./assets/paper-${tex}.webp`];
+export const shadowUrl = (tex) => TEX_URLS[`./assets/sh-${tex}.webp`];
 const TEX = { principal: ['2', '6', '3', '5'], secundaria: ['1', '3', '5', '4', '2'], personal: ['4', '1', '5'] };
 
 /* mapa a dalt a l'esquerra i pila de completades a sota; el DM els pot moure (layout.map / layout.pile) */

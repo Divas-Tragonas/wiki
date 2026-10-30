@@ -2,7 +2,11 @@
    Els noms del mapa es dibuixen amb la tipografia a partir de coordenades del mapa a 4950 d'ample:
    - ln: línies del nom, cada una [text, x, y, amplada]
    - ar: fletxa [x1, y1, x2, y2] cap al lloc (sense fletxa, el nom va escrit damunt del lloc)
-   - icon: [cx, cy, radi] per a una icona en lloc d'un nom (el tauler d'anuncis, que torna al tauler) */
+   - icon: [cx, cy, radi] per a una icona en lloc d'un nom (el tauler d'anuncis, que torna al tauler)
+   A la fitxa de cada lloc (info), character o place és la pàgina del wiki on es pot llegir més; el build falla si
+   no existeix (src/pages/missions/index.astro). */
+import mapPhentanil from './assets/map.webp?url';
+import mapCony from './assets/map-cony-cirera.webp?url';
 
 const GEOM_PHENTANIL = [
   { id: 'cami-tres-bous', name: 'Camí dels Tres Bous', ar: [2553, 141, 2721, 93], ln: [['CAMÍ dels', 2302, 140, 201], ['TRES BOUS', 2268, 178, 252]] },
@@ -28,17 +32,17 @@ const GEOM_PHENTANIL = [
 ];
 
 const PLACE_INFO_PHENTANIL = {
-  'ajuntament': { text: "On l'alcalde, Arnau Ponent, porta els registres del poble.", href: 'wiki/characters/arnau-ponent' },
-  'gegant-durment': { text: 'La taverna El Gegant Dorment, punt de trobada habitual del grup.', href: 'wiki/places/phentanil' },
-  'mansio-cendra': { text: "L'antic cau de la Vaina Roja a les afores de Phentanil, ara buidat després de la caiguda de Vara de Vidre.", href: 'wiki/places/mansio-de-la-cendra' },
-  'santuari-sort': { text: 'El santuari de Timora, a la plaça central, amb una casoleta màgica que emet purpurina quan hi tires monedes.', href: 'wiki/places/phentanil' },
-  'casa-sor-maria': { text: 'La casa de Sor Maria, apartada del carrer principal.', href: 'wiki/characters/sor-maria' },
-  'escut-lleo': { text: "L'armeria d'Hèlia Tornegrau, saquejada recentment pels goblins però encara operativa.", href: 'wiki/places/escut-del-lleo' },
-  'casa-helia': { text: "Casa d'Hèlia Tornegrau, propietària de l'armeria l'Escut del Lleó.", href: 'wiki/characters/helia-tornegrau' },
-  'can-bertran': { text: 'Establiment comercial de Phentanil on el grup va entregar el primer cargament.', href: 'wiki/places/can-bertran' },
-  'casa-bertran': { text: 'Casa de Mic Bertran, comerciant de Phentanil i propietari de Can Bertran.', href: 'wiki/characters/mic-bertran' },
-  'hort-damia': { text: "L'hort de Damià RoureBlanc, pagès d'edat avançada i vell amic de Sor Maria.", href: 'wiki/characters/damia-roureblanc' },
-  'casa-arnau': { text: "Casa d'Arnau Ponent, l'alcalde de Phentanil.", href: 'wiki/characters/arnau-ponent' }
+  'ajuntament': { text: "On l'alcalde, Arnau Ponent, porta els registres del poble.", character: 'arnau-ponent' },
+  'gegant-durment': { text: 'La taverna El Gegant Dorment, punt de trobada habitual del grup.', place: 'phentanil' },
+  'mansio-cendra': { text: "L'antic cau de la Vaina Roja a les afores de Phentanil, ara buidat després de la caiguda de Vara de Vidre.", place: 'mansio-de-la-cendra' },
+  'santuari-sort': { text: 'El santuari de Timora, a la plaça central, amb una casoleta màgica que emet purpurina quan hi tires monedes.', place: 'phentanil' },
+  'casa-sor-maria': { text: 'La casa de Sor Maria, apartada del carrer principal.', character: 'sor-maria' },
+  'escut-lleo': { text: "L'armeria d'Hèlia Tornegrau, saquejada recentment pels goblins però encara operativa.", place: 'escut-del-lleo' },
+  'casa-helia': { text: "Casa d'Hèlia Tornegrau, propietària de l'armeria l'Escut del Lleó.", character: 'helia-tornegrau' },
+  'can-bertran': { text: 'Establiment comercial de Phentanil on el grup va entregar el primer cargament.', place: 'can-bertran' },
+  'casa-bertran': { text: 'Casa de Mic Bertran, comerciant de Phentanil i propietari de Can Bertran.', character: 'mic-bertran' },
+  'hort-damia': { text: "L'hort de Damià RoureBlanc, pagès d'edat avançada i vell amic de Sor Maria.", character: 'damia-roureblanc' },
+  'casa-arnau': { text: "Casa d'Arnau Ponent, l'alcalde de Phentanil.", character: 'arnau-ponent' }
 };
 
 
@@ -59,10 +63,10 @@ const GEOM_CONY = [
 ];
 
 const PLACE_INFO_CONY = {
-  'sender-bosc': { text: "Un sender estret que s'endinsa al bosc. Com més s'hi avança, més fosc i més fred es fa. Si l'Àgata viu enlloc, és per aquí.", href: 'wiki/characters/agata' },
+  'sender-bosc': { text: "Un sender estret que s'endinsa al bosc. Com més s'hi avança, més fosc i més fred es fa. Si l'Àgata viu enlloc, és per aquí.", character: 'agata' },
   'cami-triboar': { text: "L'antic camí empedrat que porta cap a Triboar, a l'est." },
-  'cementiri': { text: 'Làpides tombades i pedres cobertes de molsa. Entre les tombes hi creixen arbustos secs.', href: 'wiki/places/runes-de-cony-cirera' },
-  'muralla': { text: "El que queda de la muralla del poble. El bosc se l'ha anat menjant pedra a pedra.", href: 'wiki/places/runes-de-cony-cirera' },
+  'cementiri': { text: 'Làpides tombades i pedres cobertes de molsa. Entre les tombes hi creixen arbustos secs.', place: 'runes-de-cony-cirera' },
+  'muralla': { text: "El que queda de la muralla del poble. El bosc se l'ha anat menjant pedra a pedra.", place: 'runes-de-cony-cirera' },
   'farga': { text: "Una farga abandonada, amb l'enclusa encara a fora, rovellada." },
   'casa-batlle': { text: 'La casa més gran del poble, amb el pati tancat. Fa temps que les portes no tanquen.' },
   'pou': { text: "El pou de la plaça. L'aigua encara hi és, freda i fosca." },
@@ -70,17 +74,13 @@ const PLACE_INFO_CONY = {
   'hostal': { text: 'Un hostal gran amb pati i estables, buit des de fa generacions.' },
   'embarcador': { text: 'Un embarcador de fusta vella. La barca encara sura.' },
   'estany': { text: "Un estany d'aigües quietes a la vora del poble." },
-  'cami-phentanil': { text: 'El camí per on heu vingut: dos dies cap a ponent fins a Phentanil.', href: 'wiki/places/phentanil' }
+  'cami-phentanil': { text: 'El camí per on heu vingut: dos dies cap a ponent fins a Phentanil.', place: 'phentanil' }
 };
 
 
 /* vb: mida del mapa en coordenades de GEOM · h: alçada del mapa al tauler (1100 d'ample) · start: primer lloc amb les fletxes */
 export const TOWNS = {
-  phentanil: { name: 'Phentanil', map: 'assets/map.webp', vb: [4950, 3510], h: 780, start: 'ajuntament', geom: GEOM_PHENTANIL, info: PLACE_INFO_PHENTANIL },
-  'cony-cirera': { name: 'Cony Cirera', map: 'assets/map-cony-cirera.webp', vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY }
+  phentanil: { name: 'Phentanil', map: mapPhentanil, vb: [4950, 3510], h: 780, start: 'ajuntament', geom: GEOM_PHENTANIL, info: PLACE_INFO_PHENTANIL },
+  'cony-cirera': { name: 'Cony Cirera', map: mapCony, vb: [4950, 3431], h: 763, start: 'pou', geom: GEOM_CONY, info: PLACE_INFO_CONY }
 };
 
-/* les missions són les mateixes per a tots els taulers (data.json) i cada una diu a quins surt */
-export const TOWN_ID = new URLSearchParams(location.search).get('lloc') === 'cony-cirera' ? 'cony-cirera' : 'phentanil';
-export const TOWN = TOWNS[TOWN_ID];
-export const PLACES = Object.fromEntries(TOWN.geom.map((p) => [p.id, p]));

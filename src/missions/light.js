@@ -7,7 +7,8 @@
      càmera i surt de l'ombra (forat amb la seva forma, seguit cada fotograma). És la més cara.
    Es tria amb la tecla L o el botó «Llum» i es recorda en aquest navegador (?gl=1 força la viva). */
 import { $, $$, D, REDUCED_MOTION, local } from './util.js';
-import { gsap, isTweening } from './tween.js';
+import { gsap } from 'gsap';
+import goboUrl from './assets/gobo-sh.webp?url';
 import { stage, toast } from './ui.js';
 
 const FX_KEY = 'phx.fx';
@@ -78,8 +79,7 @@ export function liftTo(el, kind, on, landAt) {
   const o = on
     ? { v: 1, duration: (kind === 'map' ? 0.3 : 0.42) * D, delay: 0.04 * D, ease: 'power1.out' }
     : { v: 0, duration: 0.26 * D, delay: (landAt || 0.4) * D, ease: 'power1.in' };
-  if (gsap) gsap.to(LIFT, Object.assign({ overwrite: true }, o));
-  else LIFT.v = on ? 1 : 0;
+  gsap.to(LIFT, Object.assign({ overwrite: true }, o));
 }
 
 /* ---------- llum viva (WebGL) ---------- */
@@ -189,7 +189,7 @@ function initGobo() {
     ready = true;
     run(on);
   };
-  img.src = 'assets/gobo-sh.webp';
+  img.src = goboUrl;
 
   const t0 = performance.now();
   let last = 0, drawn = 0, n = 0, slow = 0;
@@ -211,7 +211,7 @@ function initGobo() {
     last = now;
     /* el vent és lent: n'hi ha prou amb ~30 fps i deixa la GPU lliure per als papers;
        mentre un paper vola es dibuixa cada fotograma perquè el forat de l'ombra el segueixi */
-    const moving = LIFT.el && ((LIFT.v > 0.001 && LIFT.v < 0.999) || isTweening(LIFT.el));
+    const moving = LIFT.el && ((LIFT.v > 0.001 && LIFT.v < 0.999) || gsap.isTweening(LIFT.el));
     if (!moving && now - drawn < 30) { raf = requestAnimationFrame(frame); return; }
     drawn = now;
     const t = REDUCED_MOTION ? 30 : (now - t0) / 1000 + 30;

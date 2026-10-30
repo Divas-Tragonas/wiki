@@ -1,4 +1,5 @@
 /* Utilitats sense estat compartides per tot el tauler. */
+import { gsap } from 'gsap';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -22,6 +23,9 @@ export function hashOf(s, m = 0) {
   }
   return Math.abs(h + m * 7919) % 100003;
 }
+
+/* valor numèric actual d'una propietat animada amb GSAP (x, y, rotation, scaleX…) */
+export const gp = (el, k) => +gsap.getProperty(el, k) || 0;
 
 export const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 export const rad = (deg) => deg * Math.PI / 180;

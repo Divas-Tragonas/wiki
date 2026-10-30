@@ -20,8 +20,9 @@ src/
 │   ├── characters/      # fitxers .md de PNJs, enemics i faccions
 │   ├── places/          # fitxers .md dels llocs del món
 │   └── croniques/       # fitxers .md de cada sessió
+├── missions/            # codi, estils, mapes, textures i fonts del tauler de missions
 ├── content.config.ts    # esquema dels camps de cada col·lecció
-├── pages/               # rutes del lloc (no cal tocar-les normalment)
+├── pages/               # rutes del lloc (no cal tocar-les normalment); missions/index.astro és el tauler
 ├── layouts/             # BaseLayout i EntryLayout (fitxa amb columna lateral)
 ├── components/          # Navbar, Footer, SearchModal, Card, TagBadge, Breadcrumb, PageHeader, SectionHeader
 ├── lib/
@@ -100,24 +101,24 @@ Per activar-ho per primera vegada al repo de GitHub: **Settings → Pages → So
 - Els «Últims canvis» de la portada surten de l'historial de git; per això el workflow fa el checkout amb `fetch-depth: 0`.
 - El cercador és un modal global (`src/components/SearchModal.astro`, obert des del botó de la Navbar o amb Ctrl+K); l'índex JSON es genera al build a `src/pages/cerca.json.ts` a partir de les col·leccions, així que el contingut nou s'hi indexa sol.
 
-## Tauler de missions (`public/missions/`)
+## Tauler de missions
 
-Pàgina estàtica independent d'Astro (no usa el layout ni Tailwind, ni cap pas de build): `index.html`, `app.css`, `js/` i `assets/`. Es publica a `/wiki/missions/` i s'enllaça des de la Navbar.
+Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar. No fa servir el layout del wiki ni Tailwind: és `src/pages/missions/index.astro` (el marcatge) amb el codi, els estils i els fitxers a `src/missions/`. El build ho empaqueta i posa un hash als noms dels fitxers (`/wiki/_astro/…`), així que després d'un desplegament ningú es queda amb una barreja de codi vell i nou. Només `data.json` és a `public/missions/`, perquè el mode DM l'hi desa amb l'API de GitHub i el tauler el baixa nou cada cop.
 
-El codi són mòduls ES sense dependències (GSAP es carrega a part, `assets/gsap.min.js`, i si no hi és les peces van directament al seu lloc):
-
-- `js/main.js`: l'aplicació (arrencada, papers, zoom, mapa, moure papers, mode DM, publicar i entrada de teclat, ratolí i comandament).
-- `js/towns.js`: els pobles (`TOWNS`) amb els noms del mapa (`GEOM_PHENTANIL`, `GEOM_CONY`) i els textos dels llocs.
-- `js/layout.js`: geometria del tauler (llocs dels papers, textures, escales).
-- `js/data.js`: l'estat de les missions (`normState`, que també migra dades antigues) i la part pública (`publicView`).
-- `js/light.js`: la llum (ombra d'arbres) i el WebGL de la llum viva.
-- `js/crypto.js`, `js/github.js`, `js/gate.js`, `js/ui.js`, `js/tween.js`, `js/util.js`: xifratge, publicació a GitHub, la porta de les contrasenyes, escenari i avisos, GSAP i utilitats.
+- `main.js`: l'aplicació (arrencada, papers, zoom, mapa, moure papers, mode DM, publicar i entrada de teclat, ratolí i comandament).
+- `towns.js`: els pobles (`TOWNS`) amb els noms del mapa (`GEOM_PHENTANIL`, `GEOM_CONY`) i els textos dels llocs; `current-town.js` tria el del `?lloc=`.
+- `layout.js`: geometria del tauler (llocs dels papers, textures, escales).
+- `data.js`: l'estat de les missions (`normState`, que també migra dades antigues) i la part pública (`publicView`).
+- `light.js`: la llum (ombra d'arbres) i el WebGL de la llum viva.
+- `crypto.js`, `github.js`, `gate.js`, `ui.js`, `util.js`: xifratge, publicació a GitHub, la porta de les contrasenyes, escenari i avisos, i utilitats.
+- `app.css` i `assets/`: estils, mapes, textures de paper (`paper-*.webp`) amb les seves ombres (`sh-*.webp`) i les tipografies Antiquarian. GSAP ve de npm.
+- Les fitxes dels llocs del mapa enllacen al wiki amb `character` o `place` (a `towns.js`); si la pàgina no existeix, el build falla.
 
 - Les dades són a `public/missions/data.json`, **xifrades** (AES-GCM amb clau PBKDF2): `pub` és el que veu el grup (contrasenya del grup) i `dm` és l'estat complet amb missions ocultes i notes (contrasenya del DM). Les contrasenyes no són enlloc del repositori. No editis aquest fitxer a mà.
 - Les missions s'editen des del mateix tauler en **mode DM** (botó «Mode DM» o tecla D). «Publicar al wiki» desa `data.json` a `master` amb l'API de GitHub (cal una clau d'accés amb permís d'escriptura al repositori, que es guarda només al navegador del DM) i el workflow de Pages republica el lloc.
-- Hi ha un tauler per poble: Phentanil a `/wiki/missions/` i Cony Cirera a `/wiki/missions/?lloc=cony-cirera`, amb botons a la part de dalt per passar d'un a l'altre. Cada poble es configura a `TOWNS` (`js/towns.js`). Totes les missions viuen al mateix `data.json`: cada missió té `towns` (els taulers on surt) i `at` (el seu lloc al mapa de cada tauler), així que una missió que surt a dos taulers és la mateixa i en comparteix el progrés. Les posicions dels papers i els textos dels llocs són de cada tauler (`boards`). A la fitxa del DM, «Taulers» enllaça o desenllaça una missió d'un poble.
+- Hi ha un tauler per poble: Phentanil a `/wiki/missions/` i Cony Cirera a `/wiki/missions/?lloc=cony-cirera`, amb botons a la part de dalt per passar d'un a l'altre. Cada poble es configura a `TOWNS` (`src/missions/towns.js`). Totes les missions viuen al mateix `data.json`: cada missió té `towns` (els taulers on surt) i `at` (el seu lloc al mapa de cada tauler), així que una missió que surt a dos taulers és la mateixa i en comparteix el progrés. Les posicions dels papers i els textos dels llocs són de cada tauler (`boards`). A la fitxa del DM, «Taulers» enllaça o desenllaça una missió d'un poble.
 - «Importar» amb un fitxer d'un sol tauler (camp `board`, o qualsevol fitxer sense `boards` importat fora de Phentanil) afegeix les missions a aquell tauler i enllaça les que ja existeixen pel mateix id o pel mateix títol; una còpia sencera (amb `boards`) ho substitueix tot.
-- Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (`GEOM_PHENTANIL` i `GEOM_CONY` a `js/towns.js`, a 4950 d'ample), sobre `assets/map.webp` i `assets/map-cony-cirera.webp` (mapes sense etiquetes).
-- Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `js/main.js`).
-- Rendiment (el tauler sol anar en un ordinador carregat durant la sessió): la llum té tres nivells que es trien amb la tecla L o el botó «Llum» i es recorden al navegador. «Suau» (per defecte) mou l'ombra d'arbres per JS ~8 cops per segon; «quieta» no la mou gens; «viva» és l'ombra en WebGL (també amb `?gl=1`). L'ombra dels papers no és un `filter: drop-shadow` sinó una imatge ja desenfocada (`assets/sh-*.webp`) al mateix `::before` que la textura; si s'afegeix una textura nova cal generar-ne també l'ombra.
+- Els noms del mapa són text SVG dibuixat amb la tipografia Antiquarian a partir de coordenades (`GEOM_PHENTANIL` i `GEOM_CONY` a `src/missions/towns.js`, a 4950 d'ample), sobre `src/missions/assets/map.webp` i `map-cony-cirera.webp` (mapes sense etiquetes).
+- Amb el mapa o un paper ampliats, la roda del ratolí fa zoom i el botó del mig arrossega (`onWheel`/`onPanStart` a `src/missions/main.js`).
+- Rendiment (el tauler sol anar en un ordinador carregat durant la sessió): la llum té tres nivells que es trien amb la tecla L o el botó «Llum» i es recorden al navegador. «Suau» (per defecte) mou l'ombra d'arbres per JS ~8 cops per segon; «quieta» no la mou gens; «viva» és l'ombra en WebGL (també amb `?gl=1`). L'ombra dels papers no és un `filter: drop-shadow` sinó una imatge ja desenfocada (`src/missions/assets/sh-*.webp`) al mateix `::before` que la textura; si s'afegeix una textura nova cal generar-ne també l'ombra.
 - En mode DM, «Moure papers» deixa arrossegar i girar (nansa ↻ o roda) cada paper, el mapa i la pila. Les posicions es desen a `layout` dins de les dades (es publiquen amb la resta) i el doble clic torna una peça al seu lloc automàtic.

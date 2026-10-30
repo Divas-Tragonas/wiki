@@ -1,6 +1,6 @@
 /* Escenari fix de 1920×1080 escalat a la finestra, i avisos. */
 import { $, D } from './util.js';
-import { G } from './tween.js';
+import { gsap } from 'gsap';
 import { STAGE_W, STAGE_H } from './layout.js';
 
 export const stage = $('#stage');
@@ -27,6 +27,6 @@ export function toast(msg, ms = 2600) {
   const t = $('#toast');
   t.textContent = msg;
   clearTimeout(toastT);
-  G.fromTo(t, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.3 * D, overwrite: true });
-  toastT = setTimeout(() => G.to(t, { opacity: 0, duration: 0.4 * D }), ms);
+  gsap.fromTo(t, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.3 * D, overwrite: true });
+  toastT = setTimeout(() => gsap.to(t, { opacity: 0, duration: 0.4 * D }), ms);
 }

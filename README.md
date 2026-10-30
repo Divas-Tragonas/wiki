@@ -22,7 +22,8 @@ Cal Node 22 (vegeu `.nvmrc`).
 - `src/content/` — el contingut en Markdown: `characters/`, `places/` i `croniques/`.
 - `src/pages/`, `src/layouts/`, `src/components/` — les pàgines del wiki.
 - `src/lib/` — rutes, etiquetes en català, format de dates i dates de l'últim canvi.
-- `public/missions/` — el tauler de missions, una pàgina estàtica independent.
+- `src/pages/missions/` i `src/missions/` — el tauler de missions (pàgina a pantalla completa, sense el layout del wiki).
+- `public/missions/data.json` — les missions, xifrades; el tauler les hi desa des del mode DM.
 - `transcripts/` — transcripcions de les sessions, d'on surten les cròniques.
 
 Cada push a `master` republica el lloc (`.github/workflows/deploy.yml`). Les instruccions per afegir

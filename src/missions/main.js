@@ -1,16 +1,18 @@
 /* Tauler de missions · La Mina Perduda del Phentanilo
-   - Les dades viuen a data.json, xifrades: una part per al grup (contrasenya del grup) i una altra amb tot
-     (missions ocultes, notes) per al DM (contrasenya del DM).
+   - Les dades viuen a public/missions/data.json, xifrades: una part per al grup (contrasenya del grup) i una altra
+     amb tot (missions ocultes, notes) per al DM (contrasenya del DM). La pàgina és src/pages/missions/index.astro.
    - Cada paper del tauler és el document sencer a escala; en clicar-lo s'acosta el mateix paper.
    - El mode DM edita els mateixos papers i publica al repositori del wiki amb l'API de GitHub. */
-import { $, $$, D, clamp, clone, closestIn, esc, hashOf, local, nearestInDirection, num, placeCaret, plainText, rad, session, titleKey, wait, wheelPixels } from './util.js';
-import { G, gp, isTweening, gsap } from './tween.js';
+import { gsap } from 'gsap';
+import { $, $$, D, clamp, clone, closestIn, esc, gp, hashOf, local, nearestInDirection, num, placeCaret, plainText, rad, session, titleKey, wait, wheelPixels } from './util.js';
 import { deriveKey, exportKey, importKey, seal, unseal } from './crypto.js';
 import { CATS, catOf, giverLine, isDone, normState, publicView } from './data.js';
-import { PLACES, TOWN, TOWN_ID, TOWNS } from './towns.js';
+import { TOWNS } from './towns.js';
+import { PLACES, TOWN, TOWN_ID } from './current-town.js';
+import { routes, SITE_NAME, url } from '../lib/site';
 import {
   FOCUS_ROT, FOCUS_SCALE, FOCUS_SCALE_MAP, MAP_HOME, MAP_ZOOM, PAPER, PILE_HOME, STAGE_H, STAGE_W, VIEW_ZOOM_MAX,
-  homeOf, layoutBoard, pileGeom, scatterRot, scatterX, texFor
+  homeOf, layoutBoard, paperUrl, pileGeom, scatterRot, scatterX, shadowUrl, texFor
 } from './layout.js';
 import { cycleFx, initFx, liftTo, setHoleSource } from './light.js';
 import { fatal, fit, stage, toStage, toast } from './ui.js';
@@ -57,7 +59,8 @@ async function fontsReady() {
   await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 3500))]);
 }
 async function fetchData() {
-  const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
+  /* data.json és a public/ (el mode DM el desa allà amb l'API de GitHub): no passa pel build i sempre es baixa nou */
+  const r = await fetch(url('missions/data.json') + '?t=' + Date.now(), { cache: 'no-store' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
@@ -170,15 +173,15 @@ function applyDoc(el, q, g, force) {
   const tex = texFor(q, g), P = PAPER[tex], edit = el.classList.contains('editing'), zoomed = el.classList.contains('zoomed');
   el.className = ['doc', 'c-' + catOf(q), isDone(q) && 'done', q.hidden && 'hid', edit && 'editing', zoomed && 'zoomed', view.focus === q.id && 'focus'].filter(Boolean).join(' ');
   const old = el._g;
-  if (old && (old.W !== g.W || old.H !== g.H)) G.set(el, { x: gp(el, 'x') + (old.W - g.W) / 2, y: gp(el, 'y') + (old.H - g.H) / 2 });
+  if (old && (old.W !== g.W || old.H !== g.H)) gsap.set(el, { x: gp(el, 'x') + (old.W - g.W) / 2, y: gp(el, 'y') + (old.H - g.H) / 2 });
   el._g = g;
   const sig = docSig(q, g, tex, edit);
   if (force || el._sig !== sig) {
     el._sig = sig;
     el.style.width = g.W + 'px';
     el.style.height = g.H + 'px';
-    el.style.setProperty('--tex', `url(assets/paper-${tex}.webp)`);
-    el.style.setProperty('--sh', `url(assets/sh-${tex}.webp)`);
+    el.style.setProperty('--tex', `url(${paperUrl(tex)})`);
+    el.style.setProperty('--sh', `url(${shadowUrl(tex)})`);
     ['it', 'ir', 'ib', 'il'].forEach((k, i) => el.style.setProperty('--' + k, P.i[i]));
     el.firstElementChild.innerHTML = docHTML(q, edit);
     if (edit) setEditable(el, true);
@@ -190,8 +193,8 @@ function applyDoc(el, q, g, force) {
 /* el paper fa cap a la pila i, si cal, desapareix */
 function flyToPile(el, duration, ease, fade) {
   const g = pileGeom(el.dataset.id, PILE), h = homeOf(g);
-  const end = fade ? () => G.to(el, { opacity: 0, duration: fade * D, onComplete: () => el.remove() }) : () => el.remove();
-  G.to(el, { x: h.x, y: h.y, scale: g.s, rotation: g.r + 3, duration: duration * D, ease, overwrite: 'auto', onComplete: end });
+  const end = fade ? () => gsap.to(el, { opacity: 0, duration: fade * D, onComplete: () => el.remove() }) : () => el.remove();
+  gsap.to(el, { x: h.x, y: h.y, scale: g.s, rotation: g.r + 3, duration: duration * D, ease, overwrite: 'auto', onComplete: end });
 }
 function renderBoard(anim) {
   applyFixed(anim);
@@ -213,9 +216,9 @@ function renderBoard(anim) {
       rotation: foc ? g.r * FOCUS_ROT : g.r + (view.zoom ? scatterRot(g) : 0)
     };
     if (isNew || !anim) {
-      G.set(el, Object.assign({}, tgt, { opacity: 1 }));
-      if (isNew && anim) G.fromTo(el, { opacity: 0, y: h.y - 40 }, { opacity: 1, y: h.y, duration: 0.5 * D, ease: 'power2.out', delay: n * 0.02 * D });
-    } else G.to(el, Object.assign({ duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto' }, tgt));
+      gsap.set(el, Object.assign({}, tgt, { opacity: 1 }));
+      if (isNew && anim) gsap.fromTo(el, { opacity: 0, y: h.y - 40 }, { opacity: 1, y: h.y, duration: 0.5 * D, ease: 'power2.out', delay: n * 0.02 * D });
+    } else gsap.to(el, Object.assign({ duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto' }, tgt));
   });
   docs.forEach((el, id) => {
     if (seen.has(id) || view.zoom === id) return;
@@ -224,7 +227,7 @@ function renderBoard(anim) {
     if (q && isDone(q) && canSee(q)) {
       el.style.zIndex = 31;
       flyToPile(el, 0.55, 'power3.inOut', 0.25);
-    } else G.to(el, { opacity: 0, y: gp(el, 'y') + 30, duration: 0.35 * D, onComplete: () => el.remove() });
+    } else gsap.to(el, { opacity: 0, y: gp(el, 'y') + 30, duration: 0.35 * D, onComplete: () => el.remove() });
   });
   E.pile.hidden = !board.done.length;
   E.pileN.textContent = board.done.length;
@@ -247,9 +250,9 @@ function lift(key, on) {
   if (!isPiece(key)) it.el.style.zIndex = on ? 90 : it.z;
   if (view.zoom) return;
   const o = { duration: 0.32 * D, ease: 'power2.out', overwrite: 'auto' };
-  if (key === 'map') G.to(it.el, Object.assign(o, { scale: on ? FOCUS_SCALE_MAP : 1 }));
-  else if (key === 'pile') G.to(it.el, Object.assign(o, { scale: on ? FOCUS_SCALE : 1, rotation: on ? PILE.r * FOCUS_ROT : PILE.r }));
-  else G.to(it.el, Object.assign(o, { scale: it.s * (on ? FOCUS_SCALE : 1), rotation: on ? it.r * FOCUS_ROT : it.r }));
+  if (key === 'map') gsap.to(it.el, Object.assign(o, { scale: on ? FOCUS_SCALE_MAP : 1 }));
+  else if (key === 'pile') gsap.to(it.el, Object.assign(o, { scale: on ? FOCUS_SCALE : 1, rotation: on ? PILE.r * FOCUS_ROT : PILE.r }));
+  else gsap.to(it.el, Object.assign(o, { scale: it.s * (on ? FOCUS_SCALE : 1), rotation: on ? it.r * FOCUS_ROT : it.r }));
 }
 function setFocus(key) {
   if (!key || key === view.focus) return;
@@ -273,11 +276,11 @@ function scatter(out, except) {
     if (it.key === except) return;
     const d = Math.abs(it.x + it.w / 2 - STAGE_W / 2) / (STAGE_W / 2), isDoc = !isPiece(it.key);
     const h = isDoc ? homeOf(it) : { x: 0, y: 0 }, s = isDoc ? it.s : 1, foc = it.key === view.focus;
-    if (out) G.to(it.el, { x: h.x + scatterX(it), y: h.y, rotation: it.r + scatterRot(it), scale: s, duration: 0.55 * D, ease: 'power3.in', delay: (1 - d) * 0.12 * D, overwrite: 'auto' });
-    else G.to(it.el, { x: h.x, y: h.y, rotation: foc && it.key !== 'map' ? it.r * FOCUS_ROT : it.r, scale: foc ? s * (it.key === 'map' ? FOCUS_SCALE_MAP : FOCUS_SCALE) : s, duration: 0.6 * D, ease: 'power3.out', delay: d * 0.12 * D, overwrite: 'auto' });
+    if (out) gsap.to(it.el, { x: h.x + scatterX(it), y: h.y, rotation: it.r + scatterRot(it), scale: s, duration: 0.55 * D, ease: 'power3.in', delay: (1 - d) * 0.12 * D, overwrite: 'auto' });
+    else gsap.to(it.el, { x: h.x, y: h.y, rotation: foc && it.key !== 'map' ? it.r * FOCUS_ROT : it.r, scale: foc ? s * (it.key === 'map' ? FOCUS_SCALE_MAP : FOCUS_SCALE) : s, duration: 0.6 * D, ease: 'power3.out', delay: d * 0.12 * D, overwrite: 'auto' });
   });
-  G.to(E.dim, { opacity: out ? 1 : 0, duration: 0.5 * D });
-  G.to(E.zp, { opacity: out ? 1 : 0, duration: 0.4 * D, delay: out ? 0.5 * D : 0 });
+  gsap.to(E.dim, { opacity: out ? 1 : 0, duration: 0.5 * D });
+  gsap.to(E.zp, { opacity: out ? 1 : 0, duration: 0.4 * D, delay: out ? 0.5 * D : 0 });
 }
 
 /* =================================================================== paper ampliat */
@@ -286,7 +289,7 @@ function zoomTarget(g) {
   const TX = dmOn ? 690 : STAGE_W / 2, TY = 532, z = Math.min(1, 990 / g.H, (dmOn ? 1150 : 1760) / g.W);
   return { x: TX - g.W / 2, y: TY - g.H / 2, scale: z, rotation: 0 };
 }
-const flyToZoom = (el, duration, ease = 'power3.inOut') => G.to(el, Object.assign({ duration: duration * D, ease, overwrite: 'auto' }, zoomTarget(el._g)));
+const flyToZoom = (el, duration, ease = 'power3.inOut') => gsap.to(el, Object.assign({ duration: duration * D, ease, overwrite: 'auto' }, zoomTarget(el._g)));
 /* el document d'una missió feta no és al tauler: surt de la pila (temporal) i hi torna en tancar-lo */
 function docForZoom(id) {
   let el = docs.get(id);
@@ -299,7 +302,7 @@ function docForZoom(id) {
   const g = pileGeom(id, PILE), h = homeOf(g);
   applyDoc(el, q, g);
   el.style.zIndex = 31;
-  G.set(el, { x: h.x, y: h.y, scale: g.s, rotation: g.r + 3, opacity: 1 });
+  gsap.set(el, { x: h.x, y: h.y, scale: g.s, rotation: g.r + 3, opacity: 1 });
   return el;
 }
 function flyIn(el) {
@@ -336,13 +339,13 @@ function settleOut(el, dir) {
   if (g && !el._temp) {
     el.style.setProperty('--is', (1 / g.s).toFixed(3));
     const h = homeOf(g);
-    G.to(el, { x: h.x + scatterX(g), y: h.y, scale: g.s, rotation: g.r + scatterRot(g), duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = g.z; } });
+    gsap.to(el, { x: h.x + scatterX(g), y: h.y, scale: g.s, rotation: g.r + scatterRot(g), duration: 0.5 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = g.z; } });
     return;
   }
   if (docs.get(id) === el) docs.delete(id);
   const q = qById(id);
   if (q && isDone(q)) flyToPile(el, 0.5, 'power3.inOut');
-  else G.to(el, { x: gp(el, 'x') - dir * 1400, opacity: 0, duration: 0.45 * D, onComplete: () => el.remove() });
+  else gsap.to(el, { x: gp(el, 'x') - dir * 1400, opacity: 0, duration: 0.45 * D, onComplete: () => el.remove() });
 }
 function swapDoc(id, dir) {
   const prev = view.zEl, next = docForZoom(id);
@@ -364,13 +367,13 @@ function closeDoc() {
   if (g && !el._temp) {
     el.style.setProperty('--is', (1 / g.s).toFixed(3));
     const h = homeOf(g);
-    G.to(el, { x: h.x, y: h.y, scale: g.s * FOCUS_SCALE, rotation: g.r * FOCUS_ROT, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = view.focus === id ? 90 : g.z; } });
+    gsap.to(el, { x: h.x, y: h.y, scale: g.s * FOCUS_SCALE, rotation: g.r * FOCUS_ROT, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { el.style.zIndex = view.focus === id ? 90 : g.z; } });
   } else {
     if (docs.get(id) === el) docs.delete(id);
     if (q && isDone(q) && canSee(q)) {
       flyToPile(el, 0.6, 'power3.inOut', 0.2);
       if (board.done.length) view.focus = 'pile';
-    } else G.to(el, { opacity: 0, scale: gp(el, 'scaleX') * 0.9, duration: 0.4 * D, onComplete: () => el.remove() });
+    } else gsap.to(el, { opacity: 0, scale: gp(el, 'scaleX') * 0.9, duration: 0.4 * D, onComplete: () => el.remove() });
   }
   scatter(false, id);
   renderPrompts();
@@ -454,6 +457,7 @@ function openCard(id) {
   const p = PLACES[id];
   if (!p) return;
   const c = E.pcard, qs = questsAt(id), info = TOWN.info[id] || {};
+  const wiki = info.character ? routes.character(info.character) : info.place ? routes.place(info.place) : null;
   if (view.card) { const o = plcEl(view.card); if (o) o.classList.remove('sel'); }
   view.card = id;
   const e = plcEl(id);
@@ -462,7 +466,7 @@ function openCard(id) {
     ? `<div class="pc-q">${qs.map((q) => `<button type="button" data-q="${esc(q.id)}" style="--c:var(--${CATS[catOf(q)].color})"><i></i><span>${esc(q.title)}${q.hidden ? ' · oculta' : ''}</span></button>`).join('')}</div>`
     : '<div class="pc-none">Res de nou per aquí</div>';
   c.innerHTML = `<div class="pc-k">Lloc</div><div class="pc-t">${esc(p.name)}</div><div class="pc-x"${dmOn ? ' contenteditable="plaintext-only" spellcheck="false"' : ''} data-place="${esc(id)}">${esc(placeText(id))}</div>` +
-    quests + (info.href ? `<a class="pc-w" href="../${info.href}" target="_blank" rel="noopener">Més a la wiki →</a>` : '');
+    quests + (wiki ? `<a class="pc-w" href="${wiki}" target="_blank" rel="noopener">Més a la wiki →</a>` : '');
   c.classList.add('on');
   /* a la dreta del nom o, si no hi cap, a l'esquerra */
   const b = placeBox(id), w = 400, h = c.offsetHeight;
@@ -470,7 +474,7 @@ function openCard(id) {
   if (x + w > 1900) x = b.l - 14 - w;
   x = clamp(x, 20, 1900 - w);
   const y = clamp(b.cy - h / 2, 24, STAGE_H - h - 70), rot = (hashOf(id, 7) % 5) - 2;
-  G.fromTo(c, { left: x, top: y, opacity: 0, y: 12, rotation: rot - 2, scale: 0.96 }, { left: x, top: y, opacity: 1, y: 0, rotation: rot, scale: 1, duration: 0.3 * D, ease: 'power3.out', overwrite: 'auto' });
+  gsap.fromTo(c, { left: x, top: y, opacity: 0, y: 12, rotation: rot - 2, scale: 0.96 }, { left: x, top: y, opacity: 1, y: 0, rotation: rot, scale: 1, duration: 0.3 * D, ease: 'power3.out', overwrite: 'auto' });
   renderPrompts();
 }
 function closeCard() {
@@ -479,7 +483,7 @@ function closeCard() {
   if (o) o.classList.remove('sel');
   view.card = null;
   E.pcard.classList.remove('on');
-  G.to(E.pcard, { opacity: 0, y: 10, duration: 0.2 * D, overwrite: 'auto' });
+  gsap.to(E.pcard, { opacity: 0, y: 10, duration: 0.2 * D, overwrite: 'auto' });
   renderPrompts();
 }
 function openMap() {
@@ -492,7 +496,7 @@ function openMap() {
   E.map.style.zIndex = 107;
   scatter(true, 'map');
   const b = mapBase();
-  G.to(E.map, { x: b.x, y: b.y, scale: b.s, rotation: 0, duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto' });
+  gsap.to(E.map, { x: b.x, y: b.y, scale: b.s, rotation: 0, duration: 0.7 * D, ease: 'power3.inOut', overwrite: 'auto' });
   liftTo(E.map, 'map', true);
   renderPrompts();
   return wait(700);
@@ -503,7 +507,7 @@ function closeMap() {
   setPlace(null);
   view.zoom = null;
   E.map.classList.remove('zoomed');
-  G.to(E.map, { x: 0, y: 0, scale: FOCUS_SCALE_MAP, rotation: MAP.r, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { E.map.style.zIndex = ''; lift('map', true); } });
+  gsap.to(E.map, { x: 0, y: 0, scale: FOCUS_SCALE_MAP, rotation: MAP.r, duration: 0.6 * D, ease: 'power3.inOut', overwrite: 'auto', onComplete: () => { E.map.style.zIndex = ''; lift('map', true); } });
   liftTo(E.map, 'map', false, 0.38);
   scatter(false, 'map');
   renderPrompts();
@@ -536,7 +540,7 @@ function viewOf() {
 /* posició actual (o la de destí si ja hi anem); null mentre el paper o el mapa encara vola */
 function poseOf(el) {
   if (el._vt) return el._v;
-  if (isTweening(el)) return null;
+  if (gsap.isTweening(el)) return null;
   return { x: gp(el, 'x'), y: gp(el, 'y'), s: gp(el, 'scaleX') || 1 };
 }
 function mapPose() { return (view.zoom === 'map' && poseOf(E.map)) || mapBase(); }
@@ -555,9 +559,9 @@ function setPose(v, o, dur) {
   el._vt = true;
   if (view.card) closeCard();
   const end = () => { el._vt = false; };
-  G.killTweensOf(el, 'x,y,scale');
-  if (dur) G.to(el, { x: o.x, y: o.y, scale: o.s, duration: dur * D, ease: 'power2.out', onComplete: end, onInterrupt: end });
-  else { G.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
+  gsap.killTweensOf(el, 'x,y,scale');
+  if (dur) gsap.to(el, { x: o.x, y: o.y, scale: o.s, duration: dur * D, ease: 'power2.out', onComplete: end, onInterrupt: end });
+  else { gsap.set(el, { x: o.x, y: o.y, scale: o.s }); end(); }
 }
 const PANELS = '#dmcard, #dmbar, #chrome';
 function onWheel(e) {
@@ -616,11 +620,11 @@ function applyFixed(anim) {
   if (first) return;
   const d = anim ? 0.45 * D : 0;
   if (view.zoom !== 'map') {
-    G.set(E.map, { x: gp(E.map, 'x') + om.x - MAP.x, y: gp(E.map, 'y') + om.y - MAP.y, overwrite: true });
-    G.to(E.map, { x: 0, y: 0, rotation: MAP.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
+    gsap.set(E.map, { x: gp(E.map, 'x') + om.x - MAP.x, y: gp(E.map, 'y') + om.y - MAP.y, overwrite: true });
+    gsap.to(E.map, { x: 0, y: 0, rotation: MAP.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
   }
-  G.set(E.pile, { x: gp(E.pile, 'x') + op.x - PILE.x, y: gp(E.pile, 'y') + op.y - PILE.y, overwrite: true });
-  G.to(E.pile, { x: 0, y: 0, rotation: PILE.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
+  gsap.set(E.pile, { x: gp(E.pile, 'x') + op.x - PILE.x, y: gp(E.pile, 'y') + op.y - PILE.y, overwrite: true });
+  gsap.to(E.pile, { x: 0, y: 0, rotation: PILE.r, scale: 1, duration: d, ease: 'power3.out', overwrite: 'auto' });
 }
 /* el mapa gira des del cantó de dalt a l'esquerra: conversions entre aquest cantó i el centre */
 function mapCenter(x, y, r) {
@@ -651,7 +655,7 @@ function arrPose(it, cx, cy, r, up, dur) {
   if (it.key === 'map') { const c = mapCorner(cx, cy, r); o = { x: c.x - MAP.x, y: c.y - MAP.y, scale: 1, rotation: r }; }
   else if (it.key === 'pile') o = { x: cx - it.cx, y: cy - it.cy, scale: up ? 1.03 : 1, rotation: r };
   else o = { x: cx - it.g.W / 2, y: cy - it.g.H / 2, scale: it.g.s * (up ? 1.03 : 1), rotation: r };
-  G.to(it.el, Object.assign({ duration: dur * D, ease: 'power3.out', overwrite: 'auto' }, o));
+  gsap.to(it.el, Object.assign({ duration: dur * D, ease: 'power3.out', overwrite: 'auto' }, o));
   it.el.classList.toggle('arr-up', !!up);
 }
 function arrCommit(it, cx, cy, r, z) {
@@ -687,7 +691,7 @@ function placeHandle(it, cx, cy, r) {
   const a = rad(r), vx = it.w / 2 + 4, at = (vy) => [cx + Math.cos(a) * vx - Math.sin(a) * vy, cy + Math.sin(a) * vx + Math.cos(a) * vy];
   let [x, y] = at(-it.h / 2 - 4);
   if (y < 100) [x, y] = at(it.h / 2 + 4);
-  G.set(E.rhandle, { x: clamp(x - 23, 4, 1870), y: clamp(y - 23, 4, 1030) });
+  gsap.set(E.rhandle, { x: clamp(x - 23, 4, 1870), y: clamp(y - 23, 4, 1030) });
   E.rhandle.classList.add('on');
 }
 function arrHover(key) {
@@ -705,7 +709,7 @@ function setArrange(on) {
   if (on && view.focus) { lift(view.focus, false); view.focus = null; }
   stage.classList.toggle('arrange', on);
   if (!on) { E.rhandle.classList.remove('on'); arrange.hover = null; document.body.classList.remove('arr-drag'); }
-  G.to(E.zp, { opacity: on ? 1 : 0, duration: 0.3 * D });
+  gsap.to(E.zp, { opacity: on ? 1 : 0, duration: 0.3 * D });
   renderDmBar();
   renderPrompts();
 }
@@ -845,7 +849,7 @@ async function setDm(on) {
   E.dmBtn.textContent = on ? 'Sortir del mode DM' : 'Mode DM';
   E.dmbar.hidden = !on;
   E.chrome.classList.toggle('show', !on);
-  if (on) { renderDmBar(); G.fromTo(E.dmbar, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.35 * D }); }
+  if (on) { renderDmBar(); gsap.fromTo(E.dmbar, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.35 * D }); }
   renderBoard(true);
   if (view.zoom && view.zoom !== 'map' && view.zEl) {
     if (on) enterEdit(view.zEl); else { setEditing(view.zEl, false); hideDmCard(); }
@@ -893,7 +897,7 @@ function setEditable(el, on) {
 }
 function hideDmCard() {
   E.dmcard.classList.remove('on');
-  G.to(E.dmcard, { opacity: 0, x: 40, duration: 0.25 * D, overwrite: 'auto' });
+  gsap.to(E.dmcard, { opacity: 0, x: 40, duration: 0.25 * D, overwrite: 'auto' });
 }
 function renderDmCard() {
   const q = view.zEl && qById(view.zEl.dataset.id), c = E.dmcard;
@@ -937,7 +941,7 @@ function renderDmCard() {
   }
   if (!c.classList.contains('on')) {
     c.classList.add('on');
-    G.fromTo(c, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4 * D, delay: 0.25 * D, ease: 'power3.out', overwrite: 'auto' });
+    gsap.fromTo(c, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4 * D, delay: 0.25 * D, ease: 'power3.out', overwrite: 'auto' });
   }
 }
 /* eliminar demana un segon clic en pocs segons */
@@ -976,8 +980,8 @@ function questAction(act) {
   renderBoard(true);
   if (act === 'complete' || act === 'reopen') applyDoc(el, q, el._g, true);
   if (act === 'complete') {
-    G.fromTo($('.d-stamp', el), { opacity: 0, scale: 2.2, rotation: -24 }, { opacity: 0.88, scale: 1, rotation: -11, duration: 0.32 * D, ease: 'back.out(2)', clearProps: 'opacity' });
-    G.fromTo(E.shell, { x: -10 }, { x: 0, duration: 0.6 * D, ease: 'elastic.out(1,0.3)', delay: 0.24 * D });
+    gsap.fromTo($('.d-stamp', el), { opacity: 0, scale: 2.2, rotation: -24 }, { opacity: 0.88, scale: 1, rotation: -11, duration: 0.32 * D, ease: 'back.out(2)', clearProps: 'opacity' });
+    gsap.fromTo(E.shell, { x: -10 }, { x: 0, duration: 0.6 * D, ease: 'elastic.out(1,0.3)', delay: 0.24 * D });
   }
   if (el._g && board.slots[q.id] && !el._temp) applyDoc(el, q, board.slots[q.id]);
   if (view.zEl === el) flyToZoom(el, 0.4, 'power2.inOut');
@@ -1160,7 +1164,7 @@ function onCardClick(e) {
     const g = board.slots[q.id];
     if (g && !el._temp) el._g = g;
     applyDoc(el, q, el._g, true);
-    G.to(el, Object.assign({ duration: 0.4 * D }, zoomTarget(el._g)));
+    gsap.to(el, Object.assign({ duration: 0.4 * D }, zoomTarget(el._g)));
     renderDmCard();
   } else if (b.dataset.town) {
     const k = b.dataset.town, on = q.towns.includes(k);
@@ -1234,7 +1238,7 @@ let hintGone = false;
 function firstInput() {
   if (hintGone) return;
   hintGone = true;
-  G.to(E.hint, { opacity: 0, duration: 0.4 * D, onComplete: () => { E.hint.hidden = true; } });
+  gsap.to(E.hint, { opacity: 0, duration: 0.4 * D, onComplete: () => { E.hint.hidden = true; } });
 }
 function setInput(kind) {
   stage.classList.toggle('kb', kind !== 'mouse');
@@ -1411,8 +1415,8 @@ function initBoard() {
   E.map.hidden = false;
   E.map.style.height = MAP.h + 'px';
   applyFixed(false);
-  G.set(E.map, { rotation: MAP.r });
-  G.set(E.pile, { rotation: PILE.r });
+  gsap.set(E.map, { rotation: MAP.r });
+  gsap.set(E.pile, { rotation: PILE.r });
   renderBoard(false);
   renderPrompts();
   bindInput();
@@ -1420,7 +1424,6 @@ function initBoard() {
   E.hint.hidden = false;
   E.hint.innerHTML = 'Fletxes per triar · <b>↵</b> obrir · <b>M</b> mapa · <b>F</b> pantalla completa';
   setTimeout(firstInput, 9000);
-  if (!gsap) return;
   /* entrada: el mapa cau des de dalt i després els papers, un rere l'altre */
   const tl = gsap.timeline();
   tl.fromTo(E.map, { opacity: 0, y: -40, rotation: -3 }, { opacity: 1, y: 0, rotation: MAP.r, duration: 0.8 * D, ease: 'power3.out' }, 0.1 * D);
@@ -1436,7 +1439,7 @@ function initBoard() {
 /* mapa, títol i enllaços als taulers dels altres pobles (abans d'arrencar, perquè el mapa ja es vagi baixant) */
 E.mapImg.src = TOWN.map;
 E.mapImg.alt = 'Mapa de ' + TOWN.name;
-if (TOWN_ID !== 'phentanil') document.title = 'Missions de ' + TOWN.name + ' — La Mina Perduda del Phentanilo';
+if (TOWN_ID !== 'phentanil') document.title = `Missions de ${TOWN.name} — ${SITE_NAME}`;
 $('a', E.chrome).insertAdjacentHTML('afterend', Object.keys(TOWNS).filter((k) => k !== TOWN_ID)
   .map((k) => `<a class="pill" href="${k === 'phentanil' ? './' : '?lloc=' + k}">${esc(TOWNS[k].name)} →</a>`).join(''));
 
