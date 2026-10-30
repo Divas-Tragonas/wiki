@@ -20,7 +20,6 @@ export class ApiError extends Error {
 export const isOffline = (e) => e instanceof ApiError && (e.status === 0 || e.status >= 502);
 
 let token = local.get(TOKEN_KEY);
-export const hasToken = () => !!token;
 function setToken(t) {
   token = t || null;
   if (token) local.set(TOKEN_KEY, token);

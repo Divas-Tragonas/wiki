@@ -27,7 +27,6 @@ export function setEditing(key, on) {
   if (on) editing.add(key);
   else editing.delete(key);
 }
-export const hasPending = () => queue.length > 0;
 export const currentStatus = () => status;
 
 function setStatus(s) {
@@ -102,7 +101,7 @@ addEventListener('beforeunload', (e) => {
 const cacheKey = (town) => 'phx.board.' + town;
 
 /* el tauler tal com el veuria un jugador */
-export function playerSafe(view) {
+function playerSafe(view) {
   const quests = view.quests.map((q) => questView('player', q)).filter(Boolean);
   const ids = new Set(quests.map((q) => q.id));
   return {

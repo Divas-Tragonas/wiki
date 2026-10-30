@@ -31,11 +31,6 @@ export const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 export const rad = (deg) => deg * Math.PI / 180;
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-/* minúscules, sense espais de més (contrasenyes i comparació de títols) */
-export const normText = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-/* clau per comparar títols: sense accents ni signes */
-export const titleKey = (t) => normText(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-
 /* Text d'un camp editable tal com s'ha escrit. No serveix innerText: dona el text com es veu, i el títol i la
    recompensa del paper es mostren en majúscules (text-transform), així que es desarien en majúscules. */
 export function plainText(el) {

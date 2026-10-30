@@ -67,7 +67,7 @@ function clampCenter(cx, cy, w, h, r) {
 
 /* mida completa del document segons la proporció del lloc; al tauler es veu a escala s.
    Els llocs automàtics tenen un gir lleuger propi de cada missió; els que ha posat el DM (fixed) no. */
-export function geomOf(id, sl) {
+function geomOf(id, sl) {
   const r = sl.fixed ? sl.r : sl.r + ((hashOf(id, 131) % 9) - 4) * 0.15;
   const [cx, cy] = sl.fixed ? [sl.cx, sl.cy] : clampCenter(sl.cx, sl.cy, sl.w, sl.h, r);
   const ar = sl.w / sl.h;

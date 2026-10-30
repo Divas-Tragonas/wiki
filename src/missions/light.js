@@ -12,7 +12,7 @@ import goboUrl from './assets/gobo-sh.webp?url';
 import { stage, toast } from './ui.js';
 
 const FX_KEY = 'phx.fx';
-export const FX_MODES = ['suau', 'quieta', 'viva'];
+const FX_MODES = ['suau', 'quieta', 'viva'];
 const FORCE_GL = /[?&]gl=1/.test(location.search);
 const FX_SAY = {
   quieta: ': sense moviment, la més lleugera.',
@@ -21,14 +21,14 @@ const FX_SAY = {
 };
 
 /* peça aixecada (paper o mapa ampliat): v va de 0 a 1 mentre s'acosta a la càmera */
-export const LIFT = { v: 0, el: null, kind: '' };
+const LIFT = { v: 0, el: null, kind: '' };
 /* rectangle girat de la peça aixecada en coordenades de l'escenari: [cx, cy, mig ample, mig alt, gir en radians] */
 let holeOf = () => [0, 0, 0, 0, 0];
 export const setHoleSource = (fn) => { holeOf = fn; };
 
 let fx = '', gobo = null, swayT = 0;
 
-export function setFx(m, say) {
+function setFx(m, say) {
   if (m === 'viva' && !gobo) gobo = initGobo() || false;
   if (m === 'viva' && !gobo) {
     if (say) toast('Aquest ordinador no té GPU per a la llum viva; queda la suau.');
