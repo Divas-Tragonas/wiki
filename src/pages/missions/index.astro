@@ -10,7 +10,7 @@ import '../../missions/app.css';
 
 /* els enllaços «Més a la wiki» de les fitxes dels llocs han d'apuntar a pàgines que existeixen */
 for (const town of Object.values(TOWNS)) {
-  for (const [id, info] of Object.entries(town.info)) {
+  for (const [id, info] of Object.entries(town.info) as [string, { character?: string; place?: string }][]) {
     const ref = info.character ? (['characters', info.character] as const) : info.place ? (['places', info.place] as const) : null;
     if (ref && !(await getEntry(ref[0], ref[1]))) {
       throw new Error(`Tauler de missions (${town.name}, lloc «${id}»): no hi ha cap pàgina ${ref[0]}/${ref[1]} al wiki`);
