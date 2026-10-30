@@ -1,0 +1,31 @@
+{
+  "name": "@mina/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/dev.ts",
+    "build": "node build.mjs",
+    "start": "node dist/server.js",
+    "cli": "node dist/cli.js",
+    "db:generate": "drizzle-kit generate",
+    "check": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mina/model": "*",
+    "hono": "4.13.13",
+    "@hono/node-server": "2.1.4",
+    "drizzle-orm": "0.45.3",
+    "postgres": "3.4.9",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2"
+  }
+}
