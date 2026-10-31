@@ -2,8 +2,12 @@
    El DM tria «Mapa en píxel» i el mapa pintat es transforma en el del visor amb una onada de caselles que
    s'aixequen i giren, de la cantonada de dalt a l'esquerra a la de baix a la dreta. Després hi entra la
    pantalla de jugador del visor en directe (iframe de /player?embed=1), que s'eixampla a tota la pantalla i
-   segueix la càmera del DM. El visor en mode DM és en una altra finestra: la pantalla incrustada hi parla
-   pel WebSocket de la seva API, com la tauleta.
+   segueix la càmera del DM.
+   - Sense API: el DM obre aquest tauler des del visor (menú Pantalles → «Obrir el tauler de missions») i el
+     tauler parla amb el visor pel seu `window.opener`. El visor hi envia el mateix que envia a les pantalles
+     del mateix ordinador i el tauler ho passa a la pantalla incrustada, i al revés (sobre `{ rpg: 'bc', msg }`;
+     `lib/relay.ts` del visor). Dins de l'iframe el canal del navegador no serviria: queda aïllat perquè és
+     d'un altre lloc. La salutació (`bc-hello`) porta on és el visor: d'aquí surten l'iframe i el mapa en píxel.
    - L'onada: una casella per casella del mapa del visor (cols×rows), amb el tros del mapa pintat per davant
      i el de píxel per darrere. Animació CSS de transform i opacity (corre al compositor encara que el
      tauler vagi carregat).
@@ -12,21 +16,26 @@
    Tot passa fora de l'escenari (#stage), en píxels de la finestra: la pantalla de jugador ha de tenir la mida
    real de la pantalla i no la de l'escenari escalat. */
 import { gsap } from 'gsap';
-import { $, D, esc, hashOf, local, wait } from './util.js';
+import { $, D, hashOf, wait } from './util.js';
 import { TOWN } from './current-town.js';
 import { stage, toast } from './ui.js';
-import { askGate } from './gate.js';
 
-const VIEWER_KEY = 'phx.viewer';
-const VIEWER_DEFAULT = 'http://localhost:3001';
 const mapImg = $('#mapImg'), labels = $('#labels');
 
-const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false, conn: '' };
+const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false };
 /* amb el mapa en píxel a sobre, el tauler no respon al ratolí ni al teclat */
 export const pixelOn = () => PX.on;
 
-const viewerUrl = () => String(local.get(VIEWER_KEY) || VIEWER_DEFAULT).replace(/\/+$/, '');
-const pixelSrc = () => viewerUrl() + '/' + TOWN.pixel.map;
+/* el visor que ha obert aquest tauler: `base` (on és, amb la carpeta) i `origin` arriben amb la seva salutació */
+const VW = { win: window.opener || null, base: '', origin: '' };
+const linked = () => !!(VW.win && !VW.win.closed && VW.origin);
+const pixelSrc = () => VW.base + '/' + TOWN.pixel.map;
+if (TOWN.pixel && VW.win) {
+  /* fins que el visor contesta */
+  const hello = () => { if (!VW.origin && VW.win && !VW.win.closed) VW.win.postMessage({ rpg: 'bc-hello' }, '*'); };
+  hello();
+  setInterval(hello, 3000);
+}
 
 function loadImg(src) {
   return new Promise((res, rej) => {
@@ -94,44 +103,50 @@ function message(txt) {
 }
 function showStatus() {
   if (PX.phase !== 'static') return;
-  if (PX.conn === 'closed') message('No hi ha connexió amb el visor: comprova que la seva API (port 3000) està engegada.');
-  else if (PX.conn === 'open') message('Connectat. Esperant que el DM obri ' + TOWN.name + ' al visor…');
-  else message('Connectant amb el visor…');
+  message(linked() ? 'Esperant que el DM obri ' + TOWN.name + ' al visor…' : "S'ha tancat el visor que havia obert aquest tauler.");
 }
-/* la pantalla incrustada avisa quan està connectada i a punt ({ rpg: 'player', ready, conn }) */
 addEventListener('message', (e) => {
-  if (!PX.frame || e.source !== PX.frame.contentWindow) return;
   const d = e.data;
-  if (!d || d.rpg !== 'player') return;
+  if (!d || typeof d !== 'object') return;
+  /* del visor: la salutació i el canal, que va cap a la pantalla incrustada */
+  if (VW.win && e.source === VW.win) {
+    if (d.rpg === 'bc-hello' && typeof d.base === 'string') { VW.origin = e.origin; VW.base = d.base.replace(/\/+$/, ''); }
+    else if (d.rpg === 'bc' && e.origin === VW.origin && PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage(d, VW.origin);
+    return;
+  }
+  /* de la pantalla incrustada: el canal, que va cap al visor, i si ja té el mapa ({ rpg: 'player', ready }) */
+  if (!PX.frame || e.source !== PX.frame.contentWindow) return;
+  if (d.rpg === 'bc') { if (linked()) VW.win.postMessage(d, VW.origin); return; }
+  if (d.rpg !== 'player') return;
   PX.ready = !!d.ready;
-  PX.conn = String(d.conn || '');
   showStatus();
   if (PX.ready && PX.phase === 'static' && !PX.busy) goLive();
 });
 /* fit: la pantalla de jugador ensenya el mapa sencer (true) o segueix la càmera del DM (false) */
 function post(fit) {
-  if (PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage({ rpg: 'embed', fit }, '*');
+  if (PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage({ rpg: 'embed', fit }, VW.origin || '*');
 }
 
 /* prepareMap: el tauler deixa el mapa ampliat, sense fitxes i a la mida inicial (ho fa main.js) */
 export async function toPixel(prepareMap) {
   if (!TOWN.pixel || PX.on || PX.busy) return;
+  if (!linked()) { toast('Obre aquest tauler des del visor: menú «Pantalles» → «Obrir el tauler de missions».', 5200); return; }
   PX.busy = true;
   let pix;
   try {
     pix = await loadImg(pixelSrc());
   } catch (e) {
     PX.busy = false;
-    toast(`No trobo el visor a ${viewerUrl()}. És engegat? (Mode DM → «Visor» per canviar l'adreça)`, 5200);
+    toast("No s'ha pogut carregar el mapa en píxel del visor.", 4200);
     return;
   }
-  PX.on = true; PX.ready = false; PX.conn = ''; PX.phase = 'wave';
+  PX.on = true; PX.ready = false; PX.phase = 'wave';
   /* la pantalla de jugador es comença a carregar ara: l'onada en dissimula l'espera */
   const r = root();
   const wrap = document.createElement('div');
   wrap.className = 'px-live';
   const fr = document.createElement('iframe');
-  fr.src = viewerUrl() + '/player?embed=1&fit=1';
+  fr.src = VW.base + '/player?embed=1&fit=1';
   fr.title = 'Pantalla de jugador';
   fr.tabIndex = -1;
   wrap.appendChild(fr);
@@ -201,21 +216,4 @@ export async function toBoard() {
   PX.waveEl = null;
   $('#px').hidden = true;
   PX.on = false; PX.busy = false; PX.phase = '';
-}
-export async function askViewer() {
-  await askGate({
-    kicker: 'Mode DM', title: 'Adreça del visor', wide: true, type: 'text', ph: VIEWER_DEFAULT, btn: 'Desar', cancel: 'Cancel·lar',
-    text: `L'RPG Map Viewer amb ${esc(TOWN.name)} obert en mode DM. Ara: <b>${esc(viewerUrl())}</b>. Des d'aquesta pàgina (https) el navegador només hi deixa entrar per <b>https</b> o per <b>http://localhost</b>.`,
-    check: async (val) => {
-      let u;
-      try { u = new URL(val.trim()); } catch (e) { return 'No és una adreça vàlida (ha de començar per http:// o https://)'; }
-      if (!/^https?:$/.test(u.protocol)) return 'Ha de començar per http:// o https://';
-      if (location.protocol === 'https:' && u.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname)) {
-        return 'Des d’una pàgina https el navegador bloqueja http:// d’una altra màquina. Fes servir http://localhost o una adreça https.';
-      }
-      local.set(VIEWER_KEY, (u.origin + u.pathname).replace(/\/+$/, ''));
-      toast('Visor: ' + viewerUrl());
-      return null;
-    }
-  });
 }

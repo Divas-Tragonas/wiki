@@ -19,7 +19,7 @@ import {
 import { cycleFx, initFx, liftTo, setHoleSource } from './light.js';
 import { fatal, fit, stage, toStage, toast } from './ui.js';
 import { askGate, gateOpen } from './gate.js';
-import { askViewer, pixelOn, toBoard, toPixel } from './pixel.js';
+import { pixelOn, toBoard, toPixel } from './pixel.js';
 
 /* =================================================================== elements */
 const E = {
@@ -1008,7 +1008,7 @@ function renderDmBar() {
   E.dmbar.innerHTML = `<span class="k">Mode DM</span><span class="sep"></span>
     <button class="btn" type="button" data-dm="new">+ Nova missió</button>
     <button class="btn${arrange.on ? ' on' : ''}" type="button" data-dm="arrange">${arrange.on ? 'Fet' : 'Moure papers'}</button>
-    ${TOWN.pixel ? '<button class="btn" type="button" data-dm="pixel" title="Transforma el mapa en el de l\'RPG Map Viewer (tecla P)">Mapa en píxel</button><button class="btn" type="button" data-dm="viewer" title="Adreça de l\'RPG Map Viewer">Visor</button>' : ''}
+    ${TOWN.pixel ? '<button class="btn" type="button" data-dm="pixel" title="Transforma el mapa en el de l\'RPG Map Viewer (tecla P). Cal haver obert aquest tauler des del visor.">Mapa en píxel</button>' : ''}
     <span class="sep"></span><span class="stat"></span>
     <button class="btn${E.hist.classList.contains('on') ? ' on' : ''}" type="button" data-dm="history">Historial</button>
     <button class="btn" type="button" data-dm="export">Exportar</button><button class="btn" type="button" data-dm="import">Importar</button>
@@ -1379,7 +1379,6 @@ function onBarClick(e) {
   if (arrange.on && (a === 'new' || a === 'import' || a === 'exit' || a === 'history')) setArrange(false);
   if (a === 'arrange') setArrange(!arrange.on);
   else if (a === 'pixel') startPixel();
-  else if (a === 'viewer') askViewer();
   else if (a === 'new') newQuest();
   else if (a === 'history') toggleHistory();
   else if (a === 'exit') setDm(false);
