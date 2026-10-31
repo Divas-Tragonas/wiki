@@ -246,6 +246,7 @@ export async function toPixel(prepareMap) {
     }
   }
   PX.on = true; PX.phase = 'wave';
+  document.body.classList.add('pixel-on');
   ensureFrame();
   root();
   const wrap = PX.wrap;
@@ -320,4 +321,5 @@ export async function toBoard() {
   PX.waveEl = null;
   $('#px').hidden = true;
   PX.on = false; PX.busy = false; PX.phase = '';
+  document.body.classList.remove('pixel-on');
 }

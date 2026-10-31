@@ -1588,6 +1588,14 @@ function bindGamepad() {
   if (pads().some((g) => g && g.connected)) padStart();
 }
 function bindInput() {
+  /* al mòbil no hi ha tecla P, i l'escenari escalat fa els botons del mode DM minúsculs: un botó propi, a mida de
+     pantalla, fora de l'escenari. Només amb dit (pointer: coarse) i en un poble que té el mapa en píxel. */
+  if (TOWN.pixel && matchMedia('(pointer: coarse)').matches) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'pxGo'; b.textContent = 'Mapa en píxel';
+    b.addEventListener('click', (e) => { e.stopPropagation(); startPixel(); });
+    document.body.appendChild(b);
+  }
   document.addEventListener('keydown', onKey);
   document.addEventListener('click', onClick);
   document.addEventListener('mouseover', onHover);

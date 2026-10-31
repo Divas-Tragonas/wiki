@@ -295,3 +295,11 @@ body:not(.idle) .chrome.show { opacity: 1; pointer-events: auto; }
 .px-back { position: absolute; left: 22px; top: 18px; padding: .5em 1.1em .45em; border-radius: 999px; background: rgba(22, 17, 12, .8); color: #efe4c9; font: 400 clamp(14px, 1vw, 19px) "Alegreya", Georgia, serif; opacity: .3; pointer-events: auto; transition: opacity .3s; }
 .px-back:hover, .px-back:focus-visible { opacity: 1; }
 body.idle .px-back { opacity: 0; }
+
+/* botó del mapa en píxel per a pantalles tàctils (main.js, bindInput): fora de l'escenari, en píxels de la finestra */
+#pxGo { position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 900; min-height: 44px; padding: 10px 20px 9px; border: 0; border-radius: 999px; background: rgba(22, 17, 12, .86); color: #efe4c9; font: 400 18px "Alegreya", Georgia, serif; letter-spacing: .02em; touch-action: manipulation; }
+body.pixel-on #pxGo { display: none; }
+/* amb dit no hi ha ratolí que desperti la interfície: «← Tauler» es veu sempre */
+@media (pointer: coarse) {
+  .px-back { opacity: .85 !important; min-height: 44px; font-size: 18px; }
+}
