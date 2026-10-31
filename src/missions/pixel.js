@@ -22,7 +22,7 @@ import { stage, toast } from './ui.js';
 
 const mapImg = $('#mapImg'), labels = $('#labels');
 
-const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false };
+const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false, pixImg: null };
 /* amb el mapa en píxel a sobre, el tauler no respon al ratolí ni al teclat */
 export const pixelOn = () => PX.on;
 
@@ -45,50 +45,149 @@ function loadImg(src) {
     im.src = src;
   });
 }
-function root() {
+/* show: false per preparar-hi coses sense ensenyar-lo (la pantalla de jugador es carrega amagada) */
+function root(show = true) {
   let r = $('#px');
-  if (!r) { r = document.createElement('div'); r.id = 'px'; document.body.appendChild(r); }
+  if (!r) { r = document.createElement('div'); r.id = 'px'; r.hidden = true; document.body.appendChild(r); }
   if (!r.firstChild) {
     r.innerHTML = '<div class="px-bk"></div><div class="px-msg"></div><button type="button" class="px-back" title="Tornar al tauler (Esc)">← Tauler</button>';
     $('.px-back', r).addEventListener('click', () => toBoard());
   }
-  r.hidden = false;
+  if (show) r.hidden = false;
   return r;
+}
+/* La pantalla de jugador es carrega tan bon punt el visor saluda, amagada (display: none: no pinta ni gasta
+   fotogrames) però rebent la partida. Així en prémer P ja és a punt i no es carrega mentre dura l'onada: carregar-la
+   alhora (React, el mapa, els fulls de sprites) era el que feia anar a batzegades l'ampliació del mapa i l'onada. */
+function ensureFrame() {
+  if (PX.frame) return;
+  const r = root(false);
+  const wrap = document.createElement('div');
+  wrap.className = 'px-live';
+  wrap.style.display = 'none';
+  const fr = document.createElement('iframe');
+  fr.src = VW.base + '/player?embed=1&fit=1';
+  fr.title = 'Pantalla de jugador';
+  fr.tabIndex = -1;
+  wrap.appendChild(fr);
+  r.insertBefore(wrap, $('.px-msg', r));
+  PX.wrap = wrap;
+  PX.frame = fr;
 }
 /* rectangle del mapa del tauler, en píxels de la finestra (amb el mapa ampliat no té gir) */
 function mapRect() {
   const b = mapImg.getBoundingClientRect();
   return { x: b.left, y: b.top, w: b.width, h: b.height };
 }
-/* l'onada: `from` és la imatge de davant (la que es veu ara) i `to` la de darrere (la que queda) */
-function wave(R, from, to) {
-  const { cols, rows } = TOWN.pixel, tw = R.w / cols, th = R.h / rows;
-  const step = 0.03, dur = 0.95, lift = Math.max(tw, th) * 1.6;
-  const box = document.createElement('div');
-  box.className = 'px-wave';
-  Object.assign(box.style, { left: R.x + 'px', top: R.y + 'px', width: R.w + 'px', height: R.h + 'px', perspective: Math.round(R.w * 1.1) + 'px' });
-  const bg = (src, x, y) => `background-image:url("${src}");background-size:${R.w}px ${R.h}px;background-position:${-x}px ${-y}px`;
-  let h = `<style>.px-wave{--lz:${lift.toFixed(1)}px}</style>`;
+/* l'onada, pintada en un sol llenç: `from` és la imatge de davant (la que es veu ara) i `to` la de darrere (la que
+   queda); `pixTo` diu quina de les dues és el mapa en píxel (es pinta sense suavitzar).
+   Cada casella s'aixeca (es fa més gran i fa ombra), gira 180° sobre la seva diagonal i torna a baixar. El gir sobre
+   la diagonal vist des de dalt és una transformació afí (l'eix es queda igual i la direcció perpendicular s'escurça
+   amb el cosinus), així que n'hi ha prou amb setTransform + drawImage: res de 3D al DOM. La v1 tenia 900 elements
+   amb preserve-3d i anava a batzegades. Les caselles acabades es copien un sol cop a `done` i cada fotograma només es
+   pinten les que són a mig girar. Les dues imatges es reescalen abans a la mida de pantalla (el mapa pintat fa
+   4950 px i a més d'una GPU no hi cap com a textura). */
+const canvas2d = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c.getContext('2d'); };
+const waveDpr = () => Math.min(2, window.devicePixelRatio || 1);
+/* Les dues imatges, reescalades a la mida de pantalla del mapa. createImageBitmap ho fa fora del fil principal
+   (reescalar el mapa pintat de 4950 px amb drawImage costava un fotograma sencer just quan començava l'onada).
+   Es guarden: l'onada de tornada fa servir les mateixes. */
+const _scaled = new Map();
+function scaled(img, pixel, R) {
+  const W = Math.round(R.w * waveDpr()), H = Math.round(R.h * waveDpr()), key = img.src + '|' + W + 'x' + H;
+  if (!_scaled.has(key)) {
+    const viaCanvas = () => {
+      const x = canvas2d(W, H);
+      x.imageSmoothingEnabled = !pixel; x.imageSmoothingQuality = 'high';
+      x.drawImage(img, 0, 0, W, H);
+      return x.canvas;
+    };
+    const p = window.createImageBitmap
+      ? createImageBitmap(img, { resizeWidth: W, resizeHeight: H, resizeQuality: pixel ? 'pixelated' : 'high' }).catch(viaCanvas)
+      : Promise.resolve(viaCanvas());
+    _scaled.set(key, p);
+  }
+  return _scaled.get(key);
+}
+function wave(R, A, B, pixTo) {
+  const { cols, rows } = TOWN.pixel;
+  const dpr = waveDpr(), W = A.width, H = A.height, tw = W / cols, th = H / rows;
+  const step = 0.03, dur = 0.7, lift = 0.5;
+  const m = Math.ceil(Math.max(tw, th) * 1.2); // marge del llenç: una casella aixecada en sobresurt
+  const done = canvas2d(W, H); // es va omplint amb les caselles ja girades
+  done.drawImage(A, 0, 0);
+  const cv = document.createElement('canvas');
+  cv.className = 'px-wave';
+  cv.width = W + 2 * m; cv.height = H + 2 * m;
+  Object.assign(cv.style, { left: R.x - m / dpr + 'px', top: R.y - m / dpr + 'px', width: (W + 2 * m) / dpr + 'px', height: (H + 2 * m) / dpr + 'px' });
+  const ctx = cv.getContext('2d');
+  const tiles = [];
   for (let r = 0; r < rows; r++) {
-    const y0 = Math.round(r * th), y1 = Math.round((r + 1) * th);
     for (let c = 0; c < cols; c++) {
-      const x0 = Math.round(c * tw), x1 = Math.round((c + 1) * tw);
-      /* un píxel de més perquè no es vegin les juntes; una mica d'atzar perquè l'onada no sigui una regla */
-      const d = ((c + r) * step + ((hashOf(c + ',' + r) % 7) - 3) * 0.004) * D;
-      h += `<i style="left:${x0}px;top:${y0}px;width:${x1 - x0 + 1}px;height:${y1 - y0 + 1}px;--d:${d.toFixed(3)}s">` +
-        `<b class="f" style='${bg(from, x0, y0)}'></b><b class="k" style='${bg(to, x0, y0)}'></b></i>`;
+      const x0 = Math.round(c * tw), y0 = Math.round(r * th), x1 = Math.round((c + 1) * tw), y1 = Math.round((r + 1) * th);
+      /* una mica d'atzar perquè l'onada no sigui una regla */
+      const d = (c + r) * step + ((hashOf(c + ',' + r) % 7) - 3) * 0.004;
+      tiles.push({ x0, y0, w: x1 - x0, h: y1 - y0, d, st: 0 });
     }
   }
-  box.innerHTML = h;
-  box.style.setProperty('--t', (dur * D).toFixed(3) + 's');
-  box.classList.toggle('pix-f', from === pixelSrc());
-  box.classList.toggle('pix-k', to === pixelSrc());
+  tiles.sort((a, b) => a.d - b.d);
+  const total = ((cols + rows - 2) * step + 0.02 + dur) * D;
+  const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const draw = (t) => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(done.canvas, m, m);
+    const live = [];
+    for (let i = 0; i < tiles.length; i++) {
+      const k = tiles[i];
+      if (k.st === 2) continue;
+      const p = (t - k.d * D) / (dur * D);
+      if (p <= 0) break; // en ordre de sortida: la resta encara no ha començat
+      if (p >= 1) { k.st = 2; done.drawImage(B, k.x0, k.y0, k.w, k.h, k.x0, k.y0, k.w, k.h); ctx.drawImage(B, k.x0, k.y0, k.w, k.h, m + k.x0, m + k.y0, k.w, k.h); continue; }
+      k.st = 1; k.p = p; k.up = Math.sin(Math.PI * p);
+      live.push(k);
+    }
+    /* primer tots els forats i les ombres, després les cares (les més aixecades a sobre): si no, el forat d'una
+       casella tallaria la veïna que ja és enlaire */
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(24,16,8,.35)';
+    for (const k of live) ctx.fillRect(m + k.x0, m + k.y0, k.w, k.h);
+    for (const k of live) {
+      const o = k.up * k.w * 0.35;
+      ctx.fillStyle = 'rgba(12,8,4,' + (0.28 * k.up).toFixed(3) + ')';
+      ctx.fillRect(m + k.x0 + o, m + k.y0 + o, k.w, k.h);
+    }
+    live.sort((a, b) => a.up - b.up);
+    for (const k of live) {
+      /* gir sobre la diagonal: davant mentre cos > 0, darrere (que ja ve girada 180°) després */
+      const cs = Math.cos(Math.PI * ease(k.p)), back = cs < 0, c2 = back ? -cs : cs, sc = 1 + lift * k.up;
+      const a = 0.5 + 0.5 * c2, b = -0.5 + 0.5 * c2;
+      ctx.setTransform(sc * a, sc * b, sc * b, sc * a, m + k.x0 + k.w / 2, m + k.y0 + k.h / 2);
+      ctx.imageSmoothingEnabled = back ? !pixTo : pixTo;
+      ctx.drawImage(back ? B : A, k.x0, k.y0, k.w, k.h, -k.w / 2, -k.h / 2, k.w, k.h);
+      /* llum: més fosca com més de cantell, i una mica clara a la cara que puja */
+      ctx.fillStyle = 'rgba(10,6,2,' + ((1 - c2) * 0.4).toFixed(3) + ')';
+      ctx.fillRect(-k.w / 2, -k.h / 2, k.w, k.h);
+      ctx.fillStyle = 'rgba(255,244,214,' + (k.up * 0.18).toFixed(3) + ')';
+      ctx.fillRect(-k.w / 2, -k.h / 2, k.w, k.h);
+    }
+  };
   const r = root();
-  r.insertBefore(box, PX.wrap && PX.wrap.parentNode === r ? PX.wrap : $('.px-msg', r));
-  const total = ((cols + rows - 2) * step + 0.02 + dur) * D * 1000;
-  void box.offsetWidth; // l'animació comença ara
-  box.classList.add('go');
-  return { el: box, done: new Promise((res) => setTimeout(res, total + 60)) };
+  r.insertBefore(cv, PX.wrap && PX.wrap.parentNode === r ? PX.wrap : $('.px-msg', r));
+  draw(0);
+  return {
+    el: cv,
+    done: new Promise((res) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = (now - t0) / 1000;
+        if (t >= total) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(B, m, m); res(); return; }
+        draw(t);
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    })
+  };
 }
 /* la pantalla de jugador és de la mida de la finestra: transformació que en posa el mapa damunt de R, i el retall del mapa */
 function frameFit(R) {
@@ -110,7 +209,11 @@ addEventListener('message', (e) => {
   if (!d || typeof d !== 'object') return;
   /* del visor: la salutació i el canal, que va cap a la pantalla incrustada */
   if (VW.win && e.source === VW.win) {
-    if (d.rpg === 'bc-hello' && typeof d.base === 'string') { VW.origin = e.origin; VW.base = d.base.replace(/\/+$/, ''); }
+    if (d.rpg === 'bc-hello' && typeof d.base === 'string') {
+      const first = !VW.origin;
+      VW.origin = e.origin; VW.base = d.base.replace(/\/+$/, '');
+      if (first) { ensureFrame(); loadImg(pixelSrc()).then((im) => { PX.pixImg = im; }).catch(() => {}); }
+    }
     else if (d.rpg === 'bc' && e.origin === VW.origin && PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage(d, VW.origin);
     return;
   }
@@ -132,35 +235,30 @@ export async function toPixel(prepareMap) {
   if (!TOWN.pixel || PX.on || PX.busy) return;
   if (!linked()) { toast('Obre aquest tauler des del visor: menú «Pantalles» → «Obrir el tauler de missions».', 5200); return; }
   PX.busy = true;
-  let pix;
-  try {
-    pix = await loadImg(pixelSrc());
-  } catch (e) {
-    PX.busy = false;
-    toast("No s'ha pogut carregar el mapa en píxel del visor.", 4200);
-    return;
+  let pix = PX.pixImg;
+  if (!pix) {
+    try {
+      pix = PX.pixImg = await loadImg(pixelSrc());
+    } catch (e) {
+      PX.busy = false;
+      toast("No s'ha pogut carregar el mapa en píxel del visor.", 4200);
+      return;
+    }
   }
-  PX.on = true; PX.ready = false; PX.phase = 'wave';
-  /* la pantalla de jugador es comença a carregar ara: l'onada en dissimula l'espera */
-  const r = root();
-  const wrap = document.createElement('div');
-  wrap.className = 'px-live';
-  const fr = document.createElement('iframe');
-  fr.src = VW.base + '/player?embed=1&fit=1';
-  fr.title = 'Pantalla de jugador';
-  fr.tabIndex = -1;
-  wrap.appendChild(fr);
-  r.insertBefore(wrap, $('.px-msg', r));
-  PX.wrap = wrap;
-  PX.frame = fr;
+  PX.on = true; PX.phase = 'wave';
+  ensureFrame();
+  root();
+  const wrap = PX.wrap;
   gsap.set(wrap, { opacity: 0 });
   await prepareMap();
+  const R = mapRect(), f = frameFit(R);
+  const imgs = Promise.all([scaled(mapImg, false, R), scaled(pix, true, R)]);
   gsap.to(labels, { opacity: 0, duration: 0.3 * D });
   await wait(320);
-  const R = mapRect(), f = frameFit(R);
+  const [A, B] = await imgs;
   gsap.set(wrap, { x: f.x, y: f.y, scale: f.s, transformOrigin: '0 0' });
   wrap.style.clipPath = f.clip;
-  const w = wave(R, mapImg.src, pix.src);
+  const w = wave(R, A, B, true);
   PX.waveEl = w.el;
   await w.done;
   PX.phase = 'static';
@@ -171,6 +269,10 @@ async function goLive() {
   if (PX.phase !== 'static' || PX.busy) return;
   PX.busy = true; PX.phase = 'going';
   message('');
+  /* fins ara no pintava: es mostra transparent i se li deixen uns fotogrames per posar-se a la mida */
+  PX.wrap.style.display = '';
+  await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  await wait(150);
   await new Promise((res) => gsap.to(PX.wrap, { opacity: 1, duration: 0.7 * D, onComplete: res }));
   if (PX.waveEl) { PX.waveEl.remove(); PX.waveEl = null; }
   PX.phase = 'live';
@@ -188,7 +290,7 @@ export async function toBoard() {
   if (!PX.on || PX.busy || PX.phase === 'wave') return;
   PX.busy = true;
   message('');
-  const R = mapRect(), pix = pixelSrc();
+  const R = mapRect();
   if (PX.phase === 'live') {
     /* primer el mapa sencer, després s'encongeix damunt del mapa del tauler */
     post(true);
@@ -201,14 +303,16 @@ export async function toBoard() {
     await new Promise((res) => gsap.to(PX.wrap, { x: f.x, y: f.y, scale: f.s, duration: 1.1 * D, ease: 'power3.inOut', onComplete: res }));
   }
   if (PX.waveEl) { PX.waveEl.remove(); PX.waveEl = null; }
-  const w = wave(R, pix, mapImg.src);
+  const [A, B] = await Promise.all([scaled(PX.pixImg, true, R), scaled(mapImg, false, R)]);
+  const w = wave(R, A, B, false);
   PX.waveEl = w.el;
+  /* la pantalla de jugador es torna a amagar (sense treure-la): la propera vegada ja serà a punt */
   if (PX.wrap) {
     const el = PX.wrap;
     await new Promise((res) => gsap.to(el, { opacity: 0, duration: 0.3 * D, onComplete: res }));
-    el.remove();
+    el.style.display = 'none';
   }
-  PX.wrap = null; PX.frame = null; PX.phase = 'wave';
+  PX.phase = 'wave';
   /* el contingut de l'onada ja és a sota: s'hi pot posar l'animació en marxa */
   await w.done;
   gsap.to(labels, { opacity: 1, duration: 0.4 * D });

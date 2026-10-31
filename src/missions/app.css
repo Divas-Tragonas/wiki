@@ -287,22 +287,8 @@ body:not(.idle) .chrome.show { opacity: 1; pointer-events: auto; }
    de la pantalla i no la de l'escenari escalat. */
 #px { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
 #px .px-bk { position: absolute; inset: 0; background: #000; opacity: 0; }
-/* l'onada: cada casella és un bloc amb dues cares que s'aixeca, gira sobre la diagonal i torna a baixar */
-.px-wave { position: absolute; transform-style: preserve-3d; perspective-origin: 50% 50%; }
-.px-wave i { position: absolute; display: block; transform-style: preserve-3d; }
-.px-wave b { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; background-repeat: no-repeat; }
-.px-wave b::after { content: ""; position: absolute; inset: 0; opacity: 0; background: linear-gradient(135deg, rgba(255, 244, 214, .55), rgba(255, 244, 214, 0) 45%, rgba(10, 6, 2, .5)); box-shadow: inset 0 0 0 1px rgba(20, 12, 4, .35); }
-.px-wave b.k { transform: rotate3d(1, -1, 0, 180deg); }
-.px-wave.pix-f b.f, .px-wave.pix-k b.k { image-rendering: pixelated; }
-.px-wave.go i { animation: px-flip var(--t) cubic-bezier(.45, 0, .3, 1) var(--d) both; }
-.px-wave.go b::after { animation: px-shade var(--t) ease-in-out var(--d) both; }
-@keyframes px-flip {
-  0% { transform: translateZ(0) rotate3d(1, -1, 0, 0deg); }
-  45% { transform: translateZ(var(--lz)) rotate3d(1, -1, 0, 70deg); }
-  70% { transform: translateZ(var(--lz)) rotate3d(1, -1, 0, 150deg); }
-  100% { transform: translateZ(0) rotate3d(1, -1, 0, 180deg); }
-}
-@keyframes px-shade { 0%, 100% { opacity: 0; } 40%, 70% { opacity: 1; } }
+/* l'onada: un llenç damunt del mapa (pixel.js la pinta fotograma a fotograma) */
+.px-wave { position: absolute; }
 .px-live { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; background: #000; }
 .px-live iframe { display: block; width: 100%; height: 100%; border: 0; background: #000; pointer-events: none; }
 .px-msg { position: absolute; left: 50%; bottom: 6vh; transform: translateX(-50%); max-width: 80vw; padding: .6em 1.4em .55em; border-radius: 999px; background: rgba(22, 17, 12, .85); color: #efe4c9; font: 400 clamp(15px, 1.1vw, 22px) "Alegreya", Georgia, serif; text-align: center; opacity: 0; }

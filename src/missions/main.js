@@ -1514,7 +1514,7 @@ function onKey(e) {
   if (KEY_ACTS[e.key]) { e.preventDefault(); act(KEY_ACTS[e.key]); }
   else if (k === 'f') fullscreen();
   else if (k === 'd') setDm(!dmOn);
-  else if (k === 'p' && dmOn && TOWN.pixel) startPixel();
+  else if (k === 'p' && TOWN.pixel) startPixel(); // també fora del mode DM: a la tele no cal ensenyar-lo
   else if (k === 'l') cycleFx();
 }
 function onClick(e) {
