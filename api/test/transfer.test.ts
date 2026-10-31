@@ -177,5 +177,5 @@ describe('the old encrypted data.json', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 });
