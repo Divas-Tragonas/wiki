@@ -146,4 +146,4 @@ Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar, se
 
 ### El `data.json` d'abans
 
-`public/missions/data.json` és el tauler d'abans de l'API (xifrat; la part `dm` amb la contrasenya del DM). Ja no el fa servir ningú: és aquí només perquè la Mac mini l'importi un cop (`node api/dist/cli.js import-data-json public/missions/data.json`). Un cop importat, es pot esborrar del repositori i les contrasenyes s'han de canviar (l'historial de git en conserva les versions xifrades).
+El tauler d'abans de l'API guardava les missions a `public/missions/data.json` (xifrat; la part `dm` amb la contrasenya del DM d'abans). No es va poder importar perquè ningú recorda aquella contrasenya, i s'ha tret del repositori: el tauler nou va començar buit. Si mai apareix la contrasenya, el fitxer és a l'historial (`git show 7ef678c:public/missions/data.json > data.json`) i es pot carregar amb `cli import-data-json data.json` (vegeu `deploy/macmini/README.md`; si la base de dades ja té missions, cal `--force`, que les substitueix).

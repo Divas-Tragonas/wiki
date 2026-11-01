@@ -55,11 +55,13 @@ Cal Node 22 (de NodeSource, a `/usr/bin/node`), Postgres (el d'Ubuntu 24.04 és 
    cli set-password player
    cli set-password dm
    ```
-7. **Les missions d'abans** (`public/missions/data.json`, xifrat amb la contrasenya del DM d'abans). Abans, el DM ha de
-   publicar des del tauler vell el que tingui pendent i deixar d'editar-hi. Després:
+7. **Les missions d'abans**: no es van poder importar (ningú recorda la contrasenya del DM del tauler vell) i
+   `public/missions/data.json` ja no és al repositori. Si mai apareix la contrasenya, el fitxer es recupera de
+   l'historial i es carrega així:
    ```bash
-   cli import-data-json <clon>/public/missions/data.json --dry-run   # diu què hi ha, sense tocar res
-   cli import-data-json <clon>/public/missions/data.json             # el carrega (si la base de dades és buida)
+   git -C <clon> show 7ef678c:public/missions/data.json > /tmp/data.json
+   cli import-data-json /tmp/data.json --dry-run   # diu què hi ha, sense tocar res
+   cli import-data-json /tmp/data.json             # el carrega (si la base de dades és buida)
    cli status
    ```
    Si la base de dades ja té missions no fa res (perquè no es perdi feina feta al tauler nou); `--force` les
