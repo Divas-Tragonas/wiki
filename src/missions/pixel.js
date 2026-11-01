@@ -22,7 +22,7 @@ import { stage, toast } from './ui.js';
 
 const mapImg = $('#mapImg'), labels = $('#labels');
 
-const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false, pixImg: null };
+const PX = { on: false, busy: false, phase: '', frame: null, wrap: null, waveEl: null, ready: false, pixImg: null, marginEl: null };
 /* amb el mapa en píxel a sobre, el tauler no respon al ratolí ni al teclat */
 export const pixelOn = () => PX.on;
 
@@ -92,9 +92,10 @@ const waveDpr = () => Math.min(2, window.devicePixelRatio || 1);
 /* Les dues imatges, reescalades a la mida de pantalla del mapa. createImageBitmap ho fa fora del fil principal
    (reescalar el mapa pintat de 4950 px amb drawImage costava un fotograma sencer just quan començava l'onada).
    Es guarden: l'onada de tornada fa servir les mateixes. */
-const _scaled = new Map();
+const _scaled = new Map(), _ids = new WeakMap();
+const idOf = (img) => { if (!_ids.has(img)) _ids.set(img, img.src || 'canvas' + _ids.size); return _ids.get(img); };
 function scaled(img, pixel, R) {
-  const W = Math.round(R.w * waveDpr()), H = Math.round(R.h * waveDpr()), key = img.src + '|' + W + 'x' + H;
+  const W = Math.round(R.w * waveDpr()), H = Math.round(R.h * waveDpr()), key = idOf(img) + '|' + W + 'x' + H;
   if (!_scaled.has(key)) {
     const viaCanvas = () => {
       const x = canvas2d(W, H);
@@ -108,6 +109,175 @@ function scaled(img, pixel, R) {
     _scaled.set(key, p);
   }
   return _scaled.get(key);
+}
+/* El marge de paper del mapa pintat. El de Cony Cirera s'esvaeix a les vores com una aquarel·la gastada (el color
+   perd pigment fins a quedar el paper) i el de píxel s'hi talla en sec: a l'onada es notava molt que hi faltava.
+   - On: es treu del mateix mapa pintat, un sol cop. Com més clar és un punt de la vora respecte de l'interior, més
+     gastat (`fade`, 0..1). Així les clapes blanques queden on són a l'original i no canvien en girar les caselles.
+   - Com: es treu pigment al mapa en píxel, no s'hi posa blanc a sobre. Cada canal és una transmitància (v/255) i el
+     punt gastat és paper × transmitància^(1 − fade): el verd fosc es fa verd pàl·lid, com l'aquarel·la. ⚠️ Un vel
+     blanc semitransparent (la primera versió) feia gris el verd fosc i semblaven núvols.
+   - Es cou al mapa en píxel (`framedPix`, a la seva mida) i en surt també una capa (el mateix, però transparent a
+     dins) per posar damunt de la pantalla de jugador mentre ensenya el mapa sencer.
+   Res de ctx.filter per al desenfocament (Safari): tres caixes. */
+let _fade = null;
+function fadeMask() {
+  if (!_fade) {
+    _fade = (mapImg.decode ? mapImg.decode() : Promise.resolve()).catch(() => {})
+      .then(() => fadeOf(mapImg))
+      .catch(() => null);
+  }
+  return _fade;
+}
+function boxBlur(src, w, h, r) {
+  const tmp = new Float32Array(w * h), n = 2 * r + 1;
+  const a = src, b = tmp;
+  for (let pass = 0; pass < 3; pass++) {
+    /* horitzontal a → b, vertical b → a (amb les vores repetides) */
+    for (let y = 0; y < h; y++) {
+      const o = y * w;
+      let acc = 0;
+      for (let k = -r; k <= r; k++) acc += a[o + Math.min(w - 1, Math.max(0, k))];
+      for (let x = 0; x < w; x++) {
+        b[o + x] = acc / n;
+        acc += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let k = -r; k <= r; k++) acc += b[Math.min(h - 1, Math.max(0, k)) * w + x];
+      for (let y = 0; y < h; y++) {
+        a[y * w + x] = acc / n;
+        acc += b[Math.min(h - 1, y + r + 1) * w + x] - b[Math.max(0, y - r) * w + x];
+      }
+    }
+  }
+  return a;
+}
+/* → { w, h, a: Float32Array (fade 0..1), paper: [r, g, b] } o null si el mapa no té marge de paper */
+function fadeOf(img) {
+  if (!img.naturalWidth) return null;
+  const k = Math.min(1, 1100 / img.naturalWidth), w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+  const x = canvas2d(w, h);
+  x.drawImage(img, 0, 0, w, h);
+  const px = x.getImageData(0, 0, w, h).data, N = w * h;
+  const mn = new Float32Array(N); // el canal més fosc: el paper el té alt, l'herba i els arbres baix
+  for (let i = 0, j = 0; i < N; i++, j += 4) mn[i] = Math.min(px[j], px[j + 1], px[j + 2]);
+  /* distància a la vora més propera i fins on arriba el marge (com a molt un 6% del mapa) */
+  const inner = w * 0.023, outer = w * 0.056;
+  const dist = (i) => { const cx = i % w, cy = (i / w) | 0; return Math.min(cx, w - 1 - cx, cy, h - 1 - cy); };
+  /* color del paper (els punts més blancs de la vora) i to mitjà de l'interior */
+  let pr = 0, pg = 0, pb = 0, pn = 0, cs = 0, cn = 0;
+  for (let i = 0, j = 0; i < N; i++, j += 4) {
+    const d = dist(i);
+    if (d < outer && mn[i] > 228) { pr += px[j]; pg += px[j + 1]; pb += px[j + 2]; pn++; }
+    else if (d > w * 0.15) { cs += mn[i]; cn++; }
+  }
+  if (pn < 50 || !cn) return null;
+  pr /= pn; pg /= pn; pb /= pn;
+  const C = cs / cn, P = Math.min(pr, pg, pb);
+  if (P - C < 30) return null;
+  const bl = boxBlur(mn, w, h, Math.max(1, Math.round(w / 450)));
+  const a = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const d = dist(i);
+    if (d >= outer) continue;
+    const t = Math.min(1, Math.max(0, (d - inner) / (outer - inner)));
+    a[i] = Math.min(1, Math.max(0, ((bl[i] - C) / (P - C)) * 1.3)) * (1 - t * t * (3 - 2 * t));
+  }
+  return { w, h, a, paper: [pr, pg, pb] };
+}
+/* El mapa en píxel gastat a les vores, a la seva mida: { full, over } (over = només la vora, transparent a dins).
+   ⚠️ El mapa en píxel ve del visor, que és en un altre lloc i no envia CORS: el llenç on es dibuixa queda «tacat» i
+   no se'n poden llegir els píxels. Per això la potència es fa només dibuixant: soft-light amb blanc és (gairebé)
+   l'arrel quadrada, o sigui que T, T^½, T^¼ i T^⅛ surten de tres passades, i T^(1 − fade) és una barreja per trams
+   entre elles, amb màscares fetes del fade (que sí que és nostre). Després es multiplica pel paper. */
+const SL_STEPS = [0.5, 0.75, 0.875, 1]; // fade on s'arriba a T^½, T^¼, T^⅛ i al blanc
+let _framedPix = null;
+function framedPix(pix) {
+  if (!_framedPix) {
+    _framedPix = fadeMask().then((F) => {
+      if (!F) return null;
+      const W = pix.naturalWidth, H = pix.naturalHeight, N = F.w * F.h;
+      /* màscares dels trams, la capa de paper (amb gra) i la de la vora: a la mida del fade, s'amplien en dibuixar-les */
+      const mk = () => { const x = canvas2d(F.w, F.h); return { x, im: x.createImageData(F.w, F.h) }; };
+      const masks = SL_STEPS.map(mk), paper = mk(), over = mk();
+      let seed = 1;
+      const rnd = () => ((seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x9e3779b9) | 0) >>> 0) / 4294967296;
+      const bw = Math.ceil(F.w / 3) + 1, blk = new Float32Array(bw * (Math.ceil(F.h / 3) + 1));
+      for (let i = 0; i < blk.length; i++) blk[i] = rnd() - 0.5;
+      for (let i = 0, j = 0; i < N; i++, j += 4) {
+        const f = F.a[i];
+        if (f <= 0) continue;
+        let lo = 0;
+        for (let k = 0; k < SL_STEPS.length; k++) {
+          const t = Math.min(1, Math.max(0, (f - lo) / (SL_STEPS[k] - lo)));
+          masks[k].im.data[j + 3] = t * 255;
+          lo = SL_STEPS[k];
+        }
+        /* paper amb gra (un soroll per punt i un altre per blocs de 3), opac segons el fade: es multiplica */
+        const g = 1 + (rnd() - 0.5) * 0.05 + blk[(((i / F.w) | 0) / 3 | 0) * bw + ((i % F.w) / 3 | 0)] * 0.04;
+        for (let c = 0; c < 3; c++) paper.im.data[j + c] = F.paper[c] * g;
+        paper.im.data[j + 3] = f * 255;
+        over.im.data[j + 3] = Math.min(255, f * 4 * 255);
+      }
+      for (const m of [...masks, paper, over]) m.x.putImageData(m.im, 0, 0);
+      /* T^(1 − fade): es parteix de T i cada tram hi posa la potència següent on li toca */
+      const out = canvas2d(W, H), lay = canvas2d(W, H);
+      out.imageSmoothingEnabled = false;
+      out.drawImage(pix, 0, 0);
+      let pw = canvas2d(W, H); // la potència d'ara: T, T^½, T^¼…
+      pw.imageSmoothingEnabled = false;
+      pw.drawImage(pix, 0, 0);
+      for (let k = 0; k < SL_STEPS.length; k++) {
+        if (k < SL_STEPS.length - 1) {
+          pw.globalCompositeOperation = 'soft-light';
+          pw.fillStyle = '#fff';
+          pw.fillRect(0, 0, W, H);
+          pw.globalCompositeOperation = 'source-over';
+        } else { pw.fillStyle = '#fff'; pw.fillRect(0, 0, W, H); }
+        lay.globalCompositeOperation = 'copy';
+        lay.drawImage(pw.canvas, 0, 0);
+        lay.globalCompositeOperation = 'destination-in';
+        lay.drawImage(masks[k].x.canvas, 0, 0, W, H);
+        out.drawImage(lay.canvas, 0, 0);
+      }
+      /* × paper (blanc a dins, paper on és gastat) */
+      lay.globalCompositeOperation = 'copy';
+      lay.fillStyle = '#fff';
+      lay.fillRect(0, 0, W, H);
+      lay.globalCompositeOperation = 'source-over';
+      lay.drawImage(paper.x.canvas, 0, 0, W, H);
+      out.globalCompositeOperation = 'multiply';
+      out.drawImage(lay.canvas, 0, 0);
+      out.globalCompositeOperation = 'source-over';
+      /* la vora sola, per posar damunt de la pantalla de jugador */
+      const ov = canvas2d(W, H);
+      ov.drawImage(out.canvas, 0, 0);
+      ov.globalCompositeOperation = 'destination-in';
+      ov.drawImage(over.x.canvas, 0, 0, W, H);
+      return { full: out.canvas, over: ov.canvas };
+    }).catch(() => null);
+  }
+  return _framedPix;
+}
+/* per a l'onada: el mapa en píxel gastat (o el de sempre si el mapa pintat no té marge), a la mida de pantalla */
+function framed(pix, R) {
+  return framedPix(pix).then((F) => scaled(F ? F.full : pix, true, R));
+}
+/* La vora gastada damunt de la pantalla de jugador, dins de PX.wrap, on la pantalla hi té el mapa sencer: s'amplia i
+   s'encongeix amb ella. Es veu mentre ensenya el mapa sencer i s'esvaeix quan s'eixampla a tota la pantalla. */
+function marginOver(F) {
+  if (!F || !PX.wrap) return null;
+  if (!PX.marginEl) {
+    const c = F.over;
+    c.className = 'px-margin';
+    PX.wrap.appendChild(c);
+    PX.marginEl = c;
+  }
+  const P = TOWN.pixel, W = innerWidth, H = innerHeight, s = Math.min(W / P.w, H / P.h), Mw = P.w * s, Mh = P.h * s;
+  Object.assign(PX.marginEl.style, { left: (W - Mw) / 2 + 'px', top: (H - Mh) / 2 + 'px', width: Mw + 'px', height: Mh + 'px' });
+  return PX.marginEl;
 }
 function wave(R, A, B, pixTo) {
   const { cols, rows } = TOWN.pixel;
@@ -212,7 +382,12 @@ addEventListener('message', (e) => {
     if (d.rpg === 'bc-hello' && typeof d.base === 'string') {
       const first = !VW.origin;
       VW.origin = e.origin; VW.base = d.base.replace(/\/+$/, '');
-      if (first) { ensureFrame(); loadImg(pixelSrc()).then((im) => { PX.pixImg = im; }).catch(() => {}); }
+      if (first) {
+        ensureFrame();
+        /* el mapa en píxel i la seva vora gastada es preparen ja, quan el navegador no té feina */
+        const idle = window.requestIdleCallback || ((f) => setTimeout(f, 500));
+        loadImg(pixelSrc()).then((im) => { PX.pixImg = im; idle(() => framedPix(im), { timeout: 4000 }); }).catch(() => {});
+      }
     }
     else if (d.rpg === 'bc' && e.origin === VW.origin && PX.frame && PX.frame.contentWindow) PX.frame.contentWindow.postMessage(d, VW.origin);
     return;
@@ -253,12 +428,14 @@ export async function toPixel(prepareMap) {
   gsap.set(wrap, { opacity: 0 });
   await prepareMap();
   const R = mapRect(), f = frameFit(R);
-  const imgs = Promise.all([scaled(mapImg, false, R), scaled(pix, true, R)]);
+  const imgs = Promise.all([scaled(mapImg, false, R), framed(pix, R)]);
   gsap.to(labels, { opacity: 0, duration: 0.3 * D });
   await wait(320);
   const [A, B] = await imgs;
   gsap.set(wrap, { x: f.x, y: f.y, scale: f.s, transformOrigin: '0 0' });
   wrap.style.clipPath = f.clip;
+  const me = marginOver(await framedPix(PX.pixImg));
+  if (me) gsap.set(me, { opacity: 1 });
   const w = wave(R, A, B, true);
   PX.waveEl = w.el;
   await w.done;
@@ -280,6 +457,7 @@ async function goLive() {
   /* s'eixampla a tota la pantalla; el tauler queda a fosc darrere i deixa de pintar-se. El retall (només el
      mapa, sense les franges negres de la pantalla) es manté fins al final: a sobre del fons negre no es nota */
   gsap.to('.px-bk', { opacity: 1, duration: 0.9 * D, ease: 'power2.inOut' });
+  if (PX.marginEl) gsap.to(PX.marginEl, { opacity: 0, duration: 1.1 * D, ease: 'power2.in' });
   await new Promise((res) => gsap.to(PX.wrap, { x: 0, y: 0, scale: 1, duration: 1.1 * D, ease: 'power3.inOut', onComplete: res }));
   PX.wrap.style.transform = 'none';
   PX.wrap.style.clipPath = 'none';
@@ -301,10 +479,12 @@ export async function toBoard() {
     gsap.set(PX.wrap, { x: 0, y: 0, scale: 1, transformOrigin: '0 0' });
     PX.wrap.style.clipPath = f.clip;
     gsap.to('.px-bk', { opacity: 0, duration: 0.9 * D, ease: 'power2.inOut' });
+    const me = marginOver(await framedPix(PX.pixImg));
+    if (me) gsap.to(me, { opacity: 1, duration: 1.1 * D, ease: 'power2.out' });
     await new Promise((res) => gsap.to(PX.wrap, { x: f.x, y: f.y, scale: f.s, duration: 1.1 * D, ease: 'power3.inOut', onComplete: res }));
   }
   if (PX.waveEl) { PX.waveEl.remove(); PX.waveEl = null; }
-  const [A, B] = await Promise.all([scaled(PX.pixImg, true, R), scaled(mapImg, false, R)]);
+  const [A, B] = await Promise.all([framed(PX.pixImg, R), scaled(mapImg, false, R)]);
   const w = wave(R, A, B, false);
   PX.waveEl = w.el;
   /* la pantalla de jugador es torna a amagar (sense treure-la): la propera vegada ja serà a punt */
