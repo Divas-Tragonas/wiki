@@ -291,7 +291,8 @@ body:not(.idle) .chrome.show { opacity: 1; pointer-events: auto; }
 .px-wave { position: absolute; }
 .px-live { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; background: #000; }
 /* el marge de paper del mapa pintat, damunt del mapa sencer de la pantalla de jugador (pixel.js, marginOver) */
-.px-live .px-margin { position: absolute; pointer-events: none; image-rendering: pixelated; }
+.px-live .px-margin { position: absolute; pointer-events: none; }
+.px-live .px-margin canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .px-live iframe { display: block; width: 100%; height: 100%; border: 0; background: #000; pointer-events: none; }
 .px-msg { position: absolute; left: 50%; bottom: 6vh; transform: translateX(-50%); max-width: 80vw; padding: .6em 1.4em .55em; border-radius: 999px; background: rgba(22, 17, 12, .85); color: #efe4c9; font: 400 clamp(15px, 1.1vw, 22px) "Alegreya", Georgia, serif; text-align: center; opacity: 0; }
 .px-back { position: absolute; left: 22px; top: 18px; padding: .5em 1.1em .45em; border-radius: 999px; background: rgba(22, 17, 12, .8); color: #efe4c9; font: 400 clamp(14px, 1vw, 19px) "Alegreya", Georgia, serif; opacity: .3; pointer-events: auto; transition: opacity .3s; }
