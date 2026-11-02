@@ -15,3 +15,7 @@ Una fortalesa ocupada per una tribu de goblins. El grup en coneix l'existència 
 ## Estat actual
 
 El grup encara no hi ha posat un peu. És un dels fils pendents més clars que tenen per resoldre.
+
+## Sessió 12 — El grup hi entra
+
+Capturats (fingidament) per quatre goblins i un llop, el grup hi arriba a la nit amb Gota. És el centre d'operacions de la tribu: goblins i osgos pugen amb cordes subministraments robats, i passen escuts gravats amb un lleó. Una boira densa, com la de la Cova de la Fumarola, omple les sales. Una escala en espiral acaba en galeries de cova, on el grup és tancat en una cel·la custodiada per un goblin gran.

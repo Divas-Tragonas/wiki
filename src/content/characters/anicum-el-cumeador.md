@@ -15,3 +15,7 @@ Mag humà d'aparença llardosa amb entrades pronunciades, també conegut com **A
 - La màgia negra acaba posseint-lo: AniCum perd el control de si mateix i esdevé un instrument de l'entitat de l'ombra.
 - L'endemà, camuflat entre el poble, llança una bola de foc contra el balcó reial que colpeja [Guifré](/wiki/wiki/characters/guifre-el-pollos) i [Judit](/wiki/wiki/characters/judit-la-pinchos) i inicia oficialment la Gran Guerra del Fentanilo.
 - Al sisè dia de batalla, tot i haver fulminat Guifré amb un llamp de vint-i-vuit punts, cau finalment a mans d'aquest en una segona escomesa.
+
+## Sessió 12
+
+Àgata revela que el llibre de pocions i màgia que busca Sor Maria és obra d'AniCum. El grup el troba a les Runes de Cony Cirera: sobretot receptes i notes d'assaig, i un ritual per obtenir una màgia poderosa amb un barret d'Ogma sobre un altar d'Ogma.
