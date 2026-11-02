@@ -57,8 +57,8 @@ jobs:
       data: ${{ steps.detecta.outputs.data }}
       branca: ${{ steps.detecta.outputs.branca }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install --upgrade -r scripts/nova-sessio/requirements.txt
@@ -106,7 +106,7 @@ jobs:
       VOD: ${{ needs.detecta.outputs.url }}
       MINUTS: ${{ inputs.minuts }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -129,15 +129,22 @@ jobs:
             git checkout -b "$branca"
           fi
 
+          # Les proves (MINUTS) van en un issue a part i no avisen ningú
+          avisa="$REVISORS"; prefix="🎲 Sessió $SESSIO:"
+          if [ -n "$MINUTS" ]; then avisa=""; prefix="🧪 [PROVA] Sessió $SESSIO:"; fi
+          echo "avisa=$avisa" >> "$GITHUB_OUTPUT"
+          assigna=(); [ -n "$avisa" ] && assigna=(--assignee "$avisa")
+
           gh label create nova-sessio --color C9A227 --description "Sessió nova de la campanya" --force > /dev/null
           if [ -n "$ISSUE_ORIGEN" ]; then
             issue="$ISSUE_ORIGEN"
-            gh issue edit "$issue" --add-assignee "$REVISORS" > /dev/null || true
+            [ -n "$avisa" ] && { gh issue edit "$issue" --add-assignee "$avisa" > /dev/null || true; }
           else
-            issue=$(gh issue list --label nova-sessio --state open --search "\"Sessió $SESSIO\" in:title" --json number --jq '.[0].number // empty')
+            issue=$(gh issue list --label nova-sessio --state open --limit 50 --json number,title \
+              --jq "map(select(.title | startswith(\"$prefix\"))) | .[0].number // empty")
             if [ -z "$issue" ]; then
-              url=$(gh issue create --label nova-sessio --assignee "$REVISORS" \
-                --title "🎲 Sessió $SESSIO: $TITOL" \
+              url=$(gh issue create --label nova-sessio "${assigna[@]}" \
+                --title "$prefix $TITOL" \
                 --body "$(printf 'He trobat el vídeo de la **sessió %s** (%s): %s\n\nEl preparo sol: transcripció (~30 min) i crònica amb els canvis a la wiki (~20 min). Quan estigui, aquí sortirà l'\''enllaç al PR per revisar-lo.\n\nSeguiment: %s' "$SESSIO" "$DATA" "$VOD" "$RUN_URL")")
               issue="${url##*/}"
             fi
@@ -153,7 +160,7 @@ jobs:
         id: tr
         run: |
           if [ -f "transcripts/sessio-$SESSIO.txt" ] && [ -z "$MINUTS" ]; then echo "feta=true" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.tr.outputs.feta != 'true'
         with:
           python-version: '3.12'
@@ -188,7 +195,7 @@ jobs:
           gh issue comment "$ISSUE" --body "✅ Transcripció feta: [transcripts/sessio-$SESSIO.txt]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$BRANCA/transcripts/sessio-$SESSIO.txt) ($paraules paraules). Ara escric la crònica." > /dev/null || true
 
       # ── 2. Crònica i canvis a la wiki ──
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -226,7 +233,24 @@ jobs:
             Quan acabis, la descripció del PR ha de ser a `.nova-sessio/pr.md`. No facis commits: ja els fa el workflow.
           claude_args: |
             --max-turns 120
-            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite,Bash(npm run check),Bash(npm run build),Bash(git status:*),Bash(git diff:*),Bash(ls:*)"
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite,Bash(npm run check:*),Bash(npm run build:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(wc:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(cat:*),Bash(find:*),Bash(mkdir:*)"
+
+      - name: Eines que Claude no ha pogut fer servir
+        if: always() && steps.prep.outputs.pr == ''
+        run: |
+          f="$RUNNER_TEMP/claude-execution-output.json"
+          [ -f "$f" ] || exit 0
+          python3 - "$f" <<'EOF'
+          import json, sys
+          dades = json.load(open(sys.argv[1]))
+          msgs = dades if isinstance(dades, list) else [dades]
+          for m in msgs:
+              if isinstance(m, dict) and m.get("type") == "result":
+                  print(f"Torns: {m.get('num_turns')} · cost: {m.get('total_cost_usd')} $")
+                  for d in m.get("permission_denials") or []:
+                      entrada = json.dumps(d.get("tool_input", {}), ensure_ascii=False)[:160]
+                      print(f"::warning::Denegat a Claude: {d.get('tool_name')} {entrada}")
+          EOF
 
       - name: Comprova que la wiki es construeix
         id: build
@@ -246,6 +270,7 @@ jobs:
           ISSUE: ${{ steps.prep.outputs.issue }}
           BRANCA: ${{ steps.prep.outputs.branca }}
           BUILD_OK: ${{ steps.build.outputs.ok }}
+          AVISA: ${{ steps.prep.outputs.avisa }}
         run: |
           git add -A -- src/content transcripts
           git commit -m "Sessió $SESSIO: crònica i canvis a la wiki" || echo "Claude no ha canviat cap fitxer"
@@ -270,11 +295,13 @@ jobs:
             echo "Closes #$ISSUE"
           } >> "$cos"
 
-          draft=""
-          titol="Sessió $SESSIO: $TITOL"
-          if [ -n "$MINUTS" ]; then draft="--draft"; titol="[PROVA] $titol"; fi
+          # Títol: el de la crònica que ha escrit Claude (si no, el del vídeo)
+          titol_cronica=$(sed -n 's/^title: *"\(.*\)" *$/\1/p' "src/content/croniques/sessio-$SESSIO.md" 2>/dev/null | head -1)
+          titol="Sessió $SESSIO: ${titol_cronica:-$TITOL}"
+          extra=(--assignee "$AVISA" --reviewer "$AVISA")
+          if [ -n "$MINUTS" ]; then extra=(--draft); titol="[PROVA] $titol"; fi
           url=$(gh pr create --base master --head "$BRANCA" --title "$titol" --body-file "$cos" \
-            --label nova-sessio --assignee "$REVISORS" --reviewer "$REVISORS" $draft)
+            --label nova-sessio "${extra[@]}")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           gh issue comment "$ISSUE" --body "📜 La crònica de la sessió $SESSIO està llesta per revisar: $url" > /dev/null
 
