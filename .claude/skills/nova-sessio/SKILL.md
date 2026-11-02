@@ -19,6 +19,7 @@ Tota la resta és igual en els dos modes.
 - Per defecte és a `transcripts/sessio-N.txt`. Si l'usuari passa un altre fitxer o enganxa el text al xat, fes servir això.
 - Les transcripcions noves tenen una capçalera (`# Sessió N: títol`, `# Data`, `# VOD`, `# Idioma`) i paràgrafs amb l'hora del vídeo (`[1:02:03] …`). Les antigues són un sol bloc de text sense hores.
 - Són llargues (100–300 KB): llegeix-les **senceres**, en blocs amb `offset` + `limit`. No resumeixis a partir del principi.
+- Els vídeos solen començar amb una bona estona de xerrameca i música abans de jugar (a la sessió 12, 40 minuts), i tenen pauses fora de joc pel mig: busca on comença la partida (sovint amb el resum de la sessió anterior) i no ho expliquis com a fets.
 - És una transcripció automàtica en català (amb castellà barrejat): els noms propis hi surten sovint malament («Líria Andor» = Liriandor, «Barra de Vidre» = Vara de Vidre). Corregeix-los amb els noms canònics de la wiki.
 
 ## Pas 2 — Llegir tota la wiki
@@ -111,7 +112,7 @@ Després, `npm run check` i `npm run build`. Si fallen per culpa dels fitxers no
 
 ## Pas 7 (mode automàtic) — La descripció del PR
 
-Escriu-la a `.nova-sessio/pr.md`. És el que llegirà qui revisa, sovint des del mòbil: curta, en català i amb el més important primer.
+Escriu-la a `.nova-sessio/pr.md` amb l'eina `Write` (no amb `cat` ni heredocs a Bash, que no estan permesos). És el que llegirà qui revisa, sovint des del mòbil: curta, en català i amb el més important primer.
 
 ```markdown
 ## Sessió N: Títol
