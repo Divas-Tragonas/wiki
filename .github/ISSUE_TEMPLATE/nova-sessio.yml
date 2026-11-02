@@ -1,0 +1,25 @@
+name: "🎲 Sessió nova"
+description: "Enganxa l'enllaç del vídeo d'una partida i es fan soles la transcripció, la crònica i els canvis a la wiki (en un PR per revisar)."
+title: "🎲 Sessió nova"
+labels: ["nova-sessio"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Les partides que s'emeten a Twitch amb «SESSIÓ N» al títol ja es detecten soles cada dia: aquest formulari és per a **YouTube**, per a un vídeo concret o per tornar a fer una sessió.
+        En crear l'issue comença la feina (~1 h). Aquí mateix sortirà l'enllaç al PR per revisar.
+  - type: input
+    id: url
+    attributes:
+      label: Enllaç del vídeo
+      description: "Twitch (https://www.twitch.tv/videos/…) o YouTube."
+      placeholder: "https://www.twitch.tv/videos/2916807188"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes per a la crònica (opcional)
+      description: "Qui no hi era, noms que la transcripció escriurà malament, coses que no surten al vídeo…"
+    validations:
+      required: false

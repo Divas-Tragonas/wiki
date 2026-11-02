@@ -1,0 +1,306 @@
+# Sessió nova: vídeo de Twitch o YouTube → transcripció → crònica i canvis a la wiki → PR per revisar.
+#
+# Com s'engega (no cal fer res més):
+#   · sol, cada dia: mira el canal de Twitch i agafa el primer vídeo «SESSIÓ N» que encara no té crònica;
+#   · amb un issue «🎲 Nova sessió» (botó New issue), per a YouTube o un vídeo concret;
+#   · a mà des d'Actions → «Sessió nova» → Run workflow.
+# Al final hi ha un PR a la branca sessio-N i un issue amb el seguiment; als revisors els arriba l'avís.
+# Vegeu la secció «Sessió nova» del CLAUDE.md.
+
+name: Sessió nova
+
+on:
+  schedule:
+    - cron: '23 9 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Vídeo de Twitch o YouTube (buit: el primer pendent del canal de Twitch)"
+        required: false
+        type: string
+      minuts:
+        description: "Només els primers N minuts (per provar barat; surt un PR en esborrany)"
+        required: false
+        type: string
+  issues:
+    types: [opened]
+
+concurrency:
+  group: nova-sessio
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+env:
+  # Qui rep els avisos (usuaris de GitHub, separats per comes). Es pot canviar amb la variable REVISORS del repositori.
+  REVISORS: ${{ vars.REVISORS || 'CarlosChuan,devevalles' }}
+
+jobs:
+  detecta:
+    name: Hi ha sessió nova?
+    # Els issues només compten si són de la plantilla i de gent del repositori (no de qualsevol)
+    if: >-
+      github.event_name != 'issues' || (
+        contains(github.event.issue.labels.*.name, 'nova-sessio') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      pendent: ${{ steps.detecta.outputs.pendent }}
+      url: ${{ steps.detecta.outputs.url }}
+      sessio: ${{ steps.detecta.outputs.sessio }}
+      titol: ${{ steps.detecta.outputs.titol }}
+      data: ${{ steps.detecta.outputs.data }}
+      branca: ${{ steps.detecta.outputs.branca }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --upgrade -r scripts/nova-sessio/requirements.txt
+      - name: Galetes de YouTube (si n'hi ha)
+        env:
+          YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+        run: |
+          if [ -n "$YTDLP_COOKIES" ]; then
+            printf '%s\n' "$YTDLP_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            echo "YTDLP_COOKIES_FILE=$RUNNER_TEMP/cookies.txt" >> "$GITHUB_ENV"
+          fi
+      - name: Busca el vídeo
+        id: detecta
+        env:
+          URL_MANUAL: ${{ inputs.url }}
+          COS_ISSUE: ${{ github.event.issue.body }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          url="$URL_MANUAL"
+          if [ -n "$COS_ISSUE" ]; then
+            url=$(printf '%s' "$COS_ISSUE" | grep -oE 'https?://[^ )<>"]+' | head -1 || true)
+            if [ -z "$url" ]; then
+              gh issue comment "$ISSUE" --body "No trobo cap enllaç a l'issue. Edita'l perquè hi surti l'enllaç del vídeo (Twitch o YouTube) i torna'l a obrir amb un issue nou."
+              exit 1
+            fi
+          fi
+          if [ -n "$url" ]; then
+            python scripts/nova-sessio/sessio.py detecta --url "$url"
+          else
+            python scripts/nova-sessio/sessio.py detecta
+          fi
+
+  sessio:
+    name: Sessió ${{ needs.detecta.outputs.sessio }}
+    needs: detecta
+    if: needs.detecta.outputs.pendent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SESSIO: ${{ needs.detecta.outputs.sessio }}
+      TITOL: ${{ needs.detecta.outputs.titol }}
+      DATA: ${{ needs.detecta.outputs.data }}
+      VOD: ${{ needs.detecta.outputs.url }}
+      MINUTS: ${{ inputs.minuts }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Branca i issue de seguiment
+        id: prep
+        env:
+          ISSUE_ORIGEN: ${{ github.event.issue.number }}
+          BRANCA_BASE: ${{ needs.detecta.outputs.branca }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config user.name "Cronista de la Masmorra"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          branca="$BRANCA_BASE"
+          if [ -n "$MINUTS" ]; then branca="$BRANCA_BASE-prova-$MINUTS"; fi
+          echo "branca=$branca" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branca" > /dev/null; then
+            git checkout -B "$branca" "origin/$branca"
+          else
+            git checkout -b "$branca"
+          fi
+
+          gh label create nova-sessio --color C9A227 --description "Sessió nova de la campanya" --force > /dev/null
+          if [ -n "$ISSUE_ORIGEN" ]; then
+            issue="$ISSUE_ORIGEN"
+            gh issue edit "$issue" --add-assignee "$REVISORS" > /dev/null || true
+          else
+            issue=$(gh issue list --label nova-sessio --state open --search "\"Sessió $SESSIO\" in:title" --json number --jq '.[0].number // empty')
+            if [ -z "$issue" ]; then
+              url=$(gh issue create --label nova-sessio --assignee "$REVISORS" \
+                --title "🎲 Sessió $SESSIO: $TITOL" \
+                --body "$(printf 'He trobat el vídeo de la **sessió %s** (%s): %s\n\nEl preparo sol: transcripció (~30 min) i crònica amb els canvis a la wiki (~20 min). Quan estigui, aquí sortirà l'\''enllaç al PR per revisar-lo.\n\nSeguiment: %s' "$SESSIO" "$DATA" "$VOD" "$RUN_URL")")
+              issue="${url##*/}"
+            fi
+          fi
+          echo "issue=$issue" >> "$GITHUB_OUTPUT"
+          gh issue comment "$issue" --body "▶️ Començo amb la sessió $SESSIO a la branca \`$branca\`${MINUTS:+ (prova: només $MINUTS minuts)}. [Seguiment]($RUN_URL)" > /dev/null
+
+          pr=$(gh pr list --head "$branca" --state open --json url --jq '.[0].url // empty')
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+      # ── 1. Transcripció (si la branca ja en té, no es torna a pagar) ──
+      - name: Ja hi ha transcripció?
+        id: tr
+        run: |
+          if [ -f "transcripts/sessio-$SESSIO.txt" ] && [ -z "$MINUTS" ]; then echo "feta=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-python@v5
+        if: steps.tr.outputs.feta != 'true'
+        with:
+          python-version: '3.12'
+      - name: Dependències de la transcripció
+        if: steps.tr.outputs.feta != 'true'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          pip install --upgrade -r scripts/nova-sessio/requirements.txt
+      - name: Galetes de YouTube (si n'hi ha)
+        if: steps.tr.outputs.feta != 'true'
+        env:
+          YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+        run: |
+          if [ -n "$YTDLP_COOKIES" ]; then
+            printf '%s\n' "$YTDLP_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            echo "YTDLP_COOKIES_FILE=$RUNNER_TEMP/cookies.txt" >> "$GITHUB_ENV"
+          fi
+      - name: Transcriu
+        id: transcriu
+        if: steps.tr.outputs.feta != 'true'
+        env:
+          ASSEMBLYAI_API_KEY: ${{ secrets.ASSEMBLYAI_API_KEY }}
+          ISSUE: ${{ steps.prep.outputs.issue }}
+          BRANCA: ${{ steps.prep.outputs.branca }}
+        run: |
+          python scripts/nova-sessio/sessio.py transcriu \
+            --url "$VOD" --sessio "$SESSIO" --titol "$TITOL" --data "$DATA" ${MINUTS:+--minuts "$MINUTS"}
+          git add "transcripts/sessio-$SESSIO.txt"
+          git commit -m "Transcripció de la sessió $SESSIO"
+          git push -u origin "$BRANCA"
+          paraules=$(wc -w < "transcripts/sessio-$SESSIO.txt")
+          gh issue comment "$ISSUE" --body "✅ Transcripció feta: [transcripts/sessio-$SESSIO.txt]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$BRANCA/transcripts/sessio-$SESSIO.txt) ($paraules paraules). Ara escric la crònica." > /dev/null || true
+
+      # ── 2. Crònica i canvis a la wiki ──
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Credencial de Claude
+        if: steps.prep.outputs.pr == ''
+        env:
+          A: ${{ secrets.ANTHROPIC_API_KEY }}
+          B: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$A" ] && [ -z "$B" ]; then
+            echo "::error::Falta CLAUDE_CODE_OAUTH_TOKEN (o ANTHROPIC_API_KEY) als secrets del repositori. La transcripció ja és a la branca: en tornar a engegar el workflow no es torna a fer."
+            exit 1
+          fi
+      - name: Escriu la crònica
+        if: steps.prep.outputs.pr == ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Hi ha una sessió nova de la campanya. Segueix la skill `.claude/skills/nova-sessio/SKILL.md` en **mode automàtic** (no hi ha ningú per respondre preguntes: els dubtes van a la descripció del PR).
+
+            - Sessió: ${{ env.SESSIO }}
+            - Data: ${{ env.DATA }}
+            - Títol del vídeo: ${{ env.TITOL }}
+            - Vídeo: ${{ env.VOD }}
+            - Transcripció: `transcripts/sessio-${{ env.SESSIO }}.txt`
+            ${{ env.MINUTS && format('- ⚠️ PROVA: la transcripció només té els primers {0} minuts. Fes-ho igual, però digues-ho al principi del PR.', env.MINUTS) || '' }}
+
+            Notes de qui ho ha engegat (pot ser buit):
+            ${{ github.event.issue.body || '—' }}
+
+            Quan acabis, la descripció del PR ha de ser a `.nova-sessio/pr.md`. No facis commits: ja els fa el workflow.
+          claude_args: |
+            --max-turns 120
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite,Bash(npm run check),Bash(npm run build),Bash(git status:*),Bash(git diff:*),Bash(ls:*)"
+
+      - name: Comprova que la wiki es construeix
+        id: build
+        if: steps.prep.outputs.pr == ''
+        run: |
+          if npm run check > "$RUNNER_TEMP/build.log" 2>&1 && npm run build >> "$RUNNER_TEMP/build.log" 2>&1; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            tail -40 "$RUNNER_TEMP/build.log"
+          fi
+
+      - name: Obre el PR
+        id: pr
+        if: steps.prep.outputs.pr == ''
+        env:
+          ISSUE: ${{ steps.prep.outputs.issue }}
+          BRANCA: ${{ steps.prep.outputs.branca }}
+          BUILD_OK: ${{ steps.build.outputs.ok }}
+        run: |
+          git add -A -- src/content transcripts
+          git commit -m "Sessió $SESSIO: crònica i canvis a la wiki" || echo "Claude no ha canviat cap fitxer"
+          git push -u origin "$BRANCA"
+
+          cos="$RUNNER_TEMP/pr.md"
+          if [ -s .nova-sessio/pr.md ]; then cp .nova-sessio/pr.md "$cos"; else echo "_(Claude no ha deixat descripció: mira els fitxers canviats.)_" > "$cos"; fi
+          {
+            echo
+            echo "---"
+            if [ "$BUILD_OK" != "true" ]; then
+              echo "❌ **La wiki no es construeix amb aquests canvis** (\`npm run check\` / \`npm run build\`): mira el final del [registre](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) o demana-ho a Claude amb un comentari «@claude arregla el build»."
+              echo
+            fi
+            echo "### Com revisar-ho"
+            echo "1. **Files changed**: llegeix la crònica i els canvis a les fitxes. Els dubtes de dalt són el més important."
+            echo "2. Per canviar coses: comenta aquí «@claude …» (p. ex. «@claude el PNJ es diu Kumonmi, no Kumomi») i ho arregla en uns minuts. També pots editar el fitxer directament (··· → Edit file)."
+            echo "3. Quan estigui bé: **Merge**. La wiki es publica sola."
+            echo
+            echo "Vídeo: $VOD · Transcripció: [transcripts/sessio-$SESSIO.txt]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$BRANCA/transcripts/sessio-$SESSIO.txt)"
+            echo
+            echo "Closes #$ISSUE"
+          } >> "$cos"
+
+          draft=""
+          titol="Sessió $SESSIO: $TITOL"
+          if [ -n "$MINUTS" ]; then draft="--draft"; titol="[PROVA] $titol"; fi
+          url=$(gh pr create --base master --head "$BRANCA" --title "$titol" --body-file "$cos" \
+            --label nova-sessio --assignee "$REVISORS" --reviewer "$REVISORS" $draft)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          gh issue comment "$ISSUE" --body "📜 La crònica de la sessió $SESSIO està llesta per revisar: $url" > /dev/null
+
+      - name: Ja hi havia un PR
+        if: steps.prep.outputs.pr != ''
+        env:
+          ISSUE: ${{ steps.prep.outputs.issue }}
+          PR: ${{ steps.prep.outputs.pr }}
+        run: |
+          gh issue comment "$ISSUE" --body "Aquesta sessió ja té un PR obert ($PR): no en faig un altre. Per canviar-hi coses, comenta-hi «@claude …»; per tornar a començar, tanca'l i torna-ho a engegar." > /dev/null
+
+      - name: Avisa si alguna cosa ha fallat
+        if: failure() && steps.prep.outputs.issue != ''
+        env:
+          ISSUE: ${{ steps.prep.outputs.issue }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          cat > "$RUNNER_TEMP/error.md" <<'EOF'
+          ❌ Alguna cosa ha fallat: [registre](RUN_URL).
+
+          El que sol passar:
+          - **No baixa el vídeo**: els vídeos de Twitch caduquen al cap d'unes setmanes; els de YouTube sovint demanen galetes (secret `YTDLP_COOKIES`, vegeu la secció «Sessió nova» del CLAUDE.md), que també caduquen.
+          - **Falta un secret**: `ASSEMBLYAI_API_KEY` o `CLAUDE_CODE_OAUTH_TOKEN` (Settings → Secrets and variables → Actions).
+          - **La crònica**: si la transcripció ja és a la branca, en tornar-ho a engegar no es torna a transcriure (ni a pagar).
+
+          Es torna a provar sol l'endemà, o ara mateix amb **Re-run all jobs** al registre.
+          EOF
+          sed -i "s|RUN_URL|$RUN_URL|" "$RUNNER_TEMP/error.md"
+          gh issue comment "$ISSUE" --body-file "$RUNNER_TEMP/error.md" || true

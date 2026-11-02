@@ -37,6 +37,8 @@ src/
 packages/model/          # @mina/model: dades del tauler compartides per l'API i el tauler (vegeu «Tauler de missions»)
 api/                     # @mina/api: l'API de missions que corre a la Mac mini
 e2e/                     # proves de punta a punta del tauler (Playwright)
+scripts/nova-sessio/     # troba i transcriu el vídeo d'una partida (vegeu «Sessió nova»)
+transcripts/             # transcripcions de les sessions (sessio-N.txt), d'on surten les cròniques
 deploy/macmini/          # posada en marxa i actualització automàtica de l'API a la Mac mini
 ```
 
@@ -80,7 +82,7 @@ Contingut lliure en Markdown...
 
 ### Crònica de sessió nova
 
-Crea `src/content/croniques/sessio-N.md`:
+Normalment no cal escriure-la a mà: la fa el flux de **Sessió nova** (secció següent). A mà, o des de Claude Code amb `/nova-sessio` (la skill `.claude/skills/nova-sessio/SKILL.md`), és `src/content/croniques/sessio-N.md`:
 
 ```markdown
 ---
@@ -90,17 +92,39 @@ date: 2026-06-21
 summary: "Resum d'una frase per a les llistes."
 players: ["Anna", "Marc", "Sara", "Pau"]
 tags: ["tag1", "tag2"]
+vod: "https://www.twitch.tv/videos/…"   # opcional: surt com a enllaç «Vídeo» a la fitxa
 ---
 
 Contingut lliure en Markdown...
 ```
+
+## Sessió nova (automàtic)
+
+Després de cada partida **no cal fer res**: l'endemà arriba un PR per revisar.
+
+1. Cada dia, `.github/workflows/nova-sessio.yml` mira el canal de Twitch (`divasytragonas`) i agafa el primer vídeo amb «SESSIÓ N» al títol que encara no té crònica ni PR. N surt del títol i la data, del vídeo.
+2. Obre un issue de seguiment «🎲 Sessió N: …» (assignat als revisors) i hi va comentant com va.
+3. Transcriu el vídeo amb AssemblyAI (`scripts/nova-sessio/sessio.py`, ~30 min) a `transcripts/sessio-N.txt`, a la branca `sessio-N`, amb l'hora del vídeo a cada paràgraf.
+4. Claude Code segueix la skill `nova-sessio` en mode automàtic: llegeix tota la wiki, escriu la crònica, les fitxes noves i els afegits a les existents (mai reescriu ni toca els PCs), i deixa els dubtes per revisar a la descripció del PR. El workflow comprova `npm run check` i `npm run build`.
+5. PR «Sessió N: …» amb els revisors (`REVISORS`, per defecte `CarlosChuan,devevalles`). Per corregir coses, un comentari «@claude …» al PR (`.github/workflows/claude.yml`) o editar el fitxer. **Merge** i es publica.
+
+Altres maneres d'engegar-ho: **New issue → «🎲 Sessió nova»** amb l'enllaç (YouTube, un vídeo concret o refer una sessió), o **Actions → Sessió nova → Run workflow** (amb «minuts» es fa una prova barata amb només el principi del vídeo, en un PR en esborrany). Una branca `sessio-N` sense PR (alguna cosa va fallar) es torna a provar sola l'endemà sense tornar a transcriure. Per descartar una sessió, tanca'n el PR: ja no es torna a fer.
+
+A mà, sense GitHub: `python scripts/nova-sessio/sessio.py transcriu --url <vídeo> --sessio N --data AAAA-MM-DD` (o `--audio fitxer.mp4`) i després `/nova-sessio N` a Claude Code.
+
+**Secrets del repositori** (Settings → Secrets and variables → Actions):
+- `ASSEMBLYAI_API_KEY`: la transcripció (assemblyai.com; menys d'1 $ per partida).
+- `CLAUDE_CODE_OAUTH_TOKEN` (amb `claude setup-token`, va a compte de la subscripció) o `ANTHROPIC_API_KEY` (pagament per ús).
+- `YTDLP_COOKIES` (opcional): galetes de YouTube en format Netscape, perquè YouTube bloqueja els servidors de GitHub. Caduquen; amb Twitch no calen.
+
+I a Settings → Actions → General, «Allow GitHub Actions to create and approve pull requests» ha d'estar activat (si no, no pot obrir el PR). Els vídeos de Twitch caduquen al cap d'unes setmanes: per això es miren cada dia.
 
 ## Desplegament
 
 - **Wiki (GitHub Pages)**: `.github/workflows/deploy.yml` a cada push a `master`, a `https://divas-tragonas.github.io/wiki`. Necessita la variable del repositori `MISSIONS_API_URL` (Settings → Secrets and variables → Actions → Variables) amb l'adreça pública de l'API: sense ella no publica res, perquè el tauler no sabria on anar.
 - **Wiki (Vercel)**: `vercel.json` ja ho configura; al projecte cal `SITE_BASE=/`, `SITE_URL=https://<domini>`, `PUBLIC_MISSIONS_API_URL=https://<api>` i `VERCEL_DEEP_CLONE=true` (historial sencer per als «Últims canvis»). Els commits que només toquen `api/`, `deploy/` o `e2e/` no el reconstrueixen.
 - **API (Mac mini)**: no la desplega GitHub. L'autofetch de la Mac mini manté el repositori al dia i `deploy/macmini/update.sh` construeix, prova i posa en marxa la versió nova si `api/` o `packages/` han canviat (vegeu `deploy/macmini/README.md`).
-- **CI**: `.github/workflows/ci.yml` passa el check, tots els tests (PGlite i Postgres 16) i les proves de punta a punta a cada push i pull request.
+- **CI**: `.github/workflows/ci.yml` passa el check, tots els tests (PGlite i Postgres 16) i les proves de punta a punta a cada push i pull request. (Als PRs de «Sessió nova» no s'engega, perquè els obre el mateix GitHub Actions: per això el workflow ja comprova el check i el build.)
 
 ## Notes tècniques
 

@@ -41,6 +41,7 @@ const croniques = defineCollection({
     summary: z.string(),
     players: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
+    vod: z.string().url().optional(),
   }),
 });
 

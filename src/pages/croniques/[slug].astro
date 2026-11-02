@@ -13,7 +13,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-const { session, date, summary, players, tags } = entry.data;
+const { session, date, summary, players, tags, vod } = entry.data;
 ---
 
 <EntryLayout
@@ -27,6 +27,7 @@ const { session, date, summary, players, tags } = entry.data;
     { label: 'Sessió', value: String(session) },
     { label: 'Data', value: formatDate(date) },
     ...(players.length ? [{ label: 'Jugadors', value: players.join(', ') }] : []),
+    ...(vod ? [{ label: 'Vídeo', value: vod.includes('youtu') ? 'YouTube' : 'Twitch', href: vod }] : []),
   ]}
   tags={tags}
 >
