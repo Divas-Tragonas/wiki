@@ -8,7 +8,7 @@ interface Props {
   title: string;
   description?: string;
   breadcrumbs: { label: string; href?: string }[];
-  metadata?: { label: string; value: string }[];
+  metadata?: { label: string; value: string; href?: string }[];
   tags?: string[];
   /* mostra la imatge (o la inicial si no n'hi ha) a la columna lateral */
   showImage?: boolean;
@@ -50,7 +50,7 @@ const { title, description, breadcrumbs, metadata = [], tags = [], showImage = f
               {metadata.map((item) => (
                 <>
                   <dt class="meta-label">{item.label}</dt>
-                  <dd class="meta-value">{item.value}</dd>
+                  <dd class="meta-value">{item.href ? <a href={item.href} target="_blank" rel="noopener">{item.value}</a> : item.value}</dd>
                 </>
               ))}
             </dl>
@@ -125,6 +125,9 @@ const { title, description, breadcrumbs, metadata = [], tags = [], showImage = f
   }
   .meta-value {
     color: var(--color-parchment);
+  }
+  .meta-value a {
+    color: var(--color-gold-500);
   }
   .tags-list {
     display: flex;

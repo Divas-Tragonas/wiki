@@ -30,6 +30,14 @@ Cal Node 22 (vegeu `.nvmrc`). El repositori té tres espais de treball d'npm: el
 - `deploy/macmini/` — posada en marxa i actualització automàtica de l'API.
 - `e2e/` — proves de punta a punta del tauler.
 - `transcripts/` — transcripcions de les sessions, d'on surten les cròniques.
+- `scripts/nova-sessio/` i `.github/workflows/nova-sessio.yml` — la sessió nova automàtica (vegeu més avall).
+
+## Després de cada partida
+
+No cal fer res. Si el vídeo és a Twitch amb «SESSIÓ N» al títol, l'endemà arriba un **PR «Sessió N: …»** amb la
+transcripció, la crònica i els canvis a les fitxes. Llegeix els dubtes de la descripció, corregeix el que calgui
+(comentant «@claude …» o editant) i fes **Merge**. Per a YouTube o un vídeo concret: **New issue → «🎲 Sessió nova»**.
+Els detalls i els secrets que calen són a la secció «Sessió nova» del [`CLAUDE.md`](CLAUDE.md).
 
 Cada push a `master` republica el wiki (`.github/workflows/deploy.yml`) i la Mac mini actualitza l'API sola. Les
 instruccions per afegir contingut i els detalls del tauler de missions són a [`CLAUDE.md`](CLAUDE.md).

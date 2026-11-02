@@ -24,3 +24,7 @@ pnpm-debug.log*
 .idea/
 playwright-report/
 test-results/
+
+# Descripció del PR que escriu Claude a «Sessió nova»
+.nova-sessio/
+__pycache__/
