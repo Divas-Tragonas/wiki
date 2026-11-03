@@ -1,5 +1,5 @@
 ---
-title: "La Pinta de l'Àgata"
+title: "AGATHA, AGARRAME ESTA!"
 session: 13
 date: 2026-11-01
 summary: "El grup troba el fantasma d'Àgata a les Runes de Cony Cirera i, de passada, es deixa capturar pels goblins fins al Castell de la Fumarola."
