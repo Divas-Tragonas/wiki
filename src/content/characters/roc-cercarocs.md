@@ -12,6 +12,6 @@ Captiu al Castell de la Fumarola juntament amb els seus dos germans, a mans d'un
 
 El grup encara no ha posat un peu al castell per intentar rescatar-lo.
 
-## Sessió 12
+## Sessió 13
 
 Àgata confirma que és al Castell de la Fumarola. Ja dins del castell, Yunquerin veu darrere d'una roca de la cel·la la silueta d'algú de la seva alçada, que sembla ser el seu cosí.
