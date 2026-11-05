@@ -14,6 +14,8 @@ export const routes = {
   places: url('wiki/places'),
   croniques: url('croniques'),
   missions: url('missions/'),
+  frases: url('frases/'),
+  frasesIndex: url('frases.json'),
   character: (id: string) => url(`wiki/characters/${id}`),
   place: (id: string) => url(`wiki/places/${id}`),
   cronica: (id: string) => url(`croniques/${id}`),

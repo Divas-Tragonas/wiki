@@ -1,11 +1,13 @@
 ---
 import { routes, SITE_NAME } from '../lib/site';
 
-const pathname = Astro.url.pathname;
-const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+const sense = (p: string) => p.replace(/\/$/, '');
+const pathname = sense(Astro.url.pathname);
+const isActive = (href: string) => pathname === sense(href) || pathname.startsWith(sense(href) + '/');
 const links = [
   { href: routes.wiki, label: 'Wiki' },
   { href: routes.croniques, label: 'Cròniques' },
+  { href: routes.frases, label: 'Frases' },
 ];
 ---
 
@@ -22,7 +24,7 @@ const links = [
         </a>
       ))}
       <a href={routes.missions} class="link">Missions</a>
-      <button type="button" class="link search-btn" data-search-open title="Cerca (Ctrl+K)">🔍 Cerca</button>
+      <button type="button" class="link search-btn" data-search-open title="Cerca (Ctrl+K)" aria-label="Cerca">🔍<span class="search-label"> Cerca</span></button>
     </div>
   </div>
 </nav>
@@ -69,6 +71,7 @@ const links = [
     font-size: 0.95rem;
     transition: color 0.2s, opacity 0.2s;
     letter-spacing: 0.05em;
+    white-space: nowrap;
   }
   .link:hover,
   .link.active {
@@ -87,7 +90,7 @@ const links = [
     cursor: pointer;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     .inner {
       padding: 0 1rem;
       gap: 1rem;
@@ -101,7 +104,7 @@ const links = [
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 640px) {
     .inner {
       height: auto;
       padding: 0.65rem 1rem;
@@ -112,8 +115,17 @@ const links = [
     }
     .links {
       width: 100%;
-      gap: 1.5rem;
       justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .links {
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+    .search-label {
+      display: none;
     }
   }
 </style>

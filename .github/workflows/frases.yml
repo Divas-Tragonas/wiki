@@ -1,0 +1,111 @@
+# Frases: transcriu els vídeos del canal de YouTube que encara no hi són (amb l'hora de cada paraula) per al
+# cercador de frases del wiki (/wiki/frases/), i els publica.
+#
+# Com s'engega:
+#   · sol, cada dia: si el canal té vídeos nous, els transcriu (si no, acaba en un minut sense gastar res);
+#   · a mà des d'Actions → «Frases» → Run workflow (un vídeo concret, o com a molt N dels que falten).
+# Cada vídeo queda a frases/<id>.json i es puja directament a master (no cal revisar res).
+# Vegeu la secció «Frases» del CLAUDE.md.
+
+name: Frases
+
+on:
+  schedule:
+    - cron: '47 10 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Un vídeo concret de YouTube (buit: tots els del canal que falten). Si ja hi era, es torna a fer."
+        required: false
+        type: string
+      max:
+        description: "Com a molt, N vídeos dels que falten (buit: tots)"
+        required: false
+        type: string
+
+concurrency:
+  group: frases
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  frases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      URL: ${{ inputs.url }}
+      MAX: ${{ inputs.max }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install --upgrade -r scripts/nova-sessio/requirements.txt
+      - name: Galetes de YouTube (si n'hi ha)
+        env:
+          YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+        run: |
+          if [ -n "$YTDLP_COOKIES" ]; then
+            printf '%s\n' "$YTDLP_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            echo "YTDLP_COOKIES_FILE=$RUNNER_TEMP/cookies.txt" >> "$GITHUB_ENV"
+          fi
+
+      - name: Què falta?
+        id: pendents
+        if: inputs.url == ''
+        run: python scripts/frases/frases.py pendents
+
+      - name: ffmpeg
+        if: inputs.url != '' || steps.pendents.outputs.pendents != '0'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+
+      - name: Transcriu
+        id: transcriu
+        if: inputs.url != '' || steps.pendents.outputs.pendents != '0'
+        # els vídeos que sí que s'han fet es publiquen igualment (el pas següent); al final el workflow surt en vermell
+        continue-on-error: true
+        env:
+          ASSEMBLYAI_API_KEY: ${{ secrets.ASSEMBLYAI_API_KEY }}
+        run: |
+          if [ -n "$URL" ]; then
+            python scripts/frases/frases.py transcriu --url "$URL"
+          else
+            python scripts/frases/frases.py transcriu --pendents ${MAX:+--max "$MAX"}
+          fi
+
+      - name: Publica
+        if: steps.transcriu.outcome != 'skipped'
+        run: |
+          git config user.name "Cronista de la Masmorra"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frases
+          if git diff --cached --quiet; then
+            echo "No hi ha cap vídeo nou per publicar."
+            exit 0
+          fi
+          n=$(git diff --cached --name-only | wc -l)
+          git commit -m "Frases: $n vídeo(s) transcrit(s)"
+          for i in 1 2 3; do
+            if git pull --rebase origin master && git push origin HEAD:master; then
+              # un push fet amb el token del workflow no engega altres workflows: la publicació, a mà
+              gh workflow run deploy.yml --ref master
+              exit 0
+            fi
+            sleep $((i * 10))
+          done
+          # master protegida (o alguna altra cosa): en un PR, perquè no es perdi la transcripció
+          branca="frases-$GITHUB_RUN_ID"
+          git push origin "HEAD:$branca"
+          gh pr create --base master --head "$branca" --title "Frases: $n vídeo(s) transcrit(s)" \
+            --body "No s'ha pogut pujar directament a master. Són només les frases noves del cercador (\`frases/\`): **Merge** i es publiquen."
+
+      - name: Algun vídeo ha fallat
+        if: steps.transcriu.outcome == 'failure'
+        run: |
+          echo "::error::Algun vídeo no s'ha pogut transcriure (mira el pas «Transcriu»). Si YouTube no deixa baixar, cal renovar el secret YTDLP_COOKIES. Es torna a provar sol demà."
+          exit 1

@@ -1,0 +1,535 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import { routes } from '../../lib/site';
+import { videosTranscrits } from '../../lib/frases';
+
+const videos = videosTranscrits();
+const hores = Math.round(videos.reduce((s, v) => s + v.durada, 0) / 3600);
+const frases = videos.reduce((s, v) => s + v.frases.length, 0);
+---
+
+<BaseLayout title="Frases" description="Busca qualsevol cosa que s'hagi dit a les partides i mira'n el moment al vídeo.">
+  <div class="page">
+    <PageHeader title="Frases" description="Busca qualsevol cosa que s'hagi dit a les partides i mira'n el moment al vídeo." />
+
+    {videos.length === 0 ? (
+      <p class="buit">
+        Encara no hi ha cap vídeo transcrit. El workflow «Frases» transcriu els vídeos del canal de YouTube i, quan
+        acabi, aquí s'hi podrà buscar.
+      </p>
+    ) : (
+      <div id="frases" class="frases" data-index={routes.frasesIndex}>
+        <form class="cercador" role="search" onsubmit="return false">
+          <input
+            id="consulta"
+            type="search"
+            name="q"
+            placeholder="Escriu una frase o una paraula…"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Frase a buscar"
+            disabled
+          />
+          <button type="button" id="atzar" class="boto" title="Una frase qualsevol" disabled>🎲 A l'atzar</button>
+        </form>
+        <p id="estat" class="estat" aria-live="polite">
+          Carregant {frases.toLocaleString('ca-ES')} frases de {videos.length} vídeos ({hores} h)…
+        </p>
+
+        <div class="disposicio">
+          <section class="reproductor" aria-label="Reproductor">
+            <div class="pantalla">
+              <div id="yt"></div>
+              <p id="pantalla-buida" class="pantalla-buida">Busca una frase per veure-la.</p>
+            </div>
+            <p id="subtitol" class="subtitol"></p>
+            <div class="controls" hidden id="controls">
+              <button type="button" class="boto" id="anterior" title="Anterior (←)">◀</button>
+              <span id="posicio" class="posicio"></span>
+              <button type="button" class="boto" id="seguent" title="Següent (→)">▶</button>
+              <button type="button" class="boto" id="repeteix" title="Torna-la a veure (R)">⟲ Repeteix</button>
+              <label class="seguit"><input type="checkbox" id="seguit" checked /> Passa sola a la següent</label>
+              <button type="button" class="boto" id="barreja" aria-pressed="false" title="Barreja els resultats">🔀 Barreja</button>
+            </div>
+            <p id="origen" class="origen"></p>
+          </section>
+
+          <ol id="resultats" class="resultats"></ol>
+        </div>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<script>
+  import { cerca, desempaqueta, hms, prepara, retall, type Frase, type IndexFrases, type Troballa } from '@mina/frases';
+
+  /* El reproductor de YouTube (API de l'iframe): https://developers.google.com/youtube/iframe_api_reference */
+  interface YTPlayer {
+    loadVideoById(o: { videoId: string; startSeconds?: number }): void;
+    cueVideoById(o: { videoId: string; startSeconds?: number }): void;
+    seekTo(s: number, allowSeekAhead: boolean): void;
+    playVideo(): void;
+    pauseVideo(): void;
+    getCurrentTime(): number;
+    getPlayerState(): number;
+    getVideoData?(): { video_id?: string };
+  }
+  type YTNamespace = { Player: new (el: HTMLElement | string, opts: object) => YTPlayer };
+  const finestra = window as unknown as { YT?: YTNamespace; onYouTubeIframeAPIReady?: () => void };
+  const PLAYING = 1;
+
+  const arrel = document.getElementById('frases');
+  if (arrel) inicia(arrel);
+
+  async function inicia(arrel: HTMLElement) {
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const input = $<HTMLInputElement>('consulta');
+    const estat = $('estat');
+    const llista = $<HTMLOListElement>('resultats');
+    const subtitol = $('subtitol');
+    const origen = $('origen');
+    const controls = $('controls');
+    const posicio = $('posicio');
+    const seguit = $<HTMLInputElement>('seguit');
+    const barreja = $<HTMLButtonElement>('barreja');
+    const atzar = $<HTMLButtonElement>('atzar');
+    const buida = $('pantalla-buida');
+
+    let index: IndexFrases;
+    try {
+      const resposta = await fetch(arrel.dataset.index!);
+      if (!resposta.ok) throw new Error(String(resposta.status));
+      index = await resposta.json();
+    } catch {
+      estat.textContent = "No s'han pogut carregar les frases. Torna-ho a provar d'aquí a una estona.";
+      return;
+    }
+    const frases = desempaqueta(index);
+    const preparades = prepara(frases);
+    const hores = Math.round(index.videos.reduce((s, v) => s + v.durada, 0) / 3600);
+    const resum = `${frases.length.toLocaleString('ca-ES')} frases de ${index.videos.length} vídeos (${hores} h).`;
+
+    let troballes: Troballa[] = [];
+    let actual = -1;
+    /* `comencat`: el reproductor ja és dins del clip (fins llavors encara pot dir l'hora del clip d'abans) */
+    let clip: { frase: Frase; inici: number; fi: number; a: number; b: number; comencat: boolean } | null = null;
+    let consultaActual = '';
+
+    /* ── Reproductor ── */
+    let player: YTPlayer | null = null;
+    let playerLlest: Promise<YTPlayer> | null = null;
+
+    function carregaPlayer(videoId: string, inici: number, reprodueix: boolean): Promise<YTPlayer> {
+      playerLlest ??= new Promise<YTNamespace>((ok) => {
+        if (finestra.YT?.Player) return ok(finestra.YT);
+        finestra.onYouTubeIframeAPIReady = () => ok(finestra.YT!);
+        const s = document.createElement('script');
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.append(s);
+      }).then(
+        (YT) =>
+          new Promise<YTPlayer>((ok) => {
+            new YT.Player('yt', {
+              host: 'https://www.youtube-nocookie.com',
+              videoId,
+              playerVars: { start: Math.floor(inici), autoplay: reprodueix ? 1 : 0, rel: 0, playsinline: 1, iv_load_policy: 3 },
+              events: { onReady: (e: { target: YTPlayer }) => ok((player = e.target)) },
+            });
+          }),
+      );
+      return playerLlest;
+    }
+
+    async function mostra(i: number, reprodueix: boolean) {
+      if (!troballes.length) return;
+      actual = (i + troballes.length) % troballes.length;
+      const t = troballes[actual];
+      const frase = frases[t.frase];
+      clip = { frase, ...retall(frase, t.a, t.b), a: t.a, b: t.b, comencat: false };
+      const video = index.videos[frase.video];
+
+      buida.hidden = true;
+      controls.hidden = false;
+      posicio.textContent = `${actual + 1} / ${troballes.length}`;
+      pintaSubtitol(-1);
+      const enllac = `https://www.youtube.com/watch?v=${video.id}&t=${Math.floor(clip.inici)}s`;
+      origen.innerHTML = `${escapa(video.titol)} · ${hms(frase.temps[t.a])} · <a href="${enllac}" target="_blank" rel="noopener">Obre-ho a YouTube ↗</a>`;
+      llista.querySelector('[aria-current]')?.removeAttribute('aria-current');
+      const item = llista.querySelector(`[data-i="${actual}"]`);
+      item?.setAttribute('aria-current', 'true');
+      item?.scrollIntoView({ block: 'nearest' });
+
+      const ara = clip;
+      const p = player ?? (await carregaPlayer(video.id, ara.inici, reprodueix));
+      if (clip !== ara) return; // mentrestant n'han triat un altre
+      const opcions = { videoId: video.id, startSeconds: ara.inici };
+      if (reprodueix) p.loadVideoById(opcions);
+      else p.cueVideoById(opcions);
+    }
+
+    /* Atura el clip quan s'acaba (i passa al següent) i marca la paraula que es diu */
+    setInterval(() => {
+      if (!player || !clip || player.getPlayerState() !== PLAYING) return;
+      const t = player.getCurrentTime();
+      if (!clip.comencat) {
+        if (t < clip.inici - 1.5 || t >= clip.fi) return;
+        clip.comencat = true;
+      }
+      pintaSubtitol(t);
+      if (t < clip.fi) return;
+      clip.comencat = false; // no tornar-hi fins que no hi hagi el clip següent
+      if (seguit.checked && actual < troballes.length - 1) mostra(actual + 1, true);
+      else player.pauseVideo();
+    }, 100);
+
+    function pintaSubtitol(t: number) {
+      if (!clip) return (subtitol.innerHTML = '');
+      const { frase, a, b } = clip;
+      let parlant = -1;
+      if (t >= 0) frase.temps.forEach((s, i) => s <= t && (parlant = i));
+      subtitol.innerHTML = frase.paraules
+        .map((p, i) => {
+          const classes = [i >= a && i <= b ? 'troballa' : '', i === parlant ? 'ara' : ''].filter(Boolean).join(' ');
+          return classes ? `<span class="${classes}">${escapa(p)}</span>` : escapa(p);
+        })
+        .join(' ');
+    }
+
+    /* ── Cerca ── */
+    const MAX_LLISTA = 300;
+
+    function busca(consulta: string, reprodueix: boolean) {
+      consultaActual = consulta.trim();
+      const url = new URL(location.href);
+      if (consultaActual) url.searchParams.set('q', consultaActual);
+      else url.searchParams.delete('q');
+      history.replaceState(null, '', url);
+
+      troballes = consultaActual.length >= 2 ? cerca(preparades, consultaActual) : [];
+      if (barreja.getAttribute('aria-pressed') === 'true') remena(troballes);
+      pintaLlista();
+      if (!consultaActual) estat.textContent = resum;
+      else if (consultaActual.length < 2) estat.textContent = 'Escriu una mica més…';
+      else if (!troballes.length) estat.textContent = `Ningú no ha dit «${consultaActual}»… encara.`;
+      else {
+        const senceres = troballes.filter((t) => t.exacta).length;
+        estat.textContent =
+          `${troballes.length.toLocaleString('ca-ES')} ${troballes.length === 1 ? 'clip' : 'clips'}` +
+          (senceres < troballes.length ? ` (${senceres.toLocaleString('ca-ES')} amb les paraules senceres)` : '');
+      }
+      if (troballes.length) mostra(0, reprodueix);
+      else amaga();
+    }
+
+    function amaga() {
+      clip = null;
+      actual = -1;
+      player?.pauseVideo();
+      controls.hidden = true;
+      subtitol.innerHTML = '';
+      origen.innerHTML = '';
+    }
+
+    function pintaLlista() {
+      llista.innerHTML = troballes
+        .slice(0, MAX_LLISTA)
+        .map((t, i) => {
+          const f = frases[t.frase];
+          const v = index.videos[f.video];
+          const text = f.paraules.map((p, k) => (k === t.a ? '<mark>' : '') + escapa(p) + (k === t.b ? '</mark>' : '')).join(' ');
+          return `<li><button type="button" data-i="${i}"><span class="meta"><span class="titol">${escapa(v.titol)}</span> · ${hms(f.temps[t.a])}</span><span class="text">${text}</span></button></li>`;
+        })
+        .join('');
+      if (troballes.length > MAX_LLISTA) {
+        llista.insertAdjacentHTML('beforeend', `<li class="mes">…i ${troballes.length - MAX_LLISTA} més (amb ▶ també s'hi arriba)</li>`);
+      }
+    }
+
+    function remena<T>(a: T[]) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+    }
+
+    function escapa(s: string) {
+      return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+    }
+
+    let espera: ReturnType<typeof setTimeout>;
+    input.addEventListener('input', () => {
+      clearTimeout(espera);
+      espera = setTimeout(() => busca(input.value, true), 300);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      clearTimeout(espera);
+      if (input.value.trim() !== consultaActual) busca(input.value, true);
+      else mostra(actual + 1, true);
+    });
+    llista.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-i]');
+      if (b) mostra(Number(b.dataset.i), true);
+    });
+    $('anterior').addEventListener('click', () => mostra(actual - 1, true));
+    $('seguent').addEventListener('click', () => mostra(actual + 1, true));
+    $('repeteix').addEventListener('click', () => mostra(actual, true));
+    barreja.addEventListener('click', () => {
+      barreja.setAttribute('aria-pressed', String(barreja.getAttribute('aria-pressed') !== 'true'));
+      busca(input.value, true);
+    });
+    atzar.addEventListener('click', () => {
+      const i = Math.floor(Math.random() * frases.length);
+      const f = frases[i];
+      input.value = '';
+      consultaActual = '';
+      troballes = [{ frase: i, a: 0, b: f.paraules.length - 1, exacta: true }];
+      pintaLlista();
+      estat.textContent = resum;
+      mostra(0, true);
+    });
+    document.addEventListener('keydown', (e) => {
+      const lloc = e.target as HTMLElement;
+      if (e.ctrlKey || e.metaKey || e.altKey || lloc.closest('input, textarea, select')) return;
+      if (e.key === 'ArrowRight') mostra(actual + 1, true);
+      else if (e.key === 'ArrowLeft') mostra(actual - 1, true);
+      else if (e.key.toLowerCase() === 'r') mostra(actual, true);
+      else if (e.key === '/') {
+        e.preventDefault();
+        input.focus();
+      }
+    });
+
+    input.disabled = false;
+    atzar.disabled = false;
+    const inicial = new URL(location.href).searchParams.get('q') ?? '';
+    input.value = inicial;
+    // sense haver tocat res, el navegador no deixa reproduir amb so: el primer clip només es prepara
+    if (inicial) busca(inicial, false);
+    else estat.textContent = resum;
+    input.focus();
+  }
+</script>
+
+<style>
+  .buit {
+    opacity: 0.7;
+  }
+  .cercador {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .cercador input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 1.15rem;
+    padding: 0.75rem 1rem;
+    color: var(--color-parchment);
+    background-color: var(--color-stone-800);
+    border: 1px solid var(--color-stone-700);
+    border-radius: 0.5rem;
+    outline: none;
+  }
+  .cercador input::-webkit-search-cancel-button {
+    filter: grayscale(1) brightness(1.5);
+    cursor: pointer;
+  }
+  .cercador input:focus {
+    border-color: var(--color-gold-500);
+  }
+  .boto {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.8rem;
+    color: var(--color-parchment);
+    background-color: var(--color-stone-800);
+    border: 1px solid var(--color-stone-700);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .boto:hover:not(:disabled),
+  .boto[aria-pressed='true'] {
+    border-color: var(--color-gold-500);
+    color: var(--color-gold-400);
+  }
+  .boto:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .estat {
+    margin: 0.75rem 0 1.25rem;
+    font-size: 0.9rem;
+    opacity: 0.65;
+  }
+
+  .disposicio {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .reproductor {
+    position: sticky;
+    top: 5rem;
+  }
+  .pantalla {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background-color: var(--color-stone-950);
+    border: 1px solid var(--color-stone-700);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .pantalla :global(iframe),
+  .pantalla #yt {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .pantalla-buida {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    opacity: 0.45;
+  }
+  .pantalla-buida[hidden] {
+    display: none;
+  }
+  .subtitol {
+    min-height: 3.2em;
+    margin: 0.9rem 0 0.75rem;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    text-align: center;
+  }
+  .subtitol :global(.troballa) {
+    color: var(--color-gold-400);
+    font-weight: 600;
+  }
+  .subtitol :global(.ara) {
+    text-decoration: underline;
+    text-decoration-color: var(--color-gold-500);
+    text-underline-offset: 0.25em;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 0.6rem;
+  }
+  .controls[hidden] {
+    display: none;
+  }
+  .posicio {
+    min-width: 4.5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+  }
+  .seguit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    cursor: pointer;
+  }
+  .seguit input {
+    accent-color: var(--color-gold-500);
+  }
+  .origen {
+    margin: 0.75rem 0 0;
+    font-size: 0.8rem;
+    text-align: center;
+    opacity: 0.6;
+  }
+  .origen :global(a) {
+    color: var(--color-gold-400);
+  }
+
+  .resultats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: calc(100vh - 7rem);
+    overflow-y: auto;
+  }
+  .resultats :global(button) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    font: inherit;
+    text-align: left;
+    color: var(--color-parchment);
+    background-color: var(--color-stone-800);
+    border: 1px solid var(--color-stone-700);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .resultats :global(button:hover),
+  .resultats :global(button[aria-current]) {
+    border-color: var(--color-gold-500);
+  }
+  .resultats :global(button[aria-current]) {
+    background-color: var(--gold-hover);
+  }
+  .resultats :global(.meta) {
+    display: flex;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    opacity: 0.55;
+    white-space: nowrap;
+  }
+  .resultats :global(.titol) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .resultats :global(.text) {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+  .resultats :global(mark) {
+    background: var(--gold-tint);
+    color: var(--color-gold-400);
+    border-radius: 0.2rem;
+    padding: 0 0.1rem;
+  }
+  .resultats :global(.mes) {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 900px) {
+    .disposicio {
+      grid-template-columns: 1fr;
+    }
+    .reproductor {
+      position: static;
+    }
+    .resultats {
+      max-height: none;
+    }
+  }
+  @media (max-width: 480px) {
+    .cercador {
+      flex-direction: column;
+    }
+  }
+</style>

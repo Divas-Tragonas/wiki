@@ -10,7 +10,7 @@ npm install        # tot el repositori (wiki, api/ i packages/model/ són espais
 npm run dev        # wiki a localhost:4321/wiki
 npm run dev -w @mina/api   # API de missions a localhost:8787 (PGlite a api/.dev-data, contrasenyes «grup» i «dm»)
 npm run check      # tipus del wiki, de l'API i del model (també als workflows)
-npm test           # tests del model i de l'API (PGlite; amb TEST_DATABASE_URL=postgres://…/postgres, contra Postgres)
+npm test           # tests del model, de les frases i de l'API (PGlite; amb TEST_DATABASE_URL=postgres://…/postgres, contra Postgres)
 npm run test:e2e   # proves de punta a punta del tauler amb Playwright (engega l'API i el wiki sols)
 npm run build      # genera el lloc a /dist
 ```
@@ -27,7 +27,7 @@ src/
 │   └── croniques/       # fitxers .md de cada sessió
 ├── missions/            # el tauler de missions: codi, estils, mapes, textures i fonts
 ├── content.config.ts    # esquema dels camps de cada col·lecció
-├── pages/               # rutes del lloc (no cal tocar-les normalment); missions/index.astro és el tauler
+├── pages/               # rutes del lloc (no cal tocar-les normalment); missions/index.astro és el tauler i frases/index.astro el cercador de frases
 ├── layouts/             # BaseLayout i EntryLayout (fitxa amb columna lateral)
 ├── components/          # Navbar, Footer, SearchModal, Card, TagBadge, Breadcrumb, PageHeader, SectionHeader
 ├── lib/
@@ -35,9 +35,12 @@ src/
 │   └── git.ts           # data de l'últim commit de cada fitxer (per als «Últims canvis» de la portada)
 └── styles/global.css    # colors i fonts (`@theme`), `.page`, `.cards-grid` i estils del Markdown
 packages/model/          # @mina/model: dades del tauler compartides per l'API i el tauler (vegeu «Tauler de missions»)
+packages/frases/         # @mina/frases: format, cerca i retalls del cercador de frases (vegeu «Frases»)
 api/                     # @mina/api: l'API de missions que corre a la Mac mini
 e2e/                     # proves de punta a punta del tauler (Playwright)
 scripts/nova-sessio/     # troba i transcriu el vídeo d'una partida (vegeu «Sessió nova»)
+scripts/frases/          # transcriu els vídeos de YouTube paraula per paraula per al cercador de frases
+frases/                  # les frases de cada vídeo de YouTube (<id>.json), d'on surt el cercador
 transcripts/             # transcripcions de les sessions (sessio-N.txt), d'on surten les cròniques
 deploy/macmini/          # posada en marxa i actualització automàtica de l'API a la Mac mini
 ```
@@ -118,6 +121,32 @@ A mà, sense GitHub: `python scripts/nova-sessio/sessio.py transcriu --url <víd
 - `YTDLP_COOKIES` (opcional): galetes de YouTube en format Netscape, perquè YouTube bloqueja els servidors de GitHub. Caduquen; amb Twitch no calen.
 
 I a Settings → Actions → General, «Allow GitHub Actions to create and approve pull requests» ha d'estar activat (si no, no pot obrir el PR). Els vídeos de Twitch caduquen al cap d'unes setmanes: per això es miren cada dia.
+
+## Frases (cercador de clips)
+
+A `/wiki/frases/` (enllaç «Frases» de la Navbar) es busca una paraula o una frase i surten tots els moments dels
+vídeos del canal de YouTube ([@DIVASYTRAGONAS](https://www.youtube.com/@DIVASYTRAGONAS)) on algú la diu, i es
+reprodueixen un darrere l'altre, com a playphrase.me.
+
+- **Dades**: `frases/<id de YouTube>.json`, un per vídeo, amb cada frase i l'hora de cada paraula (format a
+  `frases/README.md`). Són del vídeo de **YouTube**, no del de Twitch: el cercador el reprodueix d'allà (els de Twitch
+  caduquen) i les hores han de coincidir. Per això no serveixen les transcripcions de `transcripts/`.
+- **D'on surten**: `.github/workflows/frases.yml` mira el canal cada dia i transcriu amb AssemblyAI els vídeos que hi
+  falten (`scripts/frases/frases.py`, 3 alhora, uns 15-20 min per partida i, com a «Sessió nova», menys d'1 $ cadascuna) i ho puja
+  directament a `master` (i engega el desplegament). A mà: **Actions → Frases → Run workflow** (un vídeo concret, o
+  com a molt N). Fa servir els mateixos secrets que «Sessió nova»: `ASSEMBLYAI_API_KEY` i, perquè YouTube bloqueja els
+  servidors de GitHub, `YTDLP_COOKIES`. Si les galetes donen guerra, des de qualsevol ordinador:
+  `ASSEMBLYAI_API_KEY=… python scripts/frases/frases.py transcriu --pendents` i fer commit de `frases/`.
+- **El wiki**: `src/lib/frases.ts` llegeix i valida els fitxers (un de mal format fa fallar el build i diu quin) i
+  `src/pages/frases.json.ts` en fa un sol índex compacte (`/wiki/frases.json`, ~150 KB comprimits per partida) que la
+  pàgina baixa sencer: la cerca es fa al navegador. `@mina/frases` (`packages/frases`) té el format de l'índex, la
+  cerca (paraules senceres i seguides, sense accents, majúscules ni puntuació; mentre s'escriu, l'última paraula també
+  pot ser el començament d'una de més llarga) i el retall de cada clip (la frase sencera, o el voltant de la troballa
+  si la frase passa de 9 s).
+- **El reproductor** és l'iframe de YouTube (`youtube-nocookie.com`): el clip s'atura sol quan acaba i, amb «Passa
+  sola a la següent», salta al següent. Tecles: ← →, R (repeteix), / (cerca), Enter (següent). La cerca va a l'adreça
+  (`?q=…`), així que es pot compartir.
+- Si mai l'índex pesa massa (molts vídeos), caldrà partir-lo o passar la cerca a l'API de la Mac mini.
 
 ## Desplegament
 

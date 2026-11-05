@@ -15,7 +15,7 @@ Cal Node 22 (vegeu `.nvmrc`). El repositori té tres espais de treball d'npm: el
 | `npm run dev`                | Wiki a `localhost:4321/wiki`                                    |
 | `npm run dev -w @mina/api`   | API de missions a `localhost:8787` (sense Postgres: PGlite)     |
 | `npm run check`              | Comprova els tipus del wiki, l'API i el model                   |
-| `npm test`                   | Tests del model i de l'API                                      |
+| `npm test`                   | Tests del model, de les frases i de l'API                       |
 | `npm run test:e2e`           | Proves de punta a punta del tauler (Playwright)                 |
 | `npm run build`              | Construeix el lloc a `dist/`                                    |
 
@@ -30,6 +30,8 @@ Cal Node 22 (vegeu `.nvmrc`). El repositori té tres espais de treball d'npm: el
 - `deploy/macmini/` — posada en marxa i actualització automàtica de l'API.
 - `e2e/` — proves de punta a punta del tauler.
 - `transcripts/` — transcripcions de les sessions, d'on surten les cròniques.
+- `frases/`, `scripts/frases/`, `packages/frases/` i `.github/workflows/frases.yml` — el cercador de frases dels vídeos
+  (`/wiki/frases/`): els vídeos de YouTube transcrits paraula per paraula, cada dia.
 - `scripts/nova-sessio/` i `.github/workflows/nova-sessio.yml` — la sessió nova automàtica (vegeu més avall).
 
 ## Després de cada partida
