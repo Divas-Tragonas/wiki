@@ -147,15 +147,15 @@ const frases = videos.reduce((s, v) => s + v.frases.length, 0);
       actual = (i + troballes.length) % troballes.length;
       const t = troballes[actual];
       const frase = frases[t.frase];
-      clip = { frase, ...retall(frase, t.a, t.b), a: t.a, b: t.b, comencat: false };
       const video = index.videos[frase.video];
+      clip = { frase, ...retall(frase, t.a, t.b, video.aproximat), a: t.a, b: t.b, comencat: false };
 
       buida.hidden = true;
       controls.hidden = false;
       posicio.textContent = `${actual + 1} / ${troballes.length}`;
       pintaSubtitol(-1);
       const enllac = `https://www.youtube.com/watch?v=${video.id}&t=${Math.floor(clip.inici)}s`;
-      origen.innerHTML = `${escapa(video.titol)} · ${hms(frase.temps[t.a])} · <a href="${enllac}" target="_blank" rel="noopener">Obre-ho a YouTube ↗</a>`;
+      origen.innerHTML = `${escapa(video.titol)} · ${video.aproximat ? '≈ ' : ''}${hms(frase.temps[t.a])} · <a href="${enllac}" target="_blank" rel="noopener">Obre-ho a YouTube ↗</a>`;
       llista.querySelector('[aria-current]')?.removeAttribute('aria-current');
       const item = llista.querySelector(`[data-i="${actual}"]`);
       item?.setAttribute('aria-current', 'true');

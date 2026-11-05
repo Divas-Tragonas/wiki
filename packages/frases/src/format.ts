@@ -16,6 +16,9 @@ export interface FitxerVideo {
   /** segons */
   durada: number;
   idioma: string;
+  /** les hores de les paraules són estimades (vegeu `de-transcripcio` a scripts/frases/frases.py): només la de
+   *  l'inici de cada paràgraf és exacta, i el cercador hi deixa més marge */
+  aproximat?: boolean;
   frases: FraseFitxer[];
 }
 
@@ -24,6 +27,7 @@ export interface VideoInfo {
   titol: string;
   data: string;
   durada: number;
+  aproximat?: boolean;
 }
 
 /** [vídeo, inici, durada, text, salts]: temps en centèsimes; cada salt és el que va de l'inici de la paraula anterior
@@ -81,7 +85,7 @@ export function empaqueta(fitxers: FitxerVideo[]): IndexFrases {
   });
   return {
     versio: 1,
-    videos: videos.map(({ id, titol, data, durada }) => ({ id, titol, data, durada })),
+    videos: videos.map(({ id, titol, data, durada, aproximat }) => ({ id, titol, data, durada, ...(aproximat ? { aproximat } : {}) })),
     frases,
   };
 }

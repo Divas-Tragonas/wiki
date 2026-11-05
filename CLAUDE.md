@@ -137,6 +137,12 @@ reprodueixen un darrere l'altre, com a playphrase.me.
   com a molt N). Fa servir els mateixos secrets que «Sessió nova»: `ASSEMBLYAI_API_KEY` i, perquè YouTube bloqueja els
   servidors de GitHub, `YTDLP_COOKIES`. Si les galetes donen guerra, des de qualsevol ordinador:
   `ASSEMBLYAI_API_KEY=… python scripts/frases/frases.py transcriu --pendents` i fer commit de `frases/`.
+- **Sense tornar a transcriure**: les transcripcions de «Sessió nova» que porten l'hora de cada paràgraf (de la 13
+  endavant) tenen les mateixes hores que el vídeo de YouTube, així que se'n poden treure les frases de franc:
+  `python scripts/frases/frases.py de-transcripcio transcripts/sessio-N.txt --id <id de YouTube>` (vigileu: a
+  YouTube la numeració pot no coincidir amb la del wiki; la 13 del wiki és «SESSIÓ 12» a YouTube). L'hora de cada
+  paraula és estimada dins del paràgraf: el fitxer queda amb `"aproximat": true`, el cercador hi deixa 1,5 s més de
+  marge i hi posa «≈» davant de l'hora. El workflow no els torna a fer.
 - **El wiki**: `src/lib/frases.ts` llegeix i valida els fitxers (un de mal format fa fallar el build i diu quin) i
   `src/pages/frases.json.ts` en fa un sol índex compacte (`/wiki/frases.json`, ~150 KB comprimits per partida) que la
   pàgina baixa sencer: la cerca es fa al navegador. `@mina/frases` (`packages/frases`) té el format de l'índex, la

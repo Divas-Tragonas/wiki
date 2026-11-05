@@ -10,9 +10,14 @@ Les fa el workflow `.github/workflows/frases.yml`, però també es pot fer anar 
   python scripts/frases/frases.py transcriu --url <vídeo> [--url <vídeo> …]
   python scripts/frases/frases.py transcriu --url <vídeo> --audio partida.mp4   # amb l'àudio ja baixat
   python scripts/frases/frases.py transcriu --url <vídeo> --minuts 5 --carpeta /tmp/prova   # prova barata
+  python scripts/frases/frases.py de-transcripcio transcripts/sessio-13.txt --id cUTUoES4vIc   # sense pagar res
 
 Ha de ser el vídeo de YouTube (no el de Twitch): el cercador el reprodueix d'allà i les hores han de coincidir.
 `transcriu` necessita ASSEMBLYAI_API_KEY i ffmpeg; des d'un servidor, YouTube demana galetes (YTDLP_COOKIES_FILE).
+
+`de-transcripcio` aprofita una transcripció de «Sessió nova» (transcripts/sessio-N.txt, amb l'hora de cada paràgraf)
+si el vídeo de YouTube té les mateixes hores que el de Twitch d'on va sortir: l'hora de cada paràgraf és exacta i la
+de cada paraula s'estima. El fitxer queda marcat com a «aproximat» i el cercador hi deixa més marge.
 """
 
 from __future__ import annotations
@@ -52,7 +57,12 @@ def videos_del_canal() -> list[dict]:
     with yt_dlp.YoutubeDL(sessio.ydl_opts({"extract_flat": True})) as ydl:
         canal = ydl.extract_info(CANAL, download=False)
     return [
-        {"id": e["id"], "titol": e.get("title") or "", "url": f"https://www.youtube.com/watch?v={e['id']}"}
+        {
+            "id": e["id"],
+            "titol": e.get("title") or "",
+            "durada": int(e.get("duration") or 0),
+            "url": f"https://www.youtube.com/watch?v={e['id']}",
+        }
         for e in canal.get("entries") or []
         if e.get("id")
     ]
@@ -93,8 +103,9 @@ def frases_de(paraules: list[tuple[str, int, int]]) -> list[list]:
 def escriu(cami: Path, video: dict, frases: list[list]) -> None:
     """Una frase per línia: el fitxer es pot llegir i els canvis es veuen bé al git."""
     linies = ["{"]
-    for k in ("id", "titol", "data", "durada", "idioma"):
-        linies.append(f"  {json.dumps(k)}: {json.dumps(video[k], ensure_ascii=False)},")
+    for k in ("id", "titol", "data", "durada", "idioma", "aproximat"):
+        if k in video:
+            linies.append(f"  {json.dumps(k)}: {json.dumps(video[k], ensure_ascii=False)},")
     linies.append('  "frases": [')
     for i, f in enumerate(frases):
         coma = "," if i < len(frases) - 1 else ""
@@ -174,6 +185,72 @@ def transcriu(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+# ── Des d'una transcripció de «Sessió nova» ─────────────────────────────
+
+PARAGRAF = re.compile(r"^\[(\d+):(\d{2}):(\d{2})\] (.*)$")
+LLETRES_PER_SEGON = 14  # parlant normal en català, comptant els espais
+
+
+def paraules_estimades(paragrafs: list[tuple[int, str]], durada_ms: int | None) -> list[tuple[str, int, int]]:
+    """[(inici en ms, text)] → [(paraula, inici, fi)]. Cada paràgraf comença a la seva hora (exacta) i les paraules
+    s'hi reparteixen segons la llargada, a ritme de parla normal; si fins al paràgraf següent no hi ha temps per a
+    aquest ritme, el paràgraf l'omple tot (parlaven de pressa). El silenci, si n'hi ha, queda al final."""
+    paraules: list[tuple[str, int, int]] = []
+    for i, (inici, text) in enumerate(paragrafs):
+        trossos = text.split()
+        if not trossos:
+            continue
+        seguent = paragrafs[i + 1][0] if i + 1 < len(paragrafs) else durada_ms
+        lletres = sum(len(t) + 1 for t in trossos)
+        llarg = lletres / LLETRES_PER_SEGON * 1000
+        if seguent and seguent > inici:
+            llarg = min(llarg, seguent - inici)
+        fet = 0
+        for t in trossos:
+            ini = inici + round(llarg * fet / lletres)
+            fet += len(t) + 1
+            paraules.append((t, ini, inici + round(llarg * fet / lletres)))
+    return paraules
+
+
+def de_transcripcio(args: argparse.Namespace) -> None:
+    text = Path(args.transcripcio).read_text(encoding="utf-8")
+    paragrafs = [
+        ((int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))) * 1000, m.group(4))
+        for linia in text.splitlines()
+        if (m := PARAGRAF.match(linia.strip()))
+    ]
+    if not paragrafs:
+        raise SystemExit("❌ La transcripció no porta l'hora de cada paràgraf ([h:mm:ss] …): no se'n poden treure clips.")
+    capcalera = dict(re.findall(r"^# (Data|Idioma): *(.+)$", text, re.MULTILINE))
+
+    titol, durada = args.titol, args.durada
+    if not (titol and durada):
+        del_canal = next((v for v in videos_del_canal() if v["id"] == args.id), None)
+        if not del_canal:
+            raise SystemExit(f"❌ No trobo el vídeo {args.id} al canal: passa'n --titol i --durada.")
+        titol, durada = titol or del_canal["titol"], durada or del_canal["durada"]
+    ultim = paragrafs[-1][0] // 1000
+    if durada and abs(durada - ultim) > 15 * 60:
+        print(f"⚠️  L'últim paràgraf és a {sessio.hms(ultim * 1000)} i el vídeo en dura {sessio.hms(durada * 1000)}: "
+              "segur que les hores coincideixen?", flush=True)
+
+    video = {
+        "id": args.id,
+        "titol": titol,
+        "data": args.data or capcalera.get("Data") or "",
+        "durada": int(durada or ultim),
+        "idioma": capcalera.get("Idioma", "ca"),
+        "aproximat": True,
+    }
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", video["data"]):
+        raise SystemExit("❌ Falta la data (AAAA-MM-DD): la transcripció no en porta; passa-la amb --data.")
+    frases = frases_de(paraules_estimades(paragrafs, video["durada"] * 1000))
+    cami = Path(args.carpeta) / f"{video['id']}.json"
+    escriu(cami, video, frases)
+    print(f"✓ {video['id']}: {len(frases):,} frases de {len(paragrafs):,} paràgrafs → {cami}", flush=True)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="ordre", required=True)
@@ -190,8 +267,18 @@ def main() -> None:
     t.add_argument("--carpeta", default=str(FRASES), help="on es desen (per defecte frases/)")
     t.add_argument("--parallel", type=int, default=3, help="quants vídeos alhora (per defecte 3)")
 
+    d = sub.add_parser("de-transcripcio", help="fa les frases d'un vídeo a partir d'una transcripció de «Sessió nova»")
+    d.add_argument("transcripcio", help="transcripts/sessio-N.txt (amb l'hora de cada paràgraf)")
+    d.add_argument("--id", required=True, help="id del vídeo de YouTube (el de watch?v=…)")
+    d.add_argument("--titol", help="per defecte, el de YouTube")
+    d.add_argument("--durada", type=int, help="segons; per defecte, la de YouTube")
+    d.add_argument("--data", help="AAAA-MM-DD; per defecte, la de la transcripció")
+    d.add_argument("--carpeta", default=str(FRASES), help="on es desa (per defecte frases/)")
+
     args = p.parse_args()
-    if args.ordre == "pendents":
+    if args.ordre == "de-transcripcio":
+        de_transcripcio(args)
+    elif args.ordre == "pendents":
         llista = pendents()
         print(json.dumps(llista, ensure_ascii=False, indent=2))
         sessio.escriu_output({"pendents": len(llista)})

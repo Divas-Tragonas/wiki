@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cerca, desempaqueta, empaqueta, hms, peces, prepara, retall, validaVideo, MARGE_ABANS, MARGE_DESPRES,
+  cerca, desempaqueta, empaqueta, hms, peces, prepara, retall, validaVideo, MARGE_ABANS, MARGE_APROXIMAT, MARGE_DESPRES,
   type FitxerVideo, type Frase
 } from '../src/index.ts';
 
@@ -31,6 +31,11 @@ describe('format', () => {
     const index = empaqueta([video(), vell]);
     expect(index.videos.map((v) => v.id)).toEqual(['vellvellvel', 'abcdefghijk']);
     expect(index.frases.slice(0, 2).map((f) => f[3])).toEqual(['a', 'b']);
+  });
+
+  it('només porta la marca «aproximat» als vídeos que la tenen', () => {
+    const index = empaqueta([video(), video({ id: 'aproximat01', aproximat: true })]);
+    expect(index.videos.map((v) => v.aproximat)).toEqual([undefined, true]);
   });
 
   it('valida el nombre de paraules i de temps', () => {
@@ -72,6 +77,11 @@ describe('retall', () => {
   it('reprodueix una frase curta sencera amb marge', () => {
     const [f] = frases(video());
     expect(retall(f, 1, 1)).toEqual({ inici: 1 - MARGE_ABANS, fi: 3 + MARGE_DESPRES });
+  });
+
+  it('deixa més marge si les hores són aproximades', () => {
+    const [, f] = frases(video());
+    expect(retall(f, 1, 1, true)).toEqual({ inici: 5 - MARGE_ABANS - MARGE_APROXIMAT, fi: 8 + MARGE_DESPRES + MARGE_APROXIMAT });
   });
 
   it("d'una frase llarga, només el voltant de la troballa i tallant entre paraules", () => {

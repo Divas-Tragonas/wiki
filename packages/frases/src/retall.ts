@@ -3,13 +3,15 @@ import type { Frase } from './format.ts';
 /** Marge abans i després del clip, perquè no talli la primera ni l'última síl·laba. */
 export const MARGE_ABANS = 0.35;
 export const MARGE_DESPRES = 0.6;
+/** Als vídeos amb les hores de les paraules estimades, una mica més, per si de cas. */
+export const MARGE_APROXIMAT = 1.5;
 /** Una frase més llarga que això no es reprodueix sencera: només el tros del voltant de la troballa. */
 export const MAX_FRASE = 9;
 const CONTEXT_ABANS = 2.5;
 const CONTEXT_DESPRES = 2;
 
 /** El tros del vídeo (en segons) que es reprodueix per a les paraules `a`…`b` d'una frase. */
-export function retall(f: Frase, a: number, b: number): { inici: number; fi: number } {
+export function retall(f: Frase, a: number, b: number, aproximat = false): { inici: number; fi: number } {
   let inici = f.inici;
   let fi = f.fi;
   if (fi - inici > MAX_FRASE) {
@@ -23,7 +25,8 @@ export function retall(f: Frase, a: number, b: number): { inici: number; fi: num
     inici = t[i];
     fi = j < t.length ? t[j] : f.fi;
   }
-  return { inici: Math.max(0, inici - MARGE_ABANS), fi: fi + MARGE_DESPRES };
+  const extra = aproximat ? MARGE_APROXIMAT : 0;
+  return { inici: Math.max(0, inici - MARGE_ABANS - extra), fi: fi + MARGE_DESPRES + extra };
 }
 
 /** 4521.3 → "1:15:21" */

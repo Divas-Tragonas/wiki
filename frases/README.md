@@ -11,6 +11,7 @@ dia). Vegeu la secció «Frases» del `CLAUDE.md`.
   "data": "2026-11-02",
   "durada": 16618,                     // segons
   "idioma": "ca",
+  "aproximat": true,                   // opcional: les hores de les paraules són estimades (vegeu més avall)
   "frases": [
     // [inici, fi, text, inici de cada paraula]: ms des de l'inici del vídeo; les paraules, des de l'inici de la frase.
     // El text són les paraules separades per un sol espai (tantes com temps).
@@ -21,3 +22,9 @@ dia). Vegeu la secció «Frases» del `CLAUDE.md`.
 
 Per corregir una paraula mal transcrita es pot editar el text directament, sempre que la frase continuï tenint el
 mateix nombre de paraules que de temps (si no, el build falla i diu quina és).
+
+Els fitxers amb `"aproximat": true` surten d'una transcripció de «Sessió nova» (`transcripts/sessio-N.txt`, amb
+l'hora de cada paràgraf) quan el vídeo de YouTube té les mateixes hores que el de Twitch:
+`python scripts/frases/frases.py de-transcripcio transcripts/sessio-N.txt --id <id de YouTube>`. L'inici de cada
+paràgraf és exacte i el de cada paraula, estimat; el cercador hi deixa més marge. El workflow no els torna a fer; per
+tenir-los exactes (i pagar-ho), `transcriu --url <vídeo>` o «Run workflow» amb l'enllaç.
