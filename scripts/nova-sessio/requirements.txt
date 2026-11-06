@@ -1,2 +1,2 @@
-yt-dlp
+yt-dlp[default]
 assemblyai>=0.40

@@ -135,8 +135,10 @@ reprodueixen un darrere l'altre, com a playphrase.me.
   falten (`scripts/frases/frases.py`, 3 alhora, uns 15-20 min per partida i, com a «Sessió nova», menys d'1 $ cadascuna) i ho puja
   directament a `master` (i engega el desplegament). A mà: **Actions → Frases → Run workflow** (un vídeo concret, o
   com a molt N). Fa servir els mateixos secrets que «Sessió nova»: `ASSEMBLYAI_API_KEY` i, perquè YouTube bloqueja els
-  servidors de GitHub, `YTDLP_COOKIES`. Si les galetes donen guerra, des de qualsevol ordinador:
-  `ASSEMBLYAI_API_KEY=… python scripts/frases/frases.py transcriu --pendents` i fer commit de `frases/`.
+  servidors de GitHub, `YTDLP_COOKIES`. Si les galetes donen guerra, des d'una connexió de casa no calen: a la Mac
+  mini, seguint `deploy/macmini/FRASES.md` (té un prompt per donar-li a Claude Code allà), o des de qualsevol
+  ordinador amb `ASSEMBLYAI_API_KEY=… python scripts/frases/frases.py transcriu --pendents` i fer commit de `frases/`.
+  Els vídeos marcats per a majors d'edat («GERMANS 1/2» i «2/2») necessiten galetes d'un compte major d'edat sempre.
 - **Sense tornar a transcriure**: les transcripcions de «Sessió nova» que porten l'hora de cada paràgraf (de la 13
   endavant) tenen les mateixes hores que el vídeo de YouTube, així que se'n poden treure les frases de franc:
   `python scripts/frases/frases.py de-transcripcio transcripts/sessio-N.txt --id <id de YouTube>` (vigileu: a

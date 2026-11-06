@@ -76,6 +76,12 @@ Cal Node 22 (de NodeSource, a `/usr/bin/node`), Postgres (el d'Ubuntu 24.04 és 
     Amb Funnel, `TRUST_PROXY=0`. L'adreça pública va a la variable `MISSIONS_API_URL` del repositori de GitHub (i a
     `PUBLIC_MISSIONS_API_URL` de Vercel), i l'origen del wiki a `ALLOWED_ORIGINS`.
 
+## Frases del cercador
+
+Els vídeos de YouTube per al cercador de frases del wiki es transcriuen des d'aquí, perquè YouTube bloqueja els
+servidors de GitHub: vegeu [`FRASES.md`](FRASES.md), que té un prompt per donar-li a Claude Code. Es fa en un clon
+a part (`~/wiki-frases`), no en el de l'autofetch.
+
 ## Ordres de la CLI
 
 Amb la funció `cli` del pas 6:
