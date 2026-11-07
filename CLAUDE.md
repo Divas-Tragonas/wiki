@@ -8,7 +8,7 @@ Wiki de campanya D&D 5e construïda amb **Astro 6 + Tailwind CSS 4**. Totes les 
 nvm use            # Node 22 requerit (vegeu .nvmrc)
 npm install        # tot el repositori (wiki, api/ i packages/model/ són espais de treball d'npm)
 npm run dev        # wiki a localhost:4321/wiki
-npm run dev -w @mina/api   # API de missions a localhost:8787 (PGlite a api/.dev-data, contrasenyes «grup» i «dm»)
+npm run dev -w @mina/api   # API de missions a localhost:8787 (PGlite a api/.dev-data, contrasenya del DM «dm»)
 npm run check      # tipus del wiki, de l'API i del model (també als workflows)
 npm test           # tests del model, de les frases i de l'API (PGlite; amb TEST_DATABASE_URL=postgres://…/postgres, contra Postgres)
 npm run test:e2e   # proves de punta a punta del tauler amb Playwright (engega l'API i el wiki sols)
@@ -174,7 +174,7 @@ reprodueixen un darrere l'altre, com a playphrase.me.
 
 ## Tauler de missions
 
-Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar, sense el layout del wiki ni Tailwind: `src/pages/missions/index.astro` (marcatge) i `src/missions/` (codi, estils, mapes, textures, fonts). Les missions són a l'**API de la Mac mini**; el tauler hi entra amb la contrasenya del grup, carrega el tauler del seu poble i rep els canvis en directe. Si el servidor no respon, ensenya l'última còpia que va rebre (sense res del DM), només per mirar.
+Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar, sense el layout del wiki ni Tailwind: `src/pages/missions/index.astro` (marcatge) i `src/missions/` (codi, estils, mapes, textures, fonts). Les missions són a l'**API de la Mac mini**; el tauler hi entra sol (sense contrasenya: cada pantalla rep una sessió de jugador), carrega el tauler del seu poble i rep els canvis en directe. Si el servidor no respon, ensenya l'última còpia que va rebre (sense res del DM), només per mirar.
 
 ### Com està fet
 
@@ -185,7 +185,7 @@ Pàgina a pantalla completa a `/wiki/missions/`, enllaçada des de la Navbar, se
   - `src/services/domain.ts` les regles de cada acció; `history.ts` desfer; `snapshots.ts` còpies; `transfer.ts` importar/exportar i llegir el `data.json` xifrat d'abans.
   - `src/realtime/hub.ts` els esdeveniments (SSE a `GET /v1/events`): es llegeixen de `changes` per ordre de revisió, de manera que arriben en ordre, també els que fa la CLI, i qui es reconnecta rep el que s'ha perdut.
   - `src/http/` les rutes de `/v1` (cada ruta porta el seu middleware: `authed` o `dmAuthed`). `src/cli.ts` la CLI de la Mac mini.
-  - Sessions amb clau *bearer* (el tauler la guarda al navegador): jugador un any; el permís de DM caduca als 30 dies o després de 12 h sense fer-lo servir. Contrasenyes amb scrypt a la taula `credentials`, que només canvia la CLI (`set-password`); com abans, no distingeixen majúscules ni espais.
+  - Sessions amb clau *bearer* (el tauler la guarda al navegador): la de jugador es dona sense contrasenya i dura un any; el permís de DM demana la contrasenya del DM i caduca als 30 dies o després de 12 h sense fer-lo servir. La contrasenya del DM és amb scrypt a la taula `credentials` i només la canvia la CLI (`set-password dm`); com abans, no distingeix majúscules ni espais. Ja no hi ha contrasenya del grup.
 - **El tauler** (`src/missions/`):
   - `main.js` l'aplicació (papers, zoom, mapa, moure papers, mode DM, historial, entrada); `api.js` el client (peticions i canal d'esdeveniments amb `fetch`); `remote.js` la sincronització: cada canvi del DM s'aplica de seguida al tauler i s'envia en una cua ordenada que es reintenta sense connexió; mentre un element té canvis per enviar, els esdeveniments no el toquen.
   - `towns.js` els pobles de `@mina/model` amb els mapes; `layout.js` geometria; `light.js` la llum; `pixel.js` el «Mapa en píxel»; `gate.js`, `ui.js`, `util.js`.

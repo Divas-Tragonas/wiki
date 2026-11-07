@@ -7,19 +7,14 @@ test.beforeEach(async () => {
 });
 
 test.describe('players', () => {
-  test('enter with the group password and see only what players may see', async ({ page }) => {
+  test('enter without a password and see only what players may see', async ({ page }) => {
     const bodies: string[] = [];
     page.on('response', async (r) => {
       if (r.url().startsWith(API) && !r.url().includes('/events')) bodies.push(await r.text().catch(() => ''));
     });
     await page.goto('/wiki/missions/');
-    await page.fill('#gate input', 'no és aquesta');
-    await page.press('#gate input', 'Enter');
-    await expect(page.locator('#gate .gate-e')).toHaveText('Contrasenya incorrecta');
-    await page.fill('#gate input', ' GRUP ');
-    await page.press('#gate input', 'Enter');
-    await expect(page.locator('#gate')).toBeHidden();
     await expect(page.locator('#docs .doc')).toHaveCount(4);
+    await expect(page.locator('#gate')).toBeHidden();
     expect(await boardIds(page)).toEqual(['q1', 'q2', 'q3', 'q6']);
     await expect(page.locator('#pileN')).toHaveText('1');
     expect(bodies.join('\n')).not.toContain('Nota secreta');

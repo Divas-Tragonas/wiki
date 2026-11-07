@@ -122,11 +122,14 @@ const editable = {
   note: text(LIMITS.long)
 };
 
-export const LoginBody = z.object({
-  role: z.enum(ROLES),
-  password: z.string().min(1).max(200),
-  label: z.string().max(100).optional()
-});
+/* el tauler s'obre sense contrasenya (sessió de jugador); només el permís de DM en demana */
+export const LoginBody = z
+  .object({
+    role: z.enum(ROLES),
+    password: z.string().max(200).optional(),
+    label: z.string().max(100).optional()
+  })
+  .refine((b) => b.role !== 'dm' || !!b.password, { path: ['password'], message: 'Cal la contrasenya del DM' });
 
 export const QuestCreateBody = z
   .object({

@@ -20,8 +20,8 @@ describe('passwords', () => {
 });
 
 describe('POST /v1/session', () => {
-  it('creates a player session that can read but not write', async () => {
-    const r = await env.req('POST', '/v1/session', { body: { role: 'player', password: '  grup DE prova ' } });
+  it('creates a player session without a password that can read but not write', async () => {
+    const r = await env.req('POST', '/v1/session', { body: { role: 'player' } });
     expect(r.status).toBe(201);
     expect(r.body).toMatchObject({ role: 'player', token: expect.any(String), id: expect.any(String) });
     const t = r.body.token;
@@ -32,8 +32,21 @@ describe('POST /v1/session', () => {
     expect(w.body.error.code).toBe('dm_only');
   });
 
-  it('rejects a wrong password, an unknown role and malformed bodies', async () => {
-    expect((await env.req('POST', '/v1/session', { body: { role: 'player', password: 'nope' } })).body.error.code).toBe('wrong_password');
+  it('ignores a password sent for a player session (boards built before it was removed)', async () => {
+    const r = await env.req('POST', '/v1/session', { body: { role: 'player', password: 'qualsevol' } });
+    expect(r.status).toBe(201);
+    expect(r.body.role).toBe('player');
+  });
+
+  it('does not count player sessions against the failed-attempts limit', async () => {
+    for (let i = 0; i < 5; i++) expect((await env.req('POST', '/v1/session', { body: { role: 'dm', password: 'x' + i } })).status).toBe(401);
+    expect((await env.req('POST', '/v1/session', { body: { role: 'dm', password: PASSWORDS.dm } })).status).toBe(429);
+    expect((await env.req('POST', '/v1/session', { body: { role: 'player' } })).status).toBe(201);
+  });
+
+  it('rejects a wrong or missing DM password, an unknown role and malformed bodies', async () => {
+    expect((await env.req('POST', '/v1/session', { body: { role: 'dm', password: 'nope' } })).body.error.code).toBe('wrong_password');
+    expect((await env.req('POST', '/v1/session', { body: { role: 'dm' } })).status).toBe(422);
     expect((await env.req('POST', '/v1/session', { body: { role: 'god', password: 'x' } })).status).toBe(422);
     expect((await env.req('POST', '/v1/session', { raw: '{not json' })).status).toBe(400);
   });
@@ -61,7 +74,7 @@ describe('POST /v1/session', () => {
     expect(up.body).toMatchObject({ role: 'dm', token: null });
     expect((await env.req('POST', '/v1/quests', { token: t, body: { towns: { phentanil: null } } })).status).toBe(201);
     /* entrar com a jugador amb una sessió de DM no li treu el permís */
-    expect((await env.req('POST', '/v1/session', { token: t, body: { role: 'player', password: PASSWORDS.player } })).body.role).toBe('dm');
+    expect((await env.req('POST', '/v1/session', { token: t, body: { role: 'player' } })).body.role).toBe('dm');
     expect((await env.req('POST', '/v1/session/player', { token: t })).body.role).toBe('player');
     expect((await env.req('POST', '/v1/quests', { token: t, body: { towns: { phentanil: null } } })).status).toBe(403);
   });
@@ -119,14 +132,13 @@ describe('session lifetime', () => {
     expect((await env.req('DELETE', `/v1/sessions/${id}`, { token: dm })).status).toBe(404);
   });
 
-  it('closes sessions when a password changes', async () => {
+  it('drops DM rights, but keeps the sessions, when the DM password changes', async () => {
     const player = await env.login('player');
     const dm = await env.login('dm');
     await setPasswordHash(env.rt.database.db, 'dm', await hashPassword('nova'), env.clock.now);
     expect((await env.req('GET', '/v1/session', { token: dm })).body.role).toBe('player');
+    expect((await env.req('GET', '/v1/session', { token: player })).body.role).toBe('player');
     expect((await env.req('POST', '/v1/session', { body: { role: 'dm', password: PASSWORDS.dm } })).status).toBe(401);
-    await setPasswordHash(env.rt.database.db, 'player', await hashPassword('nova'), env.clock.now);
-    expect((await env.req('GET', '/v1/session', { token: player })).status).toBe(401);
-    expect((await env.req('GET', '/v1/session', { token: dm })).status).toBe(401);
+    expect((await env.req('POST', '/v1/session', { body: { role: 'dm', password: 'Nova' } })).status).toBe(201);
   });
 });

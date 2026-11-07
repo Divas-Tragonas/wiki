@@ -1,5 +1,5 @@
-/* Servidor per desenvolupar: PGlite a api/.dev-data (no cal Postgres), qualsevol origen i contrasenyes de prova
-   («grup» i «dm») si encara no n'hi ha. Amb SEED=fitxer.json importa aquell fitxer en arrencar. */
+/* Servidor per desenvolupar: PGlite a api/.dev-data (no cal Postgres), qualsevol origen i la contrasenya del DM de prova
+   («dm») si encara no n'hi ha (el tauler s'obre sense contrasenya). Amb SEED=fitxer.json importa aquell fitxer en arrencar. */
 import { readFileSync } from 'node:fs';
 import { serve } from '@hono/node-server';
 import { hashPassword } from './auth/passwords.ts';
@@ -18,13 +18,11 @@ const config = loadConfig({
 });
 const rt = await startRuntime(config);
 const db = rt.database.db;
-for (const [role, pw] of [['player', 'grup'], ['dm', 'dm']] as const) {
-  if (!(await hasPassword(db, role))) await setPasswordHash(db, role, await hashPassword(pw), new Date());
-}
+if (!(await hasPassword(db, 'dm'))) await setPasswordHash(db, 'dm', await hashPassword('dm'), new Date());
 if (process.env.SEED) {
   await importReplace(db, { role: 'dm', sessionId: null }, JSON.parse(readFileSync(process.env.SEED, 'utf8')));
   await rt.hub.poke();
 }
 serve({ fetch: rt.app.fetch, hostname: config.host, port: config.port }, (info) => {
-  console.log(`missions-api (desenvolupament) a http://${info.address}:${info.port} · contrasenyes «grup» i «dm»`);
+  console.log(`missions-api (desenvolupament) a http://${info.address}:${info.port} · contrasenya del DM «dm»`);
 });

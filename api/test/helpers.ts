@@ -10,7 +10,8 @@ import { loadConfig } from '../src/config.ts';
 import { startRuntime, type Runtime } from '../src/runtime.ts';
 import * as repo from '../src/store/repo.ts';
 
-export const PASSWORDS = { player: 'Grup de Prova', dm: 'drac vermell' } as const;
+/* el tauler s'obre sense contrasenya: només n'hi ha per al DM */
+export const PASSWORDS = { dm: 'drac vermell' } as const;
 
 export interface Res<T = any> {
   status: number;
@@ -58,12 +59,9 @@ export async function setupEnv(opts: { watchMs?: number | null; origins?: string
   });
   const rt = await startRuntime(config, { now: () => clock.now, watchMs: opts.watchMs ?? null });
   const db = rt.database.db;
-  const hashes = { player: await hashPassword(PASSWORDS.player), dm: await hashPassword(PASSWORDS.dm) };
+  const dmHash = await hashPassword(PASSWORDS.dm);
 
-  const setPasswords = async () => {
-    await setPasswordHash(db, 'player', hashes.player, clock.now);
-    await setPasswordHash(db, 'dm', hashes.dm, clock.now);
-  };
+  const setPasswords = () => setPasswordHash(db, 'dm', dmHash, clock.now);
   await setPasswords();
 
   const req: TestEnv['req'] = async (method, path, o = {}) => {
@@ -85,7 +83,7 @@ export async function setupEnv(opts: { watchMs?: number | null; origins?: string
   };
 
   const login: TestEnv['login'] = async (role, o = {}) => {
-    const r = await req('POST', '/v1/session', { body: { role, password: PASSWORDS[role], label: o.label }, token: o.token });
+    const r = await req('POST', '/v1/session', { body: { role, password: role === 'dm' ? PASSWORDS.dm : undefined, label: o.label }, token: o.token });
     if (r.status !== 200 && r.status !== 201) throw new Error(`login ${role}: ${r.status} ${JSON.stringify(r.body)}`);
     return r.body.token ?? o.token;
   };

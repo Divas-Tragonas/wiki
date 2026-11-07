@@ -162,11 +162,11 @@ describe('the old encrypted data.json', () => {
       const again = await cli(['import-data-json', join(dir, 'data.json')], { DM_PASSWORD: 'drac' }).catch((e) => e);
       expect(again.stderr).toContain('ja té 1 missions');
       expect((await cli(['import-data-json', join(dir, 'data.json'), '--force'], { DM_PASSWORD: 'drac' })).stdout).toContain('Importat (revisió 2)');
-      await cli(['set-password', 'player'], { PASSWORD: 'grup nou' });
+      expect((await cli(['set-password', 'player'], { PASSWORD: 'grup nou' }).catch((e) => e)).stderr).toContain('Només hi ha la contrasenya del DM');
       expect((await cli(['set-password', 'dm'], { PASSWORD: 'abc' }).catch((e) => e)).stderr).toContain('mínim 4');
       const st = await cli(['status']);
       expect(st.stdout).toContain('Missions: 1 (1 ocultes, 0 completades)');
-      expect(st.stdout).toContain('Contrasenya player: posada');
+      expect(st.stdout).not.toContain('Contrasenya player');
       expect(st.stdout).toContain('Contrasenya dm: FALTA');
       await cli(['export', join(dir, 'out.json')]);
       expect(JSON.parse(readFileSync(join(dir, 'out.json'), 'utf8')).quests[0]).toMatchObject({ id: 'q1', title: 'Secreta', hidden: true, note: 'n' });

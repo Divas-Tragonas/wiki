@@ -1,5 +1,5 @@
 /* Tauler de missions · La Mina Perduda del Phentanilo
-   - Les missions són a l'API de la Mac mini (api/ al repositori): el tauler entra amb la contrasenya del grup, carrega
+   - Les missions són a l'API de la Mac mini (api/ al repositori): el tauler hi entra sol (sense contrasenya), carrega
      el tauler del seu poble i rep els canvis en directe. La pàgina és src/pages/missions/index.astro.
    - Cada paper del tauler és el document sencer a escala; en clicar-lo s'acosta el mateix paper.
    - El mode DM edita els mateixos papers: cada canvi es veu de seguida i s'envia a l'API (remote.js). */
@@ -80,14 +80,8 @@ async function start() {
   if (!api.apiConfigured()) { fatal('El tauler no sap on és el servidor de missions (falta PUBLIC_MISSIONS_API_URL en fer el build).'); return; }
   let v;
   try {
-    if (!(await api.getSession())) {
-      await askGate({
-        kicker: 'Diari de ' + TOWN.name, title: 'Tauler de missions', text: 'Escriu la contrasenya del grup per entrar.', ph: 'Contrasenya', btn: 'Entrar', back: true,
-        check: async (pw) => {
-          try { await api.login('player', pw); return null; } catch (e) { return loginError(e); }
-        }
-      });
-    }
+    /* no hi ha contrasenya del grup: el primer cop, aquesta pantalla demana una sessió de jugador i ja està */
+    if (!(await api.getSession())) await api.login('player');
     v = await fetchBoard();
   } catch (e) {
     const cached = api.isOffline(e) && remote.loadCache(TOWN_ID);
@@ -953,7 +947,7 @@ function writeRejected(e) {
   reloadBoard();
 }
 function authLost() {
-  toast('La sessió s’ha tancat. Torna a entrar amb la contrasenya del grup.', 4200);
+  toast('La sessió s’ha tancat: es torna a obrir el tauler…', 4200);
   api.forgetSession();
   setTimeout(() => location.reload(), 1600);
 }

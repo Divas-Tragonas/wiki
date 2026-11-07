@@ -48,11 +48,10 @@ Cal Node 22 (de NodeSource, a `/usr/bin/node`), Postgres (el d'Ubuntu 24.04 és 
    systemctl enable missions-api    # update.sh ja l'ha engegat; així també arrenca en reiniciar
    curl http://127.0.0.1:8787/healthz   # {"ok":true,…}
    ```
-6. **Contrasenyes** (noves: les d'abans són, xifrades, a l'historial públic del repositori). Totes les ordres de la CLI
+6. **Contrasenya del DM** (el tauler s'obre sense contrasenya; només el mode DM en demana). Totes les ordres de la CLI
    es fan així, com a `missions` i amb el `.env` carregat:
    ```bash
    cli() { sudo -u missions bash -c 'set -a; . /opt/missions-api/.env; set +a; cd /opt/missions-api/current && node api/dist/cli.js "$@"' cli "$@"; }
-   cli set-password player
    cli set-password dm
    ```
 7. **Les missions d'abans**: no es van poder importar (ningú recorda la contrasenya del DM del tauler vell) i
@@ -88,8 +87,8 @@ Amb la funció `cli` del pas 6:
 
 | Ordre | Què fa |
 | :-- | :-- |
-| `cli status` | revisió, missions, contrasenyes i sessions |
-| `cli set-password player\|dm` | contrasenya nova; tanca les sessions afectades |
+| `cli status` | revisió, missions, contrasenya del DM i sessions |
+| `cli set-password dm` | contrasenya nova del DM; treu el permís de DM a tothom |
 | `cli import <fitxer.json> [--dry-run] [--force]` | carrega una exportació (la de «Exportar» del tauler) |
 | `cli import-data-json <data.json> [--dry-run] [--force]` | carrega el `data.json` xifrat d'abans |
 | `cli export [fitxer.json]` | exporta-ho tot |

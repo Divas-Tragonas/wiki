@@ -31,17 +31,10 @@ export async function resetCampaign() {
 
 export const quest = async (id: string) => (await apiCall('GET', `/v1/quests/${id}`)).body.quest;
 
-/* obre el tauler i hi entra amb la contrasenya del grup si cal */
+/* obre el tauler (no demana contrasenya) */
 export async function openBoard(page: Page, town = 'phentanil') {
   await page.addInitScript(() => { try { localStorage.setItem('phx.fx', '"quieta"'); } catch { /* sense emmagatzematge */ } });
   await page.goto('/wiki/missions/' + (town === 'phentanil' ? '' : '?lloc=' + town));
-  const gate = page.locator('#gate input');
-  await Promise.race([gate.waitFor({ timeout: 15_000 }).catch(() => {}), page.locator('#docs .doc').first().waitFor({ timeout: 15_000 })]);
-  if (await gate.isVisible()) {
-    await gate.fill('grup');
-    await gate.press('Enter');
-    await expect(page.locator('#gate')).toBeHidden();
-  }
   await expect(page.locator('#docs .doc').first()).toBeVisible();
   await page.waitForTimeout(600);
 }

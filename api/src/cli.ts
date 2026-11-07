@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { lt } from 'drizzle-orm';
-import { ROLES, type Role } from '@mina/model';
+import type { Role } from '@mina/model';
 import { hashPassword } from './auth/passwords.ts';
 import { hasPassword, listSessions, pruneSessions, setPasswordHash } from './auth/sessions.ts';
 import { loadConfig } from './config.ts';
@@ -31,8 +31,8 @@ const HISTORY_DAYS = 90;
 
 const HELP = `Ordres:
   migrate                       aplica les migracions pendents
-  status                        revisió, missions, contrasenyes i sessions
-  set-password <player|dm>      demana la contrasenya nova (o PASSWORD=…); tanca les sessions afectades
+  status                        revisió, missions, contrasenya del DM i sessions
+  set-password dm               demana la contrasenya nova del DM (o PASSWORD=…); treu el permís de DM a tothom
   import <fitxer.json>          carrega una còpia exportada a la base de dades
   import-data-json <data.json>  carrega el data.json xifrat d'abans (demana la contrasenya del DM, o DM_PASSWORD=…)
       --dry-run                 només diu què hi ha al fitxer, sense tocar la base de dades
@@ -81,17 +81,17 @@ async function main(argv: string[]) {
         console.log(`Revisió: ${await repo.currentRev(db)}`);
         console.log(`Missions: ${data.quests.length} (${data.quests.filter((q) => q.hidden).length} ocultes, ${data.quests.filter((q) => q.status === 'done').length} completades)`);
         console.log(`Ecos: ${data.ecos.length}`);
-        for (const r of ROLES) console.log(`Contrasenya ${r}: ${(await hasPassword(db, r)) ? 'posada' : 'FALTA'}`);
+        console.log(`Contrasenya dm: ${(await hasPassword(db, 'dm')) ? 'posada' : 'FALTA'}`);
         console.log(`Sessions: ${(await listSessions(db, new Date())).length}`);
       });
     case 'set-password': {
-      const role = args[0] as Role;
-      if (!ROLES.includes(role)) throw new Error('Cal dir quina: set-password player o set-password dm');
-      const pw = process.env.PASSWORD || (await ask(`Contrasenya nova (${role}): `, true));
+      /* el tauler ja no té contrasenya del grup: només hi ha la del DM */
+      if (args[0] !== 'dm') throw new Error('Només hi ha la contrasenya del DM: set-password dm (el tauler s’obre sense contrasenya)');
+      const pw = process.env.PASSWORD || (await ask('Contrasenya nova del DM: ', true));
       if (pw.trim().length < 4) throw new Error('La contrasenya ha de tenir com a mínim 4 caràcters');
       return withDb(async ({ db }) => {
-        await setPasswordHash(db, role, await hashPassword(pw), new Date());
-        console.log(role === 'player' ? 'Contrasenya del grup canviada. Totes les sessions s’han tancat.' : 'Contrasenya del DM canviada. Ningú no té el permís de DM fins que hi torni a entrar.');
+        await setPasswordHash(db, 'dm', await hashPassword(pw), new Date());
+        console.log('Contrasenya del DM canviada. Ningú no té el permís de DM fins que hi torni a entrar.');
       });
     }
     case 'import':

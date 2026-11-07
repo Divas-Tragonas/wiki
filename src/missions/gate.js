@@ -1,4 +1,4 @@
-/* La «porta»: un paper amb un camp per a la contrasenya del grup, la del DM o la clau de GitHub. */
+/* La «porta»: un paper amb un camp per a la contrasenya del DM. */
 import { $, D, esc } from './util.js';
 import { routes } from '../lib/site';
 import { gsap } from 'gsap';
